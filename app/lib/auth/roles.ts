@@ -57,6 +57,11 @@ export function canEdit(accessRole: ClubAccessRole | null | undefined): boolean 
   return accessRole === 'admin';
 }
 
+/** Accueil après connexion (ou ouverture de la PWA) selon le rôle d'accès au club. */
+export function homePathForAccessRole(accessRole: ClubAccessRole | null | undefined): '/club' | '/mon-planning' {
+  return canEdit(accessRole) ? '/club' : '/mon-planning';
+}
+
 export function hasPlanningFunction(
   functions: PlanningFunction[] | null | undefined,
   planningFunction: PlanningFunction,

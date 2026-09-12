@@ -8,19 +8,14 @@ import { playChatMessageReceivedSound, unlockChatSounds } from '@/lib/chat/chatS
 import { chatRoomHref, notificationSpace } from '@/lib/notifications/destinations';
 import { PWA_NOTIFICATION_ICON } from '@/lib/pwa/icons';
 import { isMobileUserAgent } from '@/lib/pwa/install-prompt';
+import { isStandaloneDisplay } from '@/lib/pwa/display-mode';
 import { incomingBannerFromChatMessage, incomingBannerFromChatReaction, incomingBannerFromPushPayload, shouldSuppressIncomingBanner, type IncomingBanner } from '@/lib/notifications/incoming-banner';
 
 const DISPLAY_MS = 5_500;
 
-function isStandalonePwa(): boolean {
-  if (typeof window === 'undefined') return false;
-  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-  return window.matchMedia('(display-mode: standalone)').matches || navigatorWithStandalone.standalone === true;
-}
-
 function canShowIncomingBanner(): boolean {
   if (typeof window === 'undefined') return false;
-  return isStandalonePwa()
+  return isStandaloneDisplay()
     || window.matchMedia('(max-width: 1023px)').matches
     || isMobileUserAgent(navigator.userAgent);
 }

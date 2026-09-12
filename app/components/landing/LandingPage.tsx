@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import styles from './landing.module.css';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { canEdit } from '@/lib/auth/roles';
+import { homePathForAccessRole } from '@/lib/auth/roles';
+import { isStandaloneDisplay } from '@/lib/pwa/display-mode';
 
 interface Feature {
   num: string;
@@ -134,17 +136,28 @@ const FAQ_ITEMS: FaqItem[] = [
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
-  const { user } = useCurrentUser();
+  const [standaloneLaunch, setStandaloneLaunch] = useState(false);
+  const { user, isLoading } = useCurrentUser();
+  const router = useRouter();
 
   const closeMenu = () => setMenuOpen(false);
 
   // « Commencer » aiguille selon la session : visiteur anonyme → /login ;
   // administrateur → espace club ; dirigeant → son planning personnel.
-  const startHref = !user
-    ? '/login'
-    : canEdit(user.accessRole)
-      ? '/club'
-      : '/mon-planning';
+  const startHref = user ? homePathForAccessRole(user.accessRole) : '/login';
+
+  useEffect(() => {
+    setStandaloneLaunch(isStandaloneDisplay());
+  }, []);
+
+  useEffect(() => {
+    if (!standaloneLaunch || isLoading) return;
+    router.replace(user ? homePathForAccessRole(user.accessRole) : '/login');
+  }, [standaloneLaunch, isLoading, user, router]);
+
+  if (standaloneLaunch) {
+    return null;
+  }
 
   return (
     <div className={styles.page}>
