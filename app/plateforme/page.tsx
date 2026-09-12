@@ -22,11 +22,14 @@ import {
   ChevronDown,
   ChevronRight,
   Database,
+  Palette,
   Plus,
   Save,
   ShieldAlert,
   ShieldCheck,
+  Upload,
 } from 'lucide-react';
+import { DEFAULT_APP_SETTINGS } from '@/lib/settings';
 import { apiGet, apiPatch, apiPost } from '@/lib/utils/api';
 import { OpponentClubsSection } from '@/app/components/plateforme/OpponentClubsSection';
 
@@ -76,6 +79,10 @@ export default function PlatformDashboardPage() {
   const [isNewClubOpen, setIsNewClubOpen] = useState(false);
   const [newClubId, setNewClubId] = useState('');
   const [newClubName, setNewClubName] = useState('');
+  const [newClubAbbreviation, setNewClubAbbreviation] = useState('');
+  const [newClubLogo, setNewClubLogo] = useState('');
+  const [newClubPrimaryColor, setNewClubPrimaryColor] = useState(DEFAULT_APP_SETTINGS.primaryColor);
+  const [newClubSecondaryColor, setNewClubSecondaryColor] = useState(DEFAULT_APP_SETTINGS.accentColor);
   const [newClubMatchesUrlKey, setNewClubMatchesUrlKey] = useState('');
   const [newClubScraperClubName, setNewClubScraperClubName] = useState('');
   const [isCreatingClub, setIsCreatingClub] = useState(false);
@@ -172,21 +179,58 @@ export default function PlatformDashboardPage() {
     }
   };
 
+  const resetNewClubForm = () => {
+    setNewClubId('');
+    setNewClubName('');
+    setNewClubAbbreviation('');
+    setNewClubLogo('');
+    setNewClubPrimaryColor(DEFAULT_APP_SETTINGS.primaryColor);
+    setNewClubSecondaryColor(DEFAULT_APP_SETTINGS.accentColor);
+    setNewClubMatchesUrlKey('');
+    setNewClubScraperClubName('');
+  };
+
+  const handleLogoUpload = (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Veuillez sélectionner une image valide');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result === 'string') {
+        setNewClubLogo(result);
+      }
+    };
+    reader.onerror = () => {
+      toast.error('Impossible de lire le fichier image');
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateClub = async () => {
+    if (!newClubAbbreviation.trim()) {
+      toast.error("L'abréviation du club est requise");
+      return;
+    }
+
     setIsCreatingClub(true);
     try {
       await apiPost('/api/plateforme/clubs', {
         id: newClubId.trim(),
         name: newClubName.trim(),
+        abbreviation: newClubAbbreviation.trim(),
+        logo: newClubLogo.trim(),
+        primaryColor: newClubPrimaryColor,
+        secondaryColor: newClubSecondaryColor,
         matchesUrlKey: newClubMatchesUrlKey.trim(),
         scraperClubName: newClubScraperClubName.trim(),
       });
       toast.success('Club créé');
       setIsNewClubOpen(false);
-      setNewClubId('');
-      setNewClubName('');
-      setNewClubMatchesUrlKey('');
-      setNewClubScraperClubName('');
+      resetNewClubForm();
       await loadClubs();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Impossible de créer le club');
@@ -433,12 +477,18 @@ export default function PlatformDashboardPage() {
         </SectionCard>
       </PageContainer>
 
-      <Dialog open={isNewClubOpen} onOpenChange={setIsNewClubOpen}>
-        <DialogContent>
+      <Dialog
+        open={isNewClubOpen}
+        onOpenChange={(open) => {
+          setIsNewClubOpen(open);
+          if (!open) resetNewClubForm();
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nouveau club</DialogTitle>
             <DialogDescription>
-              Créez un nouveau club (tenant) et configurez sa source de scraping côté plateforme.
+              Créez un nouveau club (tenant), son identité visuelle et sa source de scraping côté plateforme.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -456,7 +506,7 @@ export default function PlatformDashboardPage() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="new-club-name">Nom du club</Label>
+              <Label htmlFor="new-club-name">Nom du club *</Label>
               <Input
                 id="new-club-name"
                 placeholder="Mon Club de Football"
@@ -464,6 +514,81 @@ export default function PlatformDashboardPage() {
                 onChange={(event) => setNewClubName(event.target.value)}
                 disabled={isCreatingClub}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-club-abbr">Abréviation du club *</Label>
+              <Input
+                id="new-club-abbr"
+                placeholder="Ex : AFP"
+                value={newClubAbbreviation}
+                onChange={(event) => setNewClubAbbreviation(event.target.value)}
+                maxLength={16}
+                disabled={isCreatingClub}
+              />
+              <p className="text-xs text-muted-foreground">
+                Utilisée pour les libellés de rôle : Arbitre {newClubAbbreviation.trim() || 'AFP'},
+                Encadrant {newClubAbbreviation.trim() || 'AFP'}, Accompagnateur {newClubAbbreviation.trim() || 'AFP'}.
+              </p>
+            </div>
+            <div className="rounded-lg border p-3 space-y-3">
+              <p className="text-sm font-semibold flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                Identité visuelle
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="new-club-logo">Logo du club (upload ou URL)</Label>
+                <Input
+                  id="new-club-logo"
+                  value={newClubLogo}
+                  onChange={(event) => setNewClubLogo(event.target.value)}
+                  placeholder="https://... ou data:image/..."
+                  disabled={isCreatingClub}
+                />
+                <Input
+                  type="file"
+                  accept="image/*"
+                  disabled={isCreatingClub}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    handleLogoUpload(file);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Upload className="h-3.5 w-3.5" />
+                  Le fichier est converti et sauvegardé dans la base.
+                </p>
+                {newClubLogo && (
+                  <div className="flex items-center gap-3 pt-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={newClubLogo} alt="Logo du club" className="w-16 h-16 rounded-full object-cover border" />
+                    <span className="text-sm text-muted-foreground">Aperçu du logo</span>
+                  </div>
+                )}
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="new-club-primary-color">Couleur principale</Label>
+                  <Input
+                    id="new-club-primary-color"
+                    type="color"
+                    value={newClubPrimaryColor}
+                    onChange={(event) => setNewClubPrimaryColor(event.target.value)}
+                    className="h-10 p-1"
+                    disabled={isCreatingClub}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-club-secondary-color">Couleur secondaire</Label>
+                  <Input
+                    id="new-club-secondary-color"
+                    type="color"
+                    value={newClubSecondaryColor}
+                    onChange={(event) => setNewClubSecondaryColor(event.target.value)}
+                    className="h-10 p-1"
+                    disabled={isCreatingClub}
+                  />
+                </div>
+              </div>
             </div>
             <div className="rounded-lg border p-3 space-y-3">
               <p className="text-sm font-semibold flex items-center gap-2">
@@ -498,7 +623,7 @@ export default function PlatformDashboardPage() {
             </Button>
             <Button
               onClick={handleCreateClub}
-              disabled={isCreatingClub || !newClubId.trim() || !newClubName.trim()}
+              disabled={isCreatingClub || !newClubId.trim() || !newClubName.trim() || !newClubAbbreviation.trim()}
             >
               {isCreatingClub ? 'Création...' : 'Créer'}
             </Button>

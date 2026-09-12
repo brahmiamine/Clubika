@@ -78,12 +78,47 @@ function makeDbWithPublishedSnapshot(events: unknown[]): DataSource {
     updatedAt: '2026-08-01T00:00:00.000Z',
   };
 
+  const tenant = {
+    id: clubId,
+    name: 'AFP',
+    abbreviation: 'AFP',
+    description: '',
+    logo: '',
+    themeMode: 'system',
+    primaryColor: '#003287',
+    secondaryColor: '#e3ebf7',
+    timeZone: 'Europe/Paris',
+    matchesUrlKey: '',
+    scraperClubName: '',
+    featuresJson: '{}',
+    smtpHost: null,
+    smtpPort: null,
+    smtpSecure: false,
+    smtpUser: null,
+    smtpPasswordEncrypted: null,
+    smtpFromEmail: null,
+    smtpFromName: null,
+    active: true,
+  };
+
   return {
     query: async (sql: string) => {
       if (sql.trim().startsWith('SELECT') && sql.includes('FROM planning_records')) return [record];
       return [];
     },
-    getRepository: () => ({ find: async () => [], findBy: async () => [] }),
+    getRepository: (name?: string) => {
+      if (name === 'ClubTenant') {
+        return {
+          findOneBy: async () => tenant,
+          create: (value: unknown) => value,
+          save: async (value: unknown) => value,
+        };
+      }
+      if (name === 'AppMeta') {
+        return { findOne: async () => null };
+      }
+      return { find: async () => [], findBy: async () => [] };
+    },
   } as unknown as DataSource;
 }
 

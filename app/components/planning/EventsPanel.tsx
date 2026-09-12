@@ -71,7 +71,13 @@ export const EventsPanel = memo(function EventsPanel({
   const [attentionOnly, setAttentionOnly] = useState(false);
 
   const sortedDates = useMemo(() => sortDates(Object.keys(events)), [events]);
-  const attentionCount = useMemo(() => Object.keys(alerts ?? {}).length, [alerts]);
+  const attentionCount = useMemo(
+    () => sortedDates.reduce(
+      (count, date) => count + (events[date] ?? []).filter((event) => Boolean(eventAlert(event, alerts))).length,
+      0,
+    ),
+    [sortedDates, events, alerts],
+  );
   const groupedEvents = useMemo(() => (
     sortedDates
       .map((date) => {

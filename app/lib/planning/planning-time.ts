@@ -71,3 +71,40 @@ export function zonedDayStart(timestamp: number, timeZone: string): number {
   const date = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
   return eventStartTimestamp(date, '00:00', timeZone) ?? timestamp;
 }
+
+/**
+ * Fenêtre samedi 00:00 → lundi 00:00 **dans le fuseau du club** (issue #45) : un match
+ * du samedi ou du dimanche doit être classé sur le bon week-end quelle que soit l'heure
+ * UTC sous-jacente. Le jeudi/vendredi vise le week-end à venir ; le dimanche, celui en cours.
+ */
+export function weekendWindow(now = Date.now(), timeZone = 'UTC'): { start: number; end: number } {
+  const weekday = zonedWeekday(now, timeZone);
+  const daysUntilSaturday = weekday === 6 ? 0 : weekday === 0 ? -1 : 6 - weekday;
+  const { year, month, day } = zonedDateParts(now, timeZone);
+  const format = (value: Date) => `${String(value.getUTCDate()).padStart(2, '0')}/${String(value.getUTCMonth() + 1).padStart(2, '0')}/${value.getUTCFullYear()}`;
+  const saturday = new Date(Date.UTC(year, month - 1, day + daysUntilSaturday));
+  const monday = new Date(Date.UTC(year, month - 1, day + daysUntilSaturday + 2));
+  const start = eventStartTimestamp(format(saturday), '00:00', timeZone);
+  const mondayStart = eventStartTimestamp(format(monday), '00:00', timeZone);
+  if (start === null || mondayStart === null) {
+    const current = new Date(now);
+    const utcDay = current.getUTCDay();
+    const utcDaysUntilSaturday = utcDay === 6 ? 0 : utcDay === 0 ? -1 : 6 - utcDay;
+    const fallbackStart = Date.UTC(
+      current.getUTCFullYear(),
+      current.getUTCMonth(),
+      current.getUTCDate() + utcDaysUntilSaturday,
+      0, 0, 0, 0,
+    );
+    return { start: fallbackStart, end: fallbackStart + 2 * 24 * 60 * 60_000 - 1 };
+  }
+  return { start, end: mondayStart - 1 };
+}
+
+/** Vrai si la date/heure (jj/mm/aaaa) tombe dans le week-end en cours du club. */
+export function isWithinCurrentWeekend(date: string, time: string, timeZone: string, now = Date.now()): boolean {
+  const start = eventStartTimestamp(date, time?.trim() || '00:00', timeZone);
+  if (start === null) return false;
+  const window = weekendWindow(now, timeZone);
+  return start >= window.start && start <= window.end;
+}

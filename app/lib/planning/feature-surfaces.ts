@@ -75,6 +75,12 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
     pages: [],
     routes: ['app/api/scraper/route.ts', 'app/api/cron/scraper/route.ts'],
   },
+  officialMatchesCurrentWeekendOnly: {
+    label: 'Matchs officiels du week-end uniquement',
+    description: 'N’affiche que les matchs scrapés du week-end en cours (samedi–dimanche). Les matchs passés restent visibles dans les Archives.',
+    pages: [],
+    routes: [],
+  },
   eventChat: {
     label: 'Chat des événements',
     description: 'Autorise les salons liés aux événements du club.',

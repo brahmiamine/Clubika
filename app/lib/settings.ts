@@ -12,6 +12,8 @@ export interface PlanningFeatureFlags {
     recurringEvents: boolean;
     publicSharing: boolean;
     scraperSync: boolean;
+    /** N’affiche les matchs officiels scrapés que sur le week-end en cours (samedi–dimanche). */
+    officialMatchesCurrentWeekendOnly: boolean;
     eventChat: boolean;
     travelAndWeather: boolean;
     calendarExport: boolean;
@@ -49,7 +51,7 @@ export interface AppSettings {
 
 export const DEFAULT_PLANNING_FEATURES: PlanningFeatureFlags = {
     assignmentValidation: true,
-    publicationReadiness: true,
+    publicationReadiness: false,
     autoAssignment: true,
     automaticReminders: true,
     assignmentSwaps: true,
@@ -57,6 +59,7 @@ export const DEFAULT_PLANNING_FEATURES: PlanningFeatureFlags = {
     recurringEvents: true,
     publicSharing: true,
     scraperSync: true,
+    officialMatchesCurrentWeekendOnly: true,
     eventChat: true,
     travelAndWeather: true,
     calendarExport: true,

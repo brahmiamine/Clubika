@@ -8,6 +8,7 @@ import { generateIcal, type IcalIdentity } from '@/lib/utils/ical-export';
 import { getOfficialMatchesMeta } from '@/lib/db/json-migrator';
 import { normalizePlanningFunctions } from '@/lib/auth/roles';
 import { readAppSettings } from '@/lib/settings-store';
+import { filterOfficialEventsForDisplay } from '@/lib/planning/official-match-visibility';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { isClubTenantActive } from '@/lib/db/club-tenants';
 import { personTypeForFunction } from '@/lib/planning/person-link';
@@ -85,7 +86,10 @@ export async function GET(
 
     if (publishedSnapshotsRaw) {
       const publishedSnapshots = await hydratePlanningAssignmentStates(db, publishedSnapshotsRaw, clubId);
-      events = publishedSnapshots.map((snapshot) => snapshot.event as Event);
+      events = filterOfficialEventsForDisplay(
+        publishedSnapshots.map((snapshot) => snapshot.event as Event),
+        settings,
+      );
       for (const snapshot of publishedSnapshots) {
         if (snapshot.extras?.id) allExtras[snapshot.extras.id] = snapshot.extras;
       }
@@ -97,12 +101,15 @@ export async function GET(
         db.getRepository('Plateau').findBy({ clubId }),
         db.getRepository('MatchExtra').findBy({ clubId }),
       ]);
-      events = [
-        ...officialRows.map((row) => parseMatchPayload(row.payload, 'MatchOfficial', { id: row.id, type: 'officiel' })).filter((item) => Boolean(item?.id)),
-        ...amicalRows.map((row) => parseMatchPayload(row.payload, 'MatchAmical', { id: row.id, type: 'amical' })).filter((item) => Boolean(item?.id)),
-        ...entrainementRows.map((row) => parseEntrainementPayload(row.payload, row.id)).filter((item) => Boolean(item?.id)),
-        ...plateauRows.map((row) => parsePlateauPayload(row.payload, row.id)).filter((item) => Boolean(item?.id)),
-      ];
+      events = filterOfficialEventsForDisplay(
+        [
+          ...officialRows.map((row) => parseMatchPayload(row.payload, 'MatchOfficial', { id: row.id, type: 'officiel' })).filter((item) => Boolean(item?.id)),
+          ...amicalRows.map((row) => parseMatchPayload(row.payload, 'MatchAmical', { id: row.id, type: 'amical' })).filter((item) => Boolean(item?.id)),
+          ...entrainementRows.map((row) => parseEntrainementPayload(row.payload, row.id)).filter((item) => Boolean(item?.id)),
+          ...plateauRows.map((row) => parsePlateauPayload(row.payload, row.id)).filter((item) => Boolean(item?.id)),
+        ],
+        settings,
+      );
       for (const row of extraRows) {
         const payload = parseMatchExtrasPayload(row.payload, row.matchId);
         if (payload?.id) allExtras[payload.id] = payload;

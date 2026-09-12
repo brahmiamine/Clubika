@@ -10,12 +10,14 @@ import {
   needsReplacement,
   normalizePlanningStatus,
 } from './p0-rules';
-import { zonedDateParts, zonedWeekday } from './planning-time';
+import { weekendWindow } from './planning-time';
 import {
   DEFAULT_PUBLICATION_ROLE_REQUIREMENTS,
   requiredRolesForEvent,
   type PublicationRoleRequirements,
 } from './validation';
+
+export { weekendWindow } from './planning-time';
 
 export interface WeekendPlanningItem {
   eventId: string;
@@ -39,36 +41,6 @@ export interface WeekendPlanningData {
   ready: number;
   attention: number;
   items: WeekendPlanningItem[];
-}
-
-/**
- * Fenêtre samedi 00:00 → lundi 00:00 **dans le fuseau du club** (issue #45) : un match
- * du samedi ou du dimanche doit être classé sur le bon week-end quelle que soit l'heure
- * UTC sous-jacente.
- */
-export function weekendWindow(now = Date.now(), timeZone = 'UTC'): { start: number; end: number } {
-  const weekday = zonedWeekday(now, timeZone);
-  const daysUntilSaturday = weekday === 6 ? 0 : weekday === 0 ? -1 : 6 - weekday;
-  const { year, month, day } = zonedDateParts(now, timeZone);
-  const format = (value: Date) => `${String(value.getUTCDate()).padStart(2, '0')}/${String(value.getUTCMonth() + 1).padStart(2, '0')}/${value.getUTCFullYear()}`;
-  const saturday = new Date(Date.UTC(year, month - 1, day + daysUntilSaturday));
-  const monday = new Date(Date.UTC(year, month - 1, day + daysUntilSaturday + 2));
-  const start = eventStartTimestamp(format(saturday), '00:00', timeZone);
-  const mondayStart = eventStartTimestamp(format(monday), '00:00', timeZone);
-  if (start === null || mondayStart === null) {
-    // Repli historique (UTC) si le fuseau est inutilisable.
-    const current = new Date(now);
-    const utcDay = current.getUTCDay();
-    const utcDaysUntilSaturday = utcDay === 6 ? 0 : utcDay === 0 ? -1 : 6 - utcDay;
-    const fallbackStart = Date.UTC(
-      current.getUTCFullYear(),
-      current.getUTCMonth(),
-      current.getUTCDate() + utcDaysUntilSaturday,
-      0, 0, 0, 0,
-    );
-    return { start: fallbackStart, end: fallbackStart + 2 * 24 * 60 * 60_000 - 1 };
-  }
-  return { start, end: mondayStart - 1 };
 }
 
 export function buildWeekendPlanning(

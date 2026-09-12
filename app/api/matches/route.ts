@@ -7,6 +7,8 @@ import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { parseMatchPayload } from '@/lib/db/planning-payload-codecs';
+import { readAppSettings } from '@/lib/settings-store';
+import { filterOfficialMatchesForDisplay } from '@/lib/planning/official-match-visibility';
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole(request, WRITE_ROLES);
@@ -16,12 +18,18 @@ export async function GET(request: NextRequest) {
   try {
     const db = await getDb();
     const repo = db.getRepository('MatchOfficial');
-    const rows = await repo.findBy({ clubId: auth.user.clubId });
-    const meta = await getOfficialMatchesMeta(db, auth.user.clubId);
+    const [rows, meta, settings] = await Promise.all([
+      repo.findBy({ clubId: auth.user.clubId }),
+      getOfficialMatchesMeta(db, auth.user.clubId),
+      readAppSettings(db, auth.user.clubId),
+    ]);
 
-    const matches = rows
-      .map((row) => parseMatchPayload(row.payload, 'MatchOfficial', { id: row.id, type: 'officiel' }))
-      .filter((item) => Boolean(item?.id) && item.sourceStatus !== 'missing');
+    const matches = filterOfficialMatchesForDisplay(
+      rows
+        .map((row) => parseMatchPayload(row.payload, 'MatchOfficial', { id: row.id, type: 'officiel' }))
+        .filter((item) => Boolean(item?.id) && item.sourceStatus !== 'missing'),
+      settings,
+    );
 
     const matchesData: MatchesData = {
       club: meta.club,

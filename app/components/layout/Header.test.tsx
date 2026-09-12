@@ -47,6 +47,7 @@ function baseFeatures(overrides: Partial<Record<string, boolean>> = {}) {
     recurringEvents: true,
     publicSharing: true,
     scraperSync: true,
+    officialMatchesCurrentWeekendOnly: true,
     eventChat: true,
     travelAndWeather: true,
     calendarExport: true,

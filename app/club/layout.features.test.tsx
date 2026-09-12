@@ -28,6 +28,7 @@ vi.mock('@/hooks/useAppSettings', () => ({
         recurringEvents: false,
         publicSharing: false,
         scraperSync: true,
+        officialMatchesCurrentWeekendOnly: true,
         eventChat: true,
         travelAndWeather: true,
         calendarExport: true,
