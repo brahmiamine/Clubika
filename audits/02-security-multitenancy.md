@@ -1,8 +1,8 @@
 # Audit 02 — Sécurité et Multi-Tenant
 
-**Repository :** `https://github.com/brahmiamine/afp-planning`  
-**Périmètre :** code sur `main` au 2026-09-10  
-**Méthode :** revue statique exhaustive des 92 `app/api/**/route.ts`, `proxy.ts`, auth, Socket.IO, push, secrets. `pnpm audit --prod` exécuté. Tests dynamiques Club A/B : **preuve statique + tests existants** ; pas de comptes live.  
+**Repository :** `https://github.com/brahmiamine/Clubika`
+**Périmètre :** code sur `main` au 2026-09-10
+**Méthode :** revue statique exhaustive des 92 `app/api/**/route.ts`, `proxy.ts`, auth, Socket.IO, push, secrets. `pnpm audit --prod` exécuté. Tests dynamiques Club A/B : **preuve statique + tests existants** ; pas de comptes live.
 **Question centrale :** un utilisateur du Club A peut-il lire/modifier/supprimer une ressource du Club B ?
 
 **Réponse :** **Non** pour les API club authentifiées et Socket.IO, d’après le code et les tests d’isolation existants. Isolation = `session.user.clubId` → `setCurrentClubId` (ALS) → filtres SQL `clubId`/`club_id` + ownership. **0 IDOR cross-tenant confirmé.** Les admins plateforme **peuvent** agir sur tous les clubs (by design).
@@ -42,7 +42,7 @@
 | Dépendances | 5 | 3 | `pnpm audit` : 0 critical/high, 15 moderate (jspdf/dompurify) |
 | Tests sécurité | 5 | 3 | bons sur chat/share/users ; 40 routes sans `route.test.ts` |
 
-**Findings :** P0 **0** (sécu) · P1 **2** · P2 **7** · P3 **6**  
+**Findings :** P0 **0** (sécu) · P1 **2** · P2 **7** · P3 **6**
 *(FUNC-001 bootstrap n’est pas une fuite tenant ; classé fonctionnel/qualité.)*
 
 ---
@@ -121,7 +121,7 @@ Ownership : `userId` session, `assertRoomAccess`, `event-access.ts`.
 
 ### 4.8 Mixte — 2
 
-`settings` GET public (`?club=` rate-limité, 404 si inconnu/inactif, #342, `settings/route.ts:25-59`) / PUT admin.  
+`settings` GET public (`?club=` rate-limité, 404 si inconnu/inactif, #342, `settings/route.ts:25-59`) / PUT admin.
 `invitations/[token]` GET public / DELETE admin.
 
 ### 4.9 Public sans auth — 1
@@ -212,9 +212,9 @@ Ownership : `userId` session, `assertRoomAccess`, `event-access.ts`.
 
 ## 10. Secrets, SCA
 
-- **Aucun** `.env` / `.env.example` dans le repo. README placeholders `change-me`.  
-- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` = public by design.  
-- Serveur : `APP_ENCRYPTION_KEY`, `CRON_SECRET`, `VAPID_PRIVATE_KEY`, SMTP. **Pas de rotation / dual-key** (`secret-box.ts`).  
+- **Aucun** `.env` / `.env.example` dans le repo. README placeholders `change-me`.
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` = public by design.
+- Serveur : `APP_ENCRYPTION_KEY`, `CRON_SECRET`, `VAPID_PRIVATE_KEY`, SMTP. **Pas de rotation / dual-key** (`secret-box.ts`).
 - **Aucune valeur secrète recopiée ici.**
 
 **SCA exécuté :** `pnpm audit --prod` → **20** vulns : **0 critical, 0 high, 15 moderate, 5 low**. Principalement `dompurify` via `jspdf` (exports PDF). Exploitabilité dans le flux PDF serveur : **limitée** (pas de sanitization HTML utilisateur via DOMPurify côté client chat). Recommandation : bumper `jspdf` quand un patch remonte `dompurify>=3.4.9`.
@@ -225,74 +225,74 @@ Ownership : `userId` session, `assertRoomAccess`, `event-access.ts`.
 
 ### SEC-001 — P1 — Rate-limit absent sur reset MDP / accept invitation / ical / share GET
 
-- **Référentiel :** OWASP A07, API4, CWE-307, ASVS 2.2  
-- **Preuve :** `password-reset/request/route.ts` sans `checkLoginRateLimit` ; `invitations/[token]/accept` ; `ical/[token]` ; `public/planning/[token]`.  
-- **Scénario :** bruteforce de tokens (48 hex invitation / ical) ou flooding d’e-mails reset.  
-- **Exploitabilité :** moyenne (espace token 24 bytes).  
-- **Correction :** buckets IP partagés comme le login.  
+- **Référentiel :** OWASP A07, API4, CWE-307, ASVS 2.2
+- **Preuve :** `password-reset/request/route.ts` sans `checkLoginRateLimit` ; `invitations/[token]/accept` ; `ical/[token]` ; `public/planning/[token]`.
+- **Scénario :** bruteforce de tokens (48 hex invitation / ical) ou flooding d’e-mails reset.
+- **Exploitabilité :** moyenne (espace token 24 bytes).
+- **Correction :** buckets IP partagés comme le login.
 - **Statut :** 🔴 Confirmé (absence de contrôle)
 
 ### SEC-002 — P1 — `/api/auth/me` expose `icalToken`
 
-- **Référentiel :** A01 / CWE-200  
-- **Preuve :** `auth/me/route.ts:12` + `session.ts:61-74`.  
-- **Impact :** XSS futur ou extension malveillante = vol du calendrier personnel (capability URL).  
-- **Correction :** endpoint dédié, ou scope.  
+- **Référentiel :** A01 / CWE-200
+- **Preuve :** `auth/me/route.ts:12` + `session.ts:61-74`.
+- **Impact :** XSS futur ou extension malveillante = vol du calendrier personnel (capability URL).
+- **Correction :** endpoint dédié, ou scope.
 - **Statut :** 🔴 Confirmé · hardening si l’UI en a besoin
 
 ### SEC-003 — P2 — Pas de token CSRF (SameSite=lax only)
 
-- A01 / CWE-352. POST cross-site depuis un site tiers bloqué par lax sur navigateur moderne ; formulaires same-site / attaques subdomain restent.  
+- A01 / CWE-352. POST cross-site depuis un site tiers bloqué par lax sur navigateur moderne ; formulaires same-site / attaques subdomain restent.
 - **Statut :** ⚪ Hardening
 
 ### SEC-004 — P2 — Pas de rotation `APP_ENCRYPTION_KEY`
 
-- A02. Changement de clé = messages/SMTP indéchiffrables.  
+- A02. Changement de clé = messages/SMTP indéchiffrables.
 - **Statut :** ⚪ Hardening
 
 ### SEC-005 — P2 — Pas de `.env.example`
 
-- A05. Risque ops : `CRON_SECRET` vide, encryption manquante. `server.ts` refuse le boot prod sans encryption — mitigé pour cette clé seulement.  
+- A05. Risque ops : `CRON_SECRET` vide, encryption manquante. `server.ts` refuse le boot prod sans encryption — mitigé pour cette clé seulement.
 - **Statut :** ⚪ Hardening
 
 ### SEC-006 — P2 — Validation inégale / mass assignment events
 
-- Spread `...input` sur payloads events. BodyValidator sur canonical events, pas sur tout le directory.  
+- Spread `...input` sur payloads events. BodyValidator sur canonical events, pas sur tout le directory.
 - **Statut :** 🟠 Très probable
 
 ### SEC-007 — P2 — 500 scraper/cron peut renvoyer `details`
 
-- CWE-209. `scraper/route.ts:43-45`, `cron/scraper/route.ts:60-62`.  
+- CWE-209. `scraper/route.ts:43-45`, `cron/scraper/route.ts:60-62`.
 - **Statut :** 🔴 Confirmé
 
 ### SEC-008 — P2 — `isClubTenantActive` true si ligne tenant absente
 
-- `club-tenants.ts:29-31` — legacy mono-club.  
+- `club-tenants.ts:29-31` — legacy mono-club.
 - **Statut :** 🟠 Très probable (comportement legacy)
 
 ### SEC-009 — P2 — Couverture tests A/B incomplète sur CRUD admin
 
-- categories, stades, officiels, plateaux, export : pattern ALS, **peu de tests A→B**.  
+- categories, stades, officiels, plateaux, export : pattern ALS, **peu de tests A→B**.
 - **Statut :** ⚪ Hardening tests (audit 08)
 
 ### SEC-010 — P3 — Cookie `Secure` false hors production
 
-- Attendu en local.  
+- Attendu en local.
 - **Statut :** ⚪ Hardening
 
 ### SEC-011 — P3 — Invitation GET révèle email/rôle
 
-- By design pour l’inscription.  
+- By design pour l’inscription.
 - **Statut :** ⚪ Hardening
 
 ### SEC-012 — P3 — CSRF / SameSite et `logo-proxy` CORS `*`
 
-- Images only.  
+- Images only.
 - **Statut :** ⚪ Hardening
 
 ### SEC-013 — P3 — SCA moderate jspdf/dompurify
 
-- Voir §10.  
+- Voir §10.
 - **Statut :** 🟡 À vérifier (chaîne PDF)
 
 **Non-findings (correctifs présents) :** #351 proxy revoked ; #342 settings enum ; #346 socket cross-club ; #345 event rooms ; #344 push logout ; #350 FK phase 1 ; passwords scrypt ; tokens hashés.
@@ -303,12 +303,12 @@ Ownership : `userId` session, `assertRoomAccess`, `event-access.ts`.
 
 ## 12. Plan de remédiation
 
-1. Rate-limit endpoints token publics (SEC-001).  
-2. Réduire l’exposition `icalToken` (SEC-002).  
-3. Uniformiser BodyValidator.  
-4. Dual-key encryption.  
-5. `.env.example` sans secrets.  
-6. Tests A/B sur export + directory CRUD.  
+1. Rate-limit endpoints token publics (SEC-001).
+2. Réduire l’exposition `icalToken` (SEC-002).
+3. Uniformiser BodyValidator.
+4. Dual-key encryption.
+5. `.env.example` sans secrets.
+6. Tests A/B sur export + directory CRUD.
 7. Bumper jspdf/dompurify.
 
 Ne **pas** réintroduire `APP_CLUB_ID` silencieux sur les requêtes métier (#333).
@@ -317,9 +317,9 @@ Ne **pas** réintroduire `APP_CLUB_ID` silencieux sur les requêtes métier (#33
 
 ## 13. Definition of Done
 
-- [x] 92 `route.ts` dans l’inventaire, groupés par modèle d’auth  
-- [x] Chaque scénario Cross-Tenant a une conclusion  
-- [x] P0/P1 citent OWASP/CWE + fichier:ligne (P0 sécu : 0)  
-- [x] Aucune valeur secrète dans ce rapport  
+- [x] 92 `route.ts` dans l’inventaire, groupés par modèle d’auth
+- [x] Chaque scénario Cross-Tenant a une conclusion
+- [x] P0/P1 citent OWASP/CWE + fichier:ligne (P0 sécu : 0)
+- [x] Aucune valeur secrète dans ce rapport
 
 **SCA :** exécuté (`pnpm audit --prod`). **Pentest runtime Club A/B :** non exécuté — preuve statique + tests repo.

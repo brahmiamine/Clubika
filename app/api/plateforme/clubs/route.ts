@@ -20,6 +20,61 @@ function serializeClub(club: ClubTenantEntity) {
   };
 }
 
+const HEX_COLOR_PATTERN = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+const MAX_ABBREVIATION_LENGTH = 16;
+
+function expandShortHex(value: string): string {
+  if (value.length !== 4) return value.toLowerCase();
+  const r = value[1] ?? '0';
+  const g = value[2] ?? '0';
+  const b = value[3] ?? '0';
+  return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+}
+
+function parseColor(value: unknown, field: string, fallback: string): { color: string } | { error: string } {
+  if (value === undefined || value === null || value === '') {
+    return { color: fallback };
+  }
+  if (typeof value !== 'string' || !HEX_COLOR_PATTERN.test(value.trim())) {
+    return { error: `${field} doit être une couleur hexadécimale (#RGB ou #RRGGBB)` };
+  }
+  return { color: expandShortHex(value.trim()) };
+}
+
+function parseBranding(body: Record<string, unknown>) {
+  const rawAbbreviation = body.abbreviation ?? body.clubAbbreviation;
+  const rawLogo = body.logo ?? body.clubLogo;
+  const rawPrimary = body.primaryColor;
+  const rawSecondary = body.secondaryColor ?? body.accentColor;
+
+  if (rawAbbreviation !== undefined && typeof rawAbbreviation !== 'string') {
+    return { error: 'L\'abréviation du club doit être une chaîne de caractères' } as const;
+  }
+  const abbreviation = typeof rawAbbreviation === 'string'
+    ? rawAbbreviation.trim().replace(/\s+/g, ' ').slice(0, MAX_ABBREVIATION_LENGTH)
+    : '';
+  if (!abbreviation) {
+    return { error: 'L\'abréviation du club est requise' } as const;
+  }
+
+  if (rawLogo !== undefined && typeof rawLogo !== 'string') {
+    return { error: 'Le logo du club doit être une chaîne de caractères' } as const;
+  }
+  const logo = typeof rawLogo === 'string' ? rawLogo.trim() : DEFAULT_APP_SETTINGS.clubLogo;
+
+  const primary = parseColor(rawPrimary, 'primaryColor', DEFAULT_APP_SETTINGS.primaryColor);
+  if ('error' in primary) return primary;
+  const secondary = parseColor(rawSecondary, 'secondaryColor', DEFAULT_APP_SETTINGS.accentColor);
+  if ('error' in secondary) return secondary;
+
+  return {
+    abbreviation,
+    logo,
+    primaryColor: primary.color,
+    secondaryColor: secondary.color,
+  } as const;
+}
+
 function parseScrapingConfig(body: Record<string, unknown>) {
   const rawMatchesUrlKey = body.matchesUrlKey;
   const rawScraperClubName = body.scraperClubName;
@@ -90,6 +145,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: scrapingConfig.error }, { status: 400 });
     }
 
+    const branding = parseBranding(body as Record<string, unknown>);
+    if ('error' in branding) {
+      return NextResponse.json({ error: branding.error }, { status: 400 });
+    }
+
     const db = await getDb();
     const repo = db.getRepository<ClubTenantEntity>('ClubTenant');
     const existing = await repo.findOneBy({ id });
@@ -100,11 +160,12 @@ export async function POST(request: NextRequest) {
     const club = repo.create({
       id,
       name: name.trim(),
+      abbreviation: branding.abbreviation,
       description: DEFAULT_APP_SETTINGS.clubDescription,
-      logo: DEFAULT_APP_SETTINGS.clubLogo,
+      logo: branding.logo,
       themeMode: DEFAULT_APP_SETTINGS.themeMode,
-      primaryColor: DEFAULT_APP_SETTINGS.primaryColor,
-      secondaryColor: DEFAULT_APP_SETTINGS.accentColor,
+      primaryColor: branding.primaryColor,
+      secondaryColor: branding.secondaryColor,
       timeZone: DEFAULT_APP_SETTINGS.timeZone,
       matchesUrlKey: scrapingConfig.matchesUrlKey,
       scraperClubName: scrapingConfig.scraperClubName,

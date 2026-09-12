@@ -29,6 +29,7 @@ import { hydratePlanningAssignmentStates } from './assignment-state-overlay';
 import { requiredRolesForEvent, type PublicationRoleRequirements } from './validation';
 import { createTeamLogoResolver } from './team-logos';
 import { vacateDeclinedAssignmentsFromWorkingDraft } from './declined-assignment-draft';
+import { filterOfficialEventsForDisplay } from './official-match-visibility';
 
 export interface DashboardDeclinedContact {
   nom: string;
@@ -381,24 +382,28 @@ export async function buildClubDashboardData(
   };
   // Tous les calculs temporels du dashboard utilisent le fuseau horaire du club (issue #45).
   const timeZone = settings.timeZone;
+  const liveSnapshots = filterOfficialEventsForDisplay(snapshots, settings, now);
+  const publishedForDisplay = publishedSnapshots === null
+    ? null
+    : filterOfficialEventsForDisplay(publishedSnapshots, settings, now);
 
   // Issue #39 : les métriques principales reflètent exactement ce que voient les utilisateurs
   // dans « Mon planning » — le snapshot publié, hydraté depuis le store opérationnel
   // (réponses, relances, présences). Le brouillon live n'alimente que le bloc `preparation`.
   // Si le club n'a encore jamais publié, on retombe sur le live pour ne pas afficher un
   // dashboard vide (le bloc `preparation.hasPublishedPlanning` permet à l'UI de le signaler).
-  const hasPublishedPlanning = publishedSnapshots !== null;
+  const hasPublishedPlanning = publishedForDisplay !== null;
   const operationalSnapshots = hasPublishedPlanning
-    ? await hydratePlanningAssignmentStates(db, publishedSnapshots, clubId)
-    : snapshots;
+    ? await hydratePlanningAssignmentStates(db, publishedForDisplay, clubId)
+    : liveSnapshots;
 
   const operational = computeEventMetrics(operationalSnapshots, roleRequirements, now, timeZone);
-  const preparationWork = computePreparationAlerts(snapshots, roleRequirements, now, timeZone);
+  const preparationWork = computePreparationAlerts(liveSnapshots, roleRequirements, now, timeZone);
 
   // Noms + logos des équipes pour chaque alerte (affichage « logo + nom » côté UI).
   const teamLogos = await createTeamLogoResolver(db, clubId);
   const snapshotByKey = new Map<string, PlanningEventSnapshot>();
-  for (const snapshot of [...operationalSnapshots, ...snapshots]) {
+  for (const snapshot of [...operationalSnapshots, ...liveSnapshots]) {
     snapshotByKey.set(`${snapshot.eventType}:${snapshot.eventId}`, snapshot);
   }
   const withTeamLogos = (list: DashboardAlertItem[]): DashboardAlertItem[] => list.map((item) => ({
@@ -407,14 +412,14 @@ export async function buildClubDashboardData(
   }));
 
   const publication = { draft: 0, published: 0, modified: 0, cancelled: 0 };
-  for (const snapshot of snapshots) {
+  for (const snapshot of liveSnapshots) {
     publication[snapshot.planningStatus] += 1;
   }
 
   const preparation: DashboardPreparation = {
     hasPublishedPlanning,
     publication,
-    unpublishedChanges: planningPublicationDiff(snapshots, publishedSnapshots ?? []),
+    unpublishedChanges: planningPublicationDiff(liveSnapshots, publishedForDisplay ?? []),
     missingRoles: preparationWork.missingRoles,
     alerts: withTeamLogos(preparationWork.alerts.slice(0, 30)),
   };

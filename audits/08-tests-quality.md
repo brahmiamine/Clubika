@@ -1,7 +1,7 @@
 # Audit 08 — Tests et Qualité
 
-**Repository :** `https://github.com/brahmiamine/afp-planning`  
-**Périmètre :** code sur `main` au 2026-09-10 (SHA `8e1c98f`)  
+**Repository :** `https://github.com/brahmiamine/Clubika`
+**Périmètre :** code sur `main` au 2026-09-10 (SHA `8e1c98f`)
 **Méthode :** inventaire 185 fichiers `*.test.*` + 5 E2E + exécution réelle des commandes + lecture CI GitHub.
 
 **Correction majeure vs audit 08 précédent :** la CI n’est **pas** verte. L’affirmation « CI 88 / confiance 7/10 » est **fausse** sur `main` actuel.
@@ -27,7 +27,7 @@
 
 ## 1. Score et confiance production
 
-**Note : 48 / 100**  
+**Note : 48 / 100**
 **Confiance actuelle avant mise en production : 4 / 10**
 
 Justification confiance : le corpus de tests est **riche** (publication, chat socket, isolation club) mais **main ne passe aucun job CI**. Un merge demain avec CI verte est impossible tant que lint/type-check/test/e2e/build sont rouges. La pyramide existe ; la porte CI est ouverte en apparence (jobs required inconnus côté GitHub) et **échoue** en pratique.
@@ -62,9 +62,9 @@ Date : 2026-09-10, workspace Cloud Agent.
 | CI GitHub `main` run `34512699676` (push audit 00) | **lint, type-check, build, test, e2e = failure**. Test job : **76 files failed**. E2E : `Contexte club manquant`. Test : même erreur + `ER_NO_REFERENCED_ROW_2` FK sessions + `ER_DUP_ENTRY` `icalToken`. |
 
 Classification des échecs :
-- **Bug produit** : `json-migrator.ts:453` ALS au bootstrap (FUNC-001 / DB-001) — casse CI test+e2e.  
-- **Bug produit TS** : login `matchedUser` (#347) ; import inutilisé.  
-- **Test / tooling** : `@types/jsdom` manquant ; fixtures FK 0019 ; lint budget 99.  
+- **Bug produit** : `json-migrator.ts:453` ALS au bootstrap (FUNC-001 / DB-001) — casse CI test+e2e.
+- **Bug produit TS** : login `matchedUser` (#347) ; import inutilisé.
+- **Test / tooling** : `@types/jsdom` manquant ; fixtures FK 0019 ; lint budget 99.
 - **Environnement local** : 68 skips sans DB — **normal**.
 
 ---
@@ -145,12 +145,12 @@ Corrélation 02 : 0 IDOR confirmé sans test = pas de P0 sécu ici ; **TEST-001*
 
 ## 7. Qualité des tests, coverage, skips, TypeScript
 
-- `toBeDefined`/`toBeTruthy` : 44 hits / 16 fichiers — mixte.  
-- `vi.mock` : 161 / 45 fichiers.  
-- Skips durs : 0. Conditionnels DB : fail-closed en CI via `REQUIRE_DB_TESTS=1`.  
-- Coverage code : **non mesurée / non gated**.  
-- `as any` app : 0 ; `@ts-ignore` : 0 ; `: any` : ~9 ; `as unknown as` : ~44.  
-- God files : `ChatConversation.tsx` ~1530, `scraper.js` 1309, `chat/service.ts` ~1019, `json-migrator.ts` ~734, `published-planning.ts` ~752.  
+- `toBeDefined`/`toBeTruthy` : 44 hits / 16 fichiers — mixte.
+- `vi.mock` : 161 / 45 fichiers.
+- Skips durs : 0. Conditionnels DB : fail-closed en CI via `REQUIRE_DB_TESTS=1`.
+- Coverage code : **non mesurée / non gated**.
+- `as any` app : 0 ; `@ts-ignore` : 0 ; `: any` : ~9 ; `as unknown as` : ~44.
+- God files : `ChatConversation.tsx` ~1530, `scraper.js` 1309, `chat/service.ts` ~1019, `json-migrator.ts` ~734, `published-planning.ts` ~752.
 - Lint budget 99 **dépassé** (106) — la porte qualité s’est refermée.
 
 ---
@@ -173,20 +173,20 @@ Protection de branche GitHub : **non déterminable** dans le repo (paramètre fo
 
 Exemples concrets (pas génériques) :
 
-1. **Parser SportCorico prod** : tests verts sur `sportcorico-parser.dom.js` pendant que `scraper.js` ignore `categorie` (SCRAPE-001).  
-2. **Révocation invitation UI** : DELETE testé avec `rawToken`, UI envoie le hash (FUNC-002).  
-3. **`PUT /api/matches/[id]` indispo** : validation testée seulement via `saveRoleAssignments`.  
-4. **Chat HTTP leak Club B** : pas de `route.test.ts` rooms/messages.  
-5. **Push après logout** : routes push non testées.  
-6. **`POST publication-all` en dirigeant** : 403 non asserté.  
-7. **Publish avec blockers** : helpers unitaires, pas le POST API.  
-8. **Deux admins concurrent publish** : pas de test.  
-9. **Export JSON Club B avec session A**.  
-10. **Plateforme clubs CRUD**.  
-11. **DnD préparation** (TESTING.md le note).  
-12. **Login UI club selector** (API #347 testée, pas le form).  
-13. **Overflow 320px / dialogs / chat mobile**.  
-14. **Jusqu’à 99 warnings ESLint** — et **aujourd’hui 106 font déjà échouer**.  
+1. **Parser SportCorico prod** : tests verts sur `sportcorico-parser.dom.js` pendant que `scraper.js` ignore `categorie` (SCRAPE-001).
+2. **Révocation invitation UI** : DELETE testé avec `rawToken`, UI envoie le hash (FUNC-002).
+3. **`PUT /api/matches/[id]` indispo** : validation testée seulement via `saveRoleAssignments`.
+4. **Chat HTTP leak Club B** : pas de `route.test.ts` rooms/messages.
+5. **Push après logout** : routes push non testées.
+6. **`POST publication-all` en dirigeant** : 403 non asserté.
+7. **Publish avec blockers** : helpers unitaires, pas le POST API.
+8. **Deux admins concurrent publish** : pas de test.
+9. **Export JSON Club B avec session A**.
+10. **Plateforme clubs CRUD**.
+11. **DnD préparation** (TESTING.md le note).
+12. **Login UI club selector** (API #347 testée, pas le form).
+13. **Overflow 320px / dialogs / chat mobile**.
+14. **Jusqu’à 99 warnings ESLint** — et **aujourd’hui 106 font déjà échouer**.
 15. **Chute de coverage statements** — aucun gate.
 
 **Aujourd’hui la CI détecte** (bruyamment) le bootstrap ALS et le budget lint — mais **en rouge**, donc elle ne sert plus de filet de merge.
@@ -218,7 +218,7 @@ Exemples concrets (pas génériques) :
 ## 10. Findings
 
 ### TEST-001 — P0 — CI `main` entièrement rouge
-Run `34512699676` : 5/5 jobs failed. **CI trompeuse au sens inverse** : on ne peut plus s’appuyer sur un vert pour merger, et l’historique récent (plusieurs pushes docs) est rouge depuis les PR #373/#374.  
+Run `34512699676` : 5/5 jobs failed. **CI trompeuse au sens inverse** : on ne peut plus s’appuyer sur un vert pour merger, et l’historique récent (plusieurs pushes docs) est rouge depuis les PR #373/#374.
 **Cause :** cumul FUNC-001 + lint 106 + TS login/jsdom + FK fixtures.
 
 ### TEST-002 — P0 — Bootstrap JSON + ALS casse la suite DB/E2E
@@ -252,27 +252,27 @@ Liste `pnpm routes:coverage`.
 ## 11. Stratégie et plan
 
 **Pyramide adaptée :**
-1. Unit parser **unique** + règles publication/validation (rapide).  
-2. Integration DB avec `runWithClubId` **systématique** + factories FK-safe.  
-3. API critiques : auth, publication-all, invitations contrat UI, chat HTTP, push.  
+1. Unit parser **unique** + règles publication/validation (rapide).
+2. Integration DB avec `runWithClubId` **systématique** + factories FK-safe.
+3. API critiques : auth, publication-all, invitations contrat UI, chat HTTP, push.
 4. E2E : 5 journeys actuels **plus** invitation et login UI — pas de Playwright pour tout.
 
 **Règle future :** bug → test rouge → fix → vert → non-régression. **Interdite :** tester un contrat (rawToken) différent de l’UI (hash).
 
 **Remédiation priorisée :**
-1. Fix `migrateJsonData` club explicite (débloque test+e2e).  
-2. Fix 4 erreurs tsc + 7 warnings lint (revenir ≤99) **ou** relever le seuil **en connaissance de cause**.  
-3. Factories sessions après insert user.  
-4. Tests TEST-003 à TEST-007.  
+1. Fix `migrateJsonData` club explicite (débloque test+e2e).
+2. Fix 4 erreurs tsc + 7 warnings lint (revenir ≤99) **ou** relever le seuil **en connaissance de cause**.
+3. Factories sessions après insert user.
+4. Tests TEST-003 à TEST-007.
 5. Brancher parser unique (qualité scrape).
 
 ---
 
 ## 12. Definition of Done
 
-- [x] Matrice domaines complète  
-- [x] 15 tests manquants triés par risque + niveau  
-- [x] « Ce que la CI ne détecterait pas » avec exemples concrets  
+- [x] Matrice domaines complète
+- [x] 15 tests manquants triés par risque + niveau
+- [x] « Ce que la CI ne détecterait pas » avec exemples concrets
 - [x] Commandes exécutées citées avec **résultats réels** (pas estimés)
 
 **Pyramide :** saine sur le papier, **hors service** tant que `main` est rouge.

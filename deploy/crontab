@@ -1,0 +1,11 @@
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Relances planning + retry notifications — toutes les heures à :15
+15 * * * * __DEPLOY_DIR__/scripts/cron-hit.sh planning-reminders >/dev/null
+
+# Scraper SportCorico — matin, midi, soir (Europe/Paris via TZ du serveur)
+0 7,12,18 * * * __DEPLOY_DIR__/scripts/cron-hit.sh scraper >/dev/null
+
+# Dump MariaDB quotidien à 03:20
+20 3 * * * __DEPLOY_DIR__/scripts/backup-mariadb.sh >/dev/null

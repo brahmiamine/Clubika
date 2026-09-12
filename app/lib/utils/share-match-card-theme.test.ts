@@ -33,8 +33,8 @@ describe('share-match-card-theme', () => {
   it('priorise le lieu et les officiels du club', () => {
     const facts = collectShareCardFacts(match, {
       id: '1',
-      arbitreTouche: [{ nom: 'Léa' }],
-      contactEncadrants: [{ nom: 'Marc' }],
+      arbitreTouche: [{ nom: 'Léa', numero: '' }],
+      contactEncadrants: [{ nom: 'Marc', numero: '' }],
     }, 'SP');
 
     expect(facts[0]).toEqual({ label: 'Lieu', value: 'Jean Bouin\nTaverny' });

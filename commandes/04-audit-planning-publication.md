@@ -1,8 +1,8 @@
 # Commande — Audit Planning et Publication
 
-Réalise un **audit complet et approfondi du planning, des affectations et de la publication** du projet **AFP Planning** à partir du code réel présent sur `main`.
+Réalise un **audit complet et approfondi du planning, des affectations et de la publication** du projet **Clubika** à partir du code réel présent sur `main`.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 Si `/audits/00-global-cartography.md` et `/audits/01-functional-business-rules.md` existent, utilise-les comme base de départ mais revérifie toute règle de publication ici : c'est le domaine le plus sensible fonctionnellement, aucune affirmation ne doit reposer uniquement sur un audit précédent.
 

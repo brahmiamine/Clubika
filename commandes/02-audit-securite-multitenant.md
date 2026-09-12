@@ -1,8 +1,8 @@
 # Commande — Audit sécurité et Multi-Tenant
 
-Réalise un **audit complet de sécurité et d'isolation Multi-Tenant** du projet **AFP Planning** à partir du code réel présent sur `main`, au niveau d'exigence attendu avant une mise en production réelle exposée à Internet.
+Réalise un **audit complet de sécurité et d'isolation Multi-Tenant** du projet **Clubika** à partir du code réel présent sur `main`, au niveau d'exigence attendu avant une mise en production réelle exposée à Internet.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 Si `/audits/00-global-cartography.md` existe, réutilise l'inventaire des routes/API/entités comme point de départ, mais revérifie toi-même chaque contrôle d'accès : ne fais confiance à aucun résumé précédent pour les affirmations de sécurité.
 

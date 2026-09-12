@@ -1,8 +1,8 @@
 # Audit 01 — Règles métier fonctionnelles
 
-**Repository :** `https://github.com/brahmiamine/afp-planning`  
-**Périmètre :** code sur `main` au 2026-09-10 (checkout `8e1c98f`)  
-**Méthode :** revue statique exhaustive + recoupement tests + exécution locale `pnpm test` / `pnpm lint` / `pnpm type-check` (sans MariaDB locale). Les workflows UI n’ont pas été rejoués dans un navigateur.  
+**Repository :** `https://github.com/brahmiamine/Clubika`
+**Périmètre :** code sur `main` au 2026-09-10 (checkout `8e1c98f`)
+**Méthode :** revue statique exhaustive + recoupement tests + exécution locale `pnpm test` / `pnpm lint` / `pnpm type-check` (sans MariaDB locale). Les workflows UI n’ont pas été rejoués dans un navigateur.
 **Relation avec la version précédente :** ce rapport **ne recopie pas** l’audit 01 antérieur. Plusieurs findings P1 de 2026-09-10 sont **obsolètes** (#335 logos AFP, #336 notifications scrape). Un P0 réel a été identifié (bootstrap DB). Toute affirmation structurante cite `fichier:ligne`.
 
 ---
@@ -130,23 +130,23 @@ sequenceDiagram
 
 ### 5.1 Création et configuration d’un club
 
-**Étapes :** `POST /api/plateforme/clubs` (`plateforme/clubs/route.ts:70-132`) → tenant + flags par défaut (`settings.ts:50-66`) → `POST .../admins` crée un admin `planningFunctions: []` (`admins/route.ts:88-100`). Config scraping (`matchesUrlKey` / `scraperClubName`) **uniquement plateforme** (`plateforme/clubs/[id]/route.ts:75-109`) ; l’admin club ne peut pas les modifier (`settings/route.ts:104-105`).  
+**Étapes :** `POST /api/plateforme/clubs` (`plateforme/clubs/route.ts:70-132`) → tenant + flags par défaut (`settings.ts:50-66`) → `POST .../admins` crée un admin `planningFunctions: []` (`admins/route.ts:88-100`). Config scraping (`matchesUrlKey` / `scraperClubName`) **uniquement plateforme** (`plateforme/clubs/[id]/route.ts:75-109`) ; l’admin club ne peut pas les modifier (`settings/route.ts:104-105`).
 **Statut :** complet. Club peut exister sans admin (aucune contrainte « premier admin obligatoire »).
 
 ### 5.2 Invitation, inscription, rattachement
 
-**Étapes :** admin `POST /api/invitations` stocke `id: hashInvitationToken(rawToken)` (`invitations/route.ts:161`) et renvoie `url: /inscription/${rawToken}` (`:182`). Accept public `POST .../accept` : lock pessimiste, one-shot `usedAt` (`accept/route.ts:33-127`). Profils `@sans-acces.local` (`placeholder-account.ts:4-16`, migration 0012).  
-**Rupture :** révocation — voir FUNC-002.  
+**Étapes :** admin `POST /api/invitations` stocke `id: hashInvitationToken(rawToken)` (`invitations/route.ts:161`) et renvoie `url: /inscription/${rawToken}` (`:182`). Accept public `POST .../accept` : lock pessimiste, one-shot `usedAt` (`accept/route.ts:33-127`). Profils `@sans-acces.local` (`placeholder-account.ts:4-16`, migration 0012).
+**Rupture :** révocation — voir FUNC-002.
 **Statut :** partiel.
 
 ### 5.3 Scraping SportCorico et impact fonctionnel
 
-`run-scraper.ts` → identité club (`assertScrapedClubIdentity`, `:62-78`) → `syncOfficialMatchesData`. Nouveau match → `planningStatus:'draft'` (`json-migrator.ts:336-338`). Changement horaire publié → `modified` + notif admin (`match-sync-notifications.ts`, #336). Disparition confirmée 2 fois → cancel (`json-migrator.ts:405-417`). Affectations préservées (spread `currentExtras`).  
+`run-scraper.ts` → identité club (`assertScrapedClubIdentity`, `:62-78`) → `syncOfficialMatchesData`. Nouveau match → `planningStatus:'draft'` (`json-migrator.ts:336-338`). Changement horaire publié → `modified` + notif admin (`match-sync-notifications.ts`, #336). Disparition confirmée 2 fois → cancel (`json-migrator.ts:405-417`). Affectations préservées (spread `currentExtras`).
 **Statut :** complet côté métier ; parser prod vs tests = audit 03.
 
 ### 5.4 Création manuelle et coexistence scrapé
 
-Officiel scrapé : DELETE interdit (`events/.../route.ts:363-367`). Amical / entraînement / plateau = tables manuelles. Fuzzy matching scrape (`match-reconciliation.ts`) peut créer un **doublon** si le slug change et le nom diverge.  
+Officiel scrapé : DELETE interdit (`events/.../route.ts:363-367`). Amical / entraînement / plateau = tables manuelles. Fuzzy matching scrape (`match-reconciliation.ts`) peut créer un **doublon** si le slug change et le nom diverge.
 **Statut :** géré avec risque de doublon (FUNC-008).
 
 ### 5.5 Préparation des matchs
@@ -155,8 +155,8 @@ Officiel scrapé : DELETE interdit (`events/.../route.ts:363-367`). Amical / ent
 
 ### 5.6 Affectation arbitre / encadrant / accompagnateur
 
-Admin only. `findAssignablePerson` : même club + `active` + fonction (`person-link.ts:46-74`). Multi-fonctions **autorisées** (`personal-planning.ts:321-323`).  
-`saveRoleAssignments` valide si `assignmentValidation` (`event-store.ts:461-468`, #337).  
+Admin only. `findAssignablePerson` : même club + `active` + fonction (`person-link.ts:46-74`). Multi-fonctions **autorisées** (`personal-planning.ts:321-323`).
+`saveRoleAssignments` valide si `assignmentValidation` (`event-store.ts:461-468`, #337).
 `PUT /api/matches/[id]` **ne valide pas** (`matches/[id]/route.ts:65-97`) — FUNC-003.
 
 ### 5.7 Contrôle indisponibilités et conflits
@@ -165,7 +165,7 @@ Admin only. `findAssignablePerson` : même club + `active` + fonction (`person-l
 
 ### 5.8 Publication du planning
 
-Uniquement globale `publishGlobalPlanning` (`global-publication.ts:218-438`). Transaction snapshot + statuts + outbox. Blockers : orphelins/inactifs **toujours** ; staffing si `publicationReadiness` ; indispos/conflits si `assignmentValidation`. 409 si blockers (`publication-all/route.ts:35-36`).  
+Uniquement globale `publishGlobalPlanning` (`global-publication.ts:218-438`). Transaction snapshot + statuts + outbox. Blockers : orphelins/inactifs **toujours** ; staffing si `publicationReadiness` ; indispos/conflits si `assignmentValidation`. 409 si blockers (`publication-all/route.ts:35-36`).
 **Non contournable par payload** si flags ON. **Contournable** en désactivant les flags (admin settings) — décision produit.
 
 ### 5.9 Visibilité `/mon-planning/**`
@@ -234,84 +234,84 @@ Preuve UI : cartes affichent les rôles manquants si flags ON (`EventCardDrag.ts
 
 ### FUNC-001 — P0 — Bootstrap JSON exige un ALS club inexistant
 
-- **Domaine :** utilisateurs / exploitation  
-- **Observation :** `migrateJsonData` appelle `getCurrentClubId()` (`json-migrator.ts:453`) depuis `ensureJsonDataMigrated` (`:682-693`), lui-même appelé par **toute** première `getDb()` (`db/index.ts:18-19`) **sans** `setCurrentClubId`. Sur une base où `json_migrated_v1` n’est pas encore posé (CI, Docker neuf, premier boot), login / invitations / E2E lèvent `Contexte club manquant`.  
-- **Preuve dynamique :** CI `main` run `34512699676` — jobs `test` (76 fichiers failed) et `e2e` : même erreur. Local `pnpm test` sans DB : 11 failed / 666 passed / 286 skipped, dont `published-planning.test.ts` et `personal-planning.publication.test.ts` (ALS manquant).  
-- **Impact :** workflow principal (login) impossible sur environnement neuf ; CI rouge permanente ; flakiness selon l’ordre des tests (le premier `getDb()` avec ALS « gagne » le bootstrap).  
-- **Cause :** issue #333 a retiré le fallback `APP_CLUB_ID` mais le migrator JSON one-shot n’a pas reçu de `clubId` explicite.  
-- **Correction :** utiliser `APP_CLUB_ID` **uniquement** pour cette migration one-shot, ou itérer les tenants, ou skipper si aucune portée. Ne pas réintroduire de fallback silencieux sur les requêtes métier.  
+- **Domaine :** utilisateurs / exploitation
+- **Observation :** `migrateJsonData` appelle `getCurrentClubId()` (`json-migrator.ts:453`) depuis `ensureJsonDataMigrated` (`:682-693`), lui-même appelé par **toute** première `getDb()` (`db/index.ts:18-19`) **sans** `setCurrentClubId`. Sur une base où `json_migrated_v1` n’est pas encore posé (CI, Docker neuf, premier boot), login / invitations / E2E lèvent `Contexte club manquant`.
+- **Preuve dynamique :** CI `main` run `34512699676` — jobs `test` (76 fichiers failed) et `e2e` : même erreur. Local `pnpm test` sans DB : 11 failed / 666 passed / 286 skipped, dont `published-planning.test.ts` et `personal-planning.publication.test.ts` (ALS manquant).
+- **Impact :** workflow principal (login) impossible sur environnement neuf ; CI rouge permanente ; flakiness selon l’ordre des tests (le premier `getDb()` avec ALS « gagne » le bootstrap).
+- **Cause :** issue #333 a retiré le fallback `APP_CLUB_ID` mais le migrator JSON one-shot n’a pas reçu de `clubId` explicite.
+- **Correction :** utiliser `APP_CLUB_ID` **uniquement** pour cette migration one-shot, ou itérer les tenants, ou skipper si aucune portée. Ne pas réintroduire de fallback silencieux sur les requêtes métier.
 - **Statut :** 🔴 Confirmé
 
 ### FUNC-002 — P1 — Révocation d’invitation UI/API
 
-- **Domaine :** invitations  
-- **Observation :** `serializeInvitation` expose `id` = empreinte SHA-256 (`invitations/route.ts:61-63`). L’UI fait `DELETE /api/invitations/${invitation.id}` (`invitations/page.tsx:131-133,278`). `DELETE` re-hashe (`invitations/[token]/route.ts:60`) → lookup d’un hash-de-hash → 404. Les tests DELETE utilisent `rawToken` (`route.test.ts:97-100`) : **faux négatif**.  
-- **Impact :** un admin ne peut pas révoquer une invitation depuis l’écran prévu. Le lien d’inscription reste valable jusqu’à expiration / acceptation.  
-- **Cause :** issue #271 a hashé le stockage sans adapter le contrat liste → revoke.  
-- **Correction :** si le paramètre est déjà 64 hex, lookup direct ; sinon hasher. Couvrir par un test qui rejoue le contrat UI (`DELETE` avec `invitation.id`).  
-- **Statut :** 🔴 Confirmé  
+- **Domaine :** invitations
+- **Observation :** `serializeInvitation` expose `id` = empreinte SHA-256 (`invitations/route.ts:61-63`). L’UI fait `DELETE /api/invitations/${invitation.id}` (`invitations/page.tsx:131-133,278`). `DELETE` re-hashe (`invitations/[token]/route.ts:60`) → lookup d’un hash-de-hash → 404. Les tests DELETE utilisent `rawToken` (`route.test.ts:97-100`) : **faux négatif**.
+- **Impact :** un admin ne peut pas révoquer une invitation depuis l’écran prévu. Le lien d’inscription reste valable jusqu’à expiration / acceptation.
+- **Cause :** issue #271 a hashé le stockage sans adapter le contrat liste → revoke.
+- **Correction :** si le paramètre est déjà 64 hex, lookup direct ; sinon hasher. Couvrir par un test qui rejoue le contrat UI (`DELETE` avec `invitation.id`).
+- **Statut :** 🔴 Confirmé
 - **Corrélation 02 :** pas une faille de sécu, mais un écart UI/API.
 
 ### FUNC-003 — P1 — `PUT /api/matches/[id]` ignore la validation d’affectation
 
-- **Preuve :** `matches/[id]/route.ts:65-97` → `saveMatchExtrasOptimistically` (`event-store.ts:195`) sans `validateAssignmentsAgainstDatabase`. Contrasté avec `saveRoleAssignments` (`event-store.ts:461-468`).  
-- **Impact :** un admin (ou un client HTTP) peut affecter un indisponible / un conflit ; la publication le bloquera plus tard (si flag ON) ou pas (si flag OFF).  
+- **Preuve :** `matches/[id]/route.ts:65-97` → `saveMatchExtrasOptimistically` (`event-store.ts:195`) sans `validateAssignmentsAgainstDatabase`. Contrasté avec `saveRoleAssignments` (`event-store.ts:461-468`).
+- **Impact :** un admin (ou un client HTTP) peut affecter un indisponible / un conflit ; la publication le bloquera plus tard (si flag ON) ou pas (si flag OFF).
 - **Statut :** 🔴 Confirmé — candidat audit 02 (règle UI-only / API permissive).
 
 ### FUNC-004 — P1 — Flags publication rendent les minima optionnels
 
-- **Preuve :** `settings.ts:57-61` defaults true ; `collectPublicationBlockers` saute staffing si `publicationReadiness` off (`global-publication.ts:131-148`).  
-- **Impact :** un admin peut publier un match sans arbitre/encadrant/accompagnateur en décochant le flag.  
+- **Preuve :** `settings.ts:57-61` defaults true ; `collectPublicationBlockers` saute staffing si `publicationReadiness` off (`global-publication.ts:131-148`).
+- **Impact :** un admin peut publier un match sans arbitre/encadrant/accompagnateur en décochant le flag.
 - **Statut :** ⚪ Décision produit (pas un bug si c’est volontaire).
 
 ### FUNC-005 — P1 — Texte `assignmentValidation` vs comportement
 
-- **Preuve :** `feature-surfaces.ts:24-28` (« au moment de publier ») vs enforcement aussi au save (`event-store.ts:461-468`).  
+- **Preuve :** `feature-surfaces.ts:24-28` (« au moment de publier ») vs enforcement aussi au save (`event-store.ts:461-468`).
 - **Statut :** 🔴 Confirmé (doc produit / UI mensongère).
 
 ### FUNC-006 — P1 — Deux modèles de visibilité post-publication
 
-- Admin edit → republication obligatoire (`assignment-propagation.ts:8-19`). Swap approuvé → patch snapshot immédiat (`assignment-swaps/route.ts:164-177`).  
+- Admin edit → republication obligatoire (`assignment-propagation.ts:8-19`). Swap approuvé → patch snapshot immédiat (`assignment-swaps/route.ts:164-177`).
 - **Statut :** ⚪ Décision produit.
 
 ### FUNC-007 — P2 — Types `assignment-created` / `assignment-removed` morts
 
-- Documentés dans `docs/notifications-matrix.md:15-16`. `notifyAssignmentChanges` sans caller production.  
+- Documentés dans `docs/notifications-matrix.md:15-16`. `notifyAssignmentChanges` sans caller production.
 - **Statut :** 🔴 Confirmé.
 
 ### FUNC-008 — P2 — Doublon scrape si identité instable
 
-- Fuzzy score 0 si adversaire/compétition renommés sans même `sourceMatchId` (`match-reconciliation.ts`).  
+- Fuzzy score 0 si adversaire/compétition renommés sans même `sourceMatchId` (`match-reconciliation.ts`).
 - **Statut :** 🟠 Très probable — approfondi audit 03.
 
 ### FUNC-009 — P2 — Pas de statut `postponed`
 
-- Report = édition datetime ou cancel.  
+- Report = édition datetime ou cancel.
 - **Statut :** ⚪ Décision produit.
 
 ### FUNC-010 — P2 — UI refuse la republication noop, l’API l’accepte
 
-- Harmless grâce à #348 (pas de notifs).  
+- Harmless grâce à #348 (pas de notifs).
 - **Statut :** 🔴 Confirmé.
 
 ### FUNC-011 — P2 — Layout `/club` fait confiance au proxy seul
 
-- `app/club/layout.tsx` : pas de `canEdit`. Fragile si le proxy est contourné.  
+- `app/club/layout.tsx` : pas de `canEdit`. Fragile si le proxy est contourné.
 - **Statut :** 🟠 Très probable (défense UI). Corrélation 02.
 
 ### FUNC-012 — P3 — Admin sans fonction : lien Mon Planning masqué, route autorisée
 
-- `Header.tsx:107` vs `proxy.ts` vs `GET /api/me/planning` 403.  
+- `Header.tsx:107` vs `proxy.ts` vs `GET /api/me/planning` 403.
 - **Statut :** 🔴 Confirmé.
 
 ### FUNC-013 — P3 — Commentaire dupliqué migration 0020
 
-- `schema-migrations.ts:46-50` répète le paragraphe 0020.  
+- `schema-migrations.ts:46-50` répète le paragraphe 0020.
 - **Statut :** 🔴 Confirmé (dette doc, pas métier).
 
 ### FUNC-014 — P2 — Inactive au save non vérifié
 
-- `validateAssignmentSet` ne teste pas `active` ; publish si. Fenêtre de drafts sales.  
+- `validateAssignmentSet` ne teste pas `active` ; publish si. Fenêtre de drafts sales.
 - **Statut :** 🔴 Confirmé.
 
 **Obsolètes (précédent audit 01) :** notifications scrape non émises — **corrigé #336**. Logos AFP hardcodés pour matching — **corrigé #335**. Indispo non validées au save — **corrigé #337** sur `saveRoleAssignments` seulement.
@@ -322,40 +322,40 @@ Preuve UI : cartes affichent les rôles manquants si flags ON (`EventCardDrag.ts
 
 Chaque item propose des options tranchables.
 
-**D1 — Bootstrap JSON (FUNC-001)**  
-A) `APP_CLUB_ID` uniquement pour le one-shot historique.  
-B) Migrer par tenant listé dans `club_tenants`.  
-C) Abandonner l’import JSON fichiers `data/*.json` (si plus utilisé).  
+**D1 — Bootstrap JSON (FUNC-001)**
+A) `APP_CLUB_ID` uniquement pour le one-shot historique.
+B) Migrer par tenant listé dans `club_tenants`.
+C) Abandonner l’import JSON fichiers `data/*.json` (si plus utilisé).
 Implication : A/B débloquent CI et installs neuves.
 
-**D2 — Révocation invitation (FUNC-002)**  
-A) Lookup hash-or-raw côté DELETE.  
-B) Endpoint `DELETE /api/invitations` par id interne admin-only.  
-C) Renvoyer un `revokeToken` distinct.  
+**D2 — Révocation invitation (FUNC-002)**
+A) Lookup hash-or-raw côté DELETE.
+B) Endpoint `DELETE /api/invitations` par id interne admin-only.
+C) Renvoyer un `revokeToken` distinct.
 Implication : A est le patch minimal.
 
-**D3 — `assignmentValidation`**  
-A) Save **et** publish (aligner le texte, et brancher `PUT matches`).  
-B) Publish-only (retirer le gate save).  
+**D3 — `assignmentValidation`**
+A) Save **et** publish (aligner le texte, et brancher `PUT matches`).
+B) Publish-only (retirer le gate save).
 C) Toujours ON, supprimer le flag.
 
-**D4 — Minima de publication**  
-A) Flags optionnels (actuel).  
-B) Toujours exigés pour officiel/amical ; optionnels entraînement/plateau.  
+**D4 — Minima de publication**
+A) Flags optionnels (actuel).
+B) Toujours exigés pour officiel/amical ; optionnels entraînement/plateau.
 C) Soft-warn UI, jamais 409.
 
-**D5 — Post-publish assignments**  
-A) Toujours différé (actuel admin).  
-B) Toujours immédiat (comme swap).  
+**D5 — Post-publish assignments**
+A) Toujours différé (actuel admin).
+B) Toujours immédiat (comme swap).
 C) Documenter l’exception swap comme intentionnelle.
 
-**D6 — Annulation**  
-A) Flag live jusqu’à publish global (actuel).  
+**D6 — Annulation**
+A) Flag live jusqu’à publish global (actuel).
 B) Patch snapshot immédiat (comme archive).
 
-**D7 — Statut reporté**  
-A) Nouveau statut + badge.  
-B) Cancel + motif.  
+**D7 — Statut reporté**
+A) Nouveau statut + badge.
+B) Cancel + motif.
 C) Édition d’horaire seulement (actuel).
 
 ---
@@ -376,24 +376,24 @@ C) Édition d’horaire seulement (actuel).
 ## 11. Plan de remédiation
 
 **Quick wins**
-1. Patch `DELETE` invitation (D2-A) + test contrat UI.  
-2. `migrateJsonData` : club explicite (D1) — **débloque CI**.  
-3. Aligner `feature-surfaces` sur le save.  
+1. Patch `DELETE` invitation (D2-A) + test contrat UI.
+2. `migrateJsonData` : club explicite (D1) — **débloque CI**.
+3. Aligner `feature-surfaces` sur le save.
 4. Appeler `validateAssignmentsAgainstDatabase` depuis `PUT /api/matches/[id]`.
 
 **Structurel**
-1. Un seul chemin d’écriture d’affectations (`saveRoleAssignments`).  
-2. Trancher D3–D7.  
-3. Retirer ou brancher `assignment-created/removed`.  
+1. Un seul chemin d’écriture d’affectations (`saveRoleAssignments`).
+2. Trancher D3–D7.
+3. Retirer ou brancher `assignment-created/removed`.
 4. Tests E2E invitation claim + révocation.
 
 ---
 
 ## 12. Definition of Done
 
-- [x] 13 workflows reconstitués avec au moins une référence de code par étape  
-- [x] Matrice UI/API pour admin, dirigeant, fonctions, plateforme  
-- [x] Chaque décision produit a des options concrètes  
-- [x] Score justifié poste par poste  
+- [x] 13 workflows reconstitués avec au moins une référence de code par étape
+- [x] Matrice UI/API pour admin, dirigeant, fonctions, plateforme
+- [x] Chaque décision produit a des options concrètes
+- [x] Score justifié poste par poste
 
 **Exécution :** `pnpm test` local (sans MariaDB) : 5 files failed / 112 passed / 68 skipped — 11 tests failed (ALS). `pnpm lint` : 106 warnings > seuil 99. `pnpm type-check` : 4 erreurs. CI `main` rouge (lint, type-check, build, test, e2e). Détail → audit 08.

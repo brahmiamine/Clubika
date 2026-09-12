@@ -1,7 +1,7 @@
 # Audit 07 — Design, UI/UX et Responsive
 
-**Repository :** `https://github.com/brahmiamine/afp-planning`  
-**Périmètre :** code sur `main` au 2026-09-10  
+**Repository :** `https://github.com/brahmiamine/Clubika`
+**Périmètre :** code sur `main` au 2026-09-10
 **Méthode :** revue statique `globals.css`, `app/components/ui/**`, `layout/**`, 45 `page.tsx`. **Audit statique uniquement — écrans non vérifiés visuellement** : application non démarrée, Playwright non lancé pour captures (CI e2e rouge pour ALS, pas pour le layout). Pas d’axe-core dans le projet.
 
 Référentiel accessibilité : **WCAG 2.2 niveau AA**.
@@ -48,10 +48,10 @@ Overflow horizontal : **non mesuré** runtime sauf e2e existant à **390px** sur
 
 ### Tokens — `app/globals.css`
 
-- `@theme inline` mappe `--background`, `--primary`, `--primary-soft`, `--secondary-soft`, `--destructive`, radius (`:4-48`).  
-- Palettes light/dark OKLCH (`:50-123`).  
-- Mobile ≤1023px : boutons `min-height: 44px`, inputs `font-size: 16px` (`:150-166`) — **bonne base WCAG 2.5.8 / iOS zoom**.  
-- Standalone : `safe-area-inset-top` (`:168-172`).  
+- `@theme inline` mappe `--background`, `--primary`, `--primary-soft`, `--secondary-soft`, `--destructive`, radius (`:4-48`).
+- Palettes light/dark OKLCH (`:50-123`).
+- Mobile ≤1023px : boutons `min-height: 44px`, inputs `font-size: 16px` (`:150-166`) — **bonne base WCAG 2.5.8 / iOS zoom**.
+- Standalone : `safe-area-inset-top` (`:168-172`).
 - `body` `min-width: 320px` + `overflow-x: hidden` (`:137-138`) — **masque** l’overflow plutôt que de le corriger.
 
 ### UI (`app/components/ui/**` — 35 fichiers)
@@ -104,10 +104,10 @@ Contraste WCAG **non mesuré** (pas de rendu). Plusieurs paires club claire/fonc
 | `/plateforme` | 1+login | DashboardShell / custom | distinct (OK) |
 
 **Réimplémentations :**
-- `club/page.tsx:102-122` header custom  
-- `club/configuration/page.tsx:32` `<h1>` brut  
-- `NotificationsView` / `ChatView` : pas de `PageHeader`  
-- `UsersManagementTab` : SectionCard comme titre de page  
+- `club/page.tsx:102-122` header custom
+- `club/configuration/page.tsx:32` `<h1>` brut
+- `NotificationsView` / `ChatView` : pas de `PageHeader`
+- `UsersManagementTab` : SectionCard comme titre de page
 
 ---
 
@@ -120,10 +120,10 @@ Sidebar `lg:fixed` 256px (`DashboardShell.tsx:140`). Active state + logo. Chat u
 Breakpoint `lg` : passage drawer + MobileTabBar. Risque de **double chrome** (drawer hamburger + tab bar). Non vérifié visuellement.
 
 ### Mobile (430–320) — priorité
-- Planning #341 : `PlanningPreparationView.tsx:304` `overflow-x-hidden` ; grille 1 col ; e2e **390px only** sur `/club/planning` + `/controle`.  
-- `EventCardDrag` icônes `h-7 w-7` / remove `h-3.5` (`:492,603-620`) — sous 44px, classes peuvent gagner sur le media globals.  
-- AlertDialog `max-w-lg` **sans** `calc(100%-2rem)` (`alert-dialog.tsx:39`) vs Dialog (`dialog.tsx:63`) — risque clip 320px (UI-001, WCAG 1.4.10).  
-- Chat composer `text-sm` (`ChatConversation.tsx:1464`) vs base 16px — **zoom iOS probable** (UI-002).  
+- Planning #341 : `PlanningPreparationView.tsx:304` `overflow-x-hidden` ; grille 1 col ; e2e **390px only** sur `/club/planning` + `/controle`.
+- `EventCardDrag` icônes `h-7 w-7` / remove `h-3.5` (`:492,603-620`) — sous 44px, classes peuvent gagner sur le media globals.
+- AlertDialog `max-w-lg` **sans** `calc(100%-2rem)` (`alert-dialog.tsx:39`) vs Dialog (`dialog.tsx:63`) — risque clip 320px (UI-001, WCAG 1.4.10).
+- Chat composer `text-sm` (`ChatConversation.tsx:1464`) vs base 16px — **zoom iOS probable** (UI-002).
 - `overflow-x: hidden` body : overflow **non mesuré** sur les autres pages.
 
 Viewports 640/375/320 : **non exercés**.
@@ -132,7 +132,7 @@ Viewports 640/375/320 : **non exercés**.
 
 ## 6. Navigation, listes, formulaires, dialogs
 
-**MobileTabBar :** 4 items admin / 5 personnel (`MobileTabBar.tsx:34-47`), `z-50`, safe-area, badge chat #343 (test unitaire).  
+**MobileTabBar :** 4 items admin / 5 personnel (`MobileTabBar.tsx:34-47`), `z-50`, safe-area, badge chat #343 (test unitaire).
 **Header personnel :** icônes `h-9 w-9` (36px desktop), chat **sans** badge unread (`Header.tsx:273`).
 
 **Listes :** DataList (users, archives, invitations, indispos, contrôle, historique) = bon pattern mobile stack (`page-primitives.tsx:150`). Notifications = cards. Pas de `<table>` interactive (export print only).
@@ -184,32 +184,32 @@ Pas de skeletons (spinner remplace le contenu → saut de layout). `next/font` G
 ## 10. Findings
 
 ### P1
-- **UI-001** AlertDialog overflow 320px — `alert-dialog.tsx:39` — WCAG 1.4.10  
-- **UI-002** Chat composer `text-sm` — `ChatConversation.tsx:1464` — 1.4.4  
-- **UI-003** StatusPill hors tokens — `page-primitives.tsx:211-213` — 1.4.3  
-- **UI-004** Icon-only sans `aria-label` (EventCardDrag `:620`, invitations copy `:70`, CRUD config) — 4.1.2  
-- **UI-005** Cible minuscule remove badge — `EventCardDrag.tsx:492` — 2.5.8  
-- **UI-006** Dual nav Header vs DashboardShell + unread chat seulement tab bar — 3.2.3  
+- **UI-001** AlertDialog overflow 320px — `alert-dialog.tsx:39` — WCAG 1.4.10
+- **UI-002** Chat composer `text-sm` — `ChatConversation.tsx:1464` — 1.4.4
+- **UI-003** StatusPill hors tokens — `page-primitives.tsx:211-213` — 1.4.3
+- **UI-004** Icon-only sans `aria-label` (EventCardDrag `:620`, invitations copy `:70`, CRUD config) — 4.1.2
+- **UI-005** Cible minuscule remove badge — `EventCardDrag.tsx:492` — 2.5.8
+- **UI-006** Dual nav Header vs DashboardShell + unread chat seulement tab bar — 3.2.3
 
 ### P2
-- **UI-007** Pages hors PageHeader (club home, configuration)  
-- **UI-008** `bg-white` logos vs dark mode  
-- **UI-009** object-cover vs contain  
-- **UI-010** EventCalendar couleurs type hardcodées  
-- **UI-011** Pas de skeletons  
-- **UI-012** Toolbar chat hover-only — 2.1.1  
-- **UI-013** Sidebar sans badge chat  
-- **UI-014** `--destructive-foreground` absent  
-- **UI-015** Dialog close « Close »  
-- **UI-016** e2e overflow 390px only, pas 320, pas dialogs/chat  
+- **UI-007** Pages hors PageHeader (club home, configuration)
+- **UI-008** `bg-white` logos vs dark mode
+- **UI-009** object-cover vs contain
+- **UI-010** EventCalendar couleurs type hardcodées
+- **UI-011** Pas de skeletons
+- **UI-012** Toolbar chat hover-only — 2.1.1
+- **UI-013** Sidebar sans badge chat
+- **UI-014** `--destructive-foreground` absent
+- **UI-015** Dialog close « Close »
+- **UI-016** e2e overflow 390px only, pas 320, pas dialogs/chat
 
 ### P3
-- **UI-017** Landing DS parallèle  
-- **UI-018** PWA background toujours blanc  
-- **UI-019** plateforme/login ≠ AuthShell  
-- **UI-020** Export iCal hors layout partagé  
-- **UI-021** Pas d’axe-core  
-- **UI-022** LoadingSpinner non annoncé  
+- **UI-017** Landing DS parallèle
+- **UI-018** PWA background toujours blanc
+- **UI-019** plateforme/login ≠ AuthShell
+- **UI-020** Export iCal hors layout partagé
+- **UI-021** Pas d’axe-core
+- **UI-022** LoadingSpinner non annoncé
 
 **Non-findings :** 44px globals mobile ; DataList stack ; export PDF layout #317 ; badge chat testé #343.
 
@@ -225,9 +225,9 @@ Pas de skeletons (spinner remplace le contenu → saut de layout). `next/font` G
 
 ## 12. Definition of Done
 
-- [x] Routes principales listées ; preuve visuelle **explicitement impossible** (app non rendue) sauf e2e 390px planning  
-- [x] Findings a11y citent WCAG 2.2  
-- [x] Overflow : mesuré en e2e à 390px planning ; **non mesuré** ailleurs  
+- [x] Routes principales listées ; preuve visuelle **explicitement impossible** (app non rendue) sauf e2e 390px planning
+- [x] Findings a11y citent WCAG 2.2
+- [x] Overflow : mesuré en e2e à 390px planning ; **non mesuré** ailleurs
 - [ ] Captures `/audits/assets/design/**` — **non produites** (contrainte runtime)
 
 **Cause racine UI :** deux chrome (DashboardShell vs Header) + tokens contourés pour les statuts + media-query 44px combattue par utility classes denses du planning.

@@ -1,8 +1,8 @@
 # Commande — Audit global et cartographie
 
-Analyse en profondeur le projet **AFP Planning** à partir du code réel présent sur `main`.
+Analyse en profondeur le projet **Clubika** à partir du code réel présent sur `main`.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 Stack de référence à valider dans le code (ne présume rien, vérifie) : Next.js (App Router), TypeScript, TypeORM, MariaDB, Socket.IO, Web Push/PWA, Vitest, Playwright, pnpm, GitHub Actions.
 

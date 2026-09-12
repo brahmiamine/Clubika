@@ -1,6 +1,10 @@
 # Relances automatiques du planning
 
-Les relances automatiques des affectations en attente sont déclenchées par GitHub Actions via le workflow `.github/workflows/planning-reminders.yml`.
+Les relances automatiques des affectations en attente sont déclenchées soit par le
+**cron du VPS** (`deploy/scripts/install-cron.sh`, recommandé en production), soit par
+GitHub Actions via le workflow `.github/workflows/planning-reminders.yml`.
+
+N'activez **pas** les deux en même temps : chaque exécution enverrait les relances en double.
 
 Le workflow peut s'exécuter toutes les heures, à la minute 15, et appelle :
 
@@ -29,7 +33,7 @@ Dans GitHub : **Repository → Settings → Secrets and variables → Actions �
 
 Créer exactement ces deux secrets :
 
-### `AFP_PLANNING_BASE_URL`
+### `CLUBIKA_BASE_URL`
 
 URL publique HTTPS de l'application déployée, sans chemin d'API.
 
@@ -41,12 +45,12 @@ https://planning.exemple.fr
 
 Le workflow supprime automatiquement un éventuel `/` final avant d'ajouter `/api/cron/planning-reminders`.
 
-### `AFP_PLANNING_CRON_SECRET`
+### `CLUBIKA_CRON_SECRET`
 
 Copie exacte de la valeur `CRON_SECRET` configurée sur l'application déployée :
 
 ```text
-AFP_PLANNING_CRON_SECRET == CRON_SECRET (application déployée)
+CLUBIKA_CRON_SECRET == CRON_SECRET (application déployée)
 ```
 
 Le secret n'est jamais placé dans l'URL ni affiché explicitement dans les logs.
@@ -73,7 +77,7 @@ Seulement après le succès du test manuel, ouvrir :
 Créer la variable :
 
 ```text
-AFP_PLANNING_SCHEDULE_ENABLED=true
+CLUBIKA_SCHEDULE_ENABLED=true
 ```
 
 À partir de ce moment, le job planifié s'exécute toutes les heures à la minute 15.
@@ -82,8 +86,8 @@ Pour suspendre les relances planifiées sans modifier le workflow, supprimer cet
 
 ## Sécurité
 
-- Ne jamais mettre `CRON_SECRET` ou `AFP_PLANNING_CRON_SECRET` dans un fichier versionné, une issue ou un commentaire de PR.
-- Utiliser uniquement l'URL HTTPS publique dans `AFP_PLANNING_BASE_URL`.
+- Ne jamais mettre `CRON_SECRET` ou `CLUBIKA_CRON_SECRET` dans un fichier versionné, une issue ou un commentaire de PR.
+- Utiliser uniquement l'URL HTTPS publique dans `CLUBIKA_BASE_URL`.
 - Faire tourner le secret immédiatement s'il est exposé.
 - Le endpoint cron est appelé avec `Authorization: Bearer ...`; le secret n'est pas placé dans l'URL.
-- `AFP_PLANNING_SCHEDULE_ENABLED` n'est pas un secret : il ne contient aucune donnée sensible et sert uniquement d'interrupteur.
+- `CLUBIKA_SCHEDULE_ENABLED` n'est pas un secret : il ne contient aucune donnée sensible et sert uniquement d'interrupteur.

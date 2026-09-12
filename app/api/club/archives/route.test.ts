@@ -6,6 +6,7 @@ import { isDbAvailable } from '@/lib/db/test-utils';
 import { createTestUserAndSession } from '@/lib/auth/test-helpers';
 import type { Match, MatchesData } from '@/types/match';
 import { syncOfficialMatchesData } from '@/lib/db/json-migrator';
+import { updateAppSettings } from '@/lib/settings-store';
 import { GET as getArchives } from './route';
 import { GET as getActiveMatches } from '@/app/api/matches/route';
 
@@ -60,6 +61,10 @@ describe.skipIf(!dbAvailable)('GET /api/club/archives (issue #319)', () => {
     const otherAdmin = await createTestUserAndSession('admin', { clubId: otherClubId });
     const dirigeant = await createTestUserAndSession('dirigeant', { clubId });
     const db = await getDb();
+    await Promise.all([clubId, otherClubId].map((id) => updateAppSettings(db, id, (current) => ({
+      ...current,
+      features: { ...current.features, officialMatchesCurrentWeekendOnly: false },
+    }))));
 
     const keepId = `keep-${randomBytes(4).toString('hex')}`;
     const goneId = `gone-${randomBytes(4).toString('hex')}`;

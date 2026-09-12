@@ -12,7 +12,7 @@ pnpm run e2e        # exécute la suite Playwright (démarre le serveur applicat
 ```
 
 `pnpm run e2e` a besoin d'une MariaDB joignable avec les identifiants par défaut
-(`afp_planning`/`afp_user`/`afp_password`, port 3306, comme `pnpm test`) et des navigateurs
+(`clubika`/`clubika_user`/`clubika_password`, port 3306, comme `pnpm test`) et des navigateurs
 Playwright installés (`pnpm exec playwright install --with-deps chromium`, déjà fait par le
 `postinstall` du dépôt). Le serveur (`tsx server.ts`, port 3100) est démarré et arrêté
 automatiquement par `playwright.config.ts` — inutile de le lancer à la main. Pour cibler un
@@ -32,7 +32,7 @@ issue #286), et `pnpm run e2e` (Playwright, contre son propre service MariaDB). 
 
 Les fichiers `*.test.ts` qui appellent `getDb()` sont des tests d'intégration contre une
 vraie MariaDB — jamais de mock de la base. Ils utilisent les mêmes identifiants que
-`start.sh` (`afp_planning`/`afp_user`/`afp_password`, port 3306), se sautent
+`start.sh` (`clubika`/`clubika_user`/`clubika_password`, port 3306), se sautent
 automatiquement (`describe.skipIf(!(await isDbAvailable()))`) si aucune base n'est
 joignable en local, et la CI leur fournit un service `mariadb`. En CI,
 `REQUIRE_DB_TESTS=1` transforme cette indisponibilité en échec (issue #286).

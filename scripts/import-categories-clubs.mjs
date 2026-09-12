@@ -60,9 +60,9 @@ async function main() {
   const dbConfig = {
     host: getEnv('DB_HOST', '127.0.0.1'),
     port: Number.parseInt(getEnv('DB_PORT', '3306'), 10),
-    user: getEnv('DB_USER', 'afp_user'),
-    password: getEnv('DB_PASSWORD', 'afp_password'),
-    database: getEnv('DB_NAME', 'afp_planning'),
+    user: getEnv('DB_USER', 'clubika_user'),
+    password: getEnv('DB_PASSWORD', 'clubika_password'),
+    database: getEnv('DB_NAME', 'clubika'),
     charset: 'utf8mb4',
   };
 

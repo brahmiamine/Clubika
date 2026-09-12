@@ -16,6 +16,8 @@ import { hasPlanningFunction } from '@/lib/auth/roles';
 import { listPublishedPlanningEventSnapshots } from './published-planning';
 import { hydratePlanningAssignmentStates } from './assignment-state-overlay';
 import { createTeamLogoResolver } from './team-logos';
+import { readAppSettings } from '@/lib/settings-store';
+import { filterOfficialEventsForDisplay } from './official-match-visibility';
 import {
   assignmentStatus,
   attendanceStatus,
@@ -300,7 +302,11 @@ export async function listPersonalAssignments(
   // elles ne deviennent visibles que via le bouton « Publier le planning ».
   if (!publishedSnapshots) return [];
 
-  const effectiveSnapshots = await hydratePlanningAssignmentStates(db, publishedSnapshots, user.clubId);
+  const settings = await readAppSettings(db, user.clubId);
+  const effectiveSnapshots = filterOfficialEventsForDisplay(
+    await hydratePlanningAssignmentStates(db, publishedSnapshots, user.clubId),
+    settings,
+  );
   const publishedAssignments: PersonalAssignment[] = [];
   for (const snapshot of effectiveSnapshots) {
     if (snapshot.eventType === 'officiel' || snapshot.eventType === 'amical') {

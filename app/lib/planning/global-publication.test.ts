@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataSource } from 'typeorm';
 import type { SessionUser } from '@/lib/auth/session';
+import type { Match } from '@/types/match';
 import type { PlanningEventSnapshot } from './event-store';
 
 const mocks = vi.hoisted(() => ({
@@ -60,7 +61,8 @@ vi.mock('./published-planning', async (importOriginal) => {
   };
 });
 
-import { collectPublicationBlockers, publishGlobalPlanning } from './global-publication';
+import { runWithClubId } from '@/lib/auth/club-context';
+import { collectPublicationBlockers, getGlobalPlanningPublicationPreview, publishGlobalPlanning } from './global-publication';
 
 function formatDate(date: Date): string {
   const day = String(date.getUTCDate()).padStart(2, '0');
@@ -534,5 +536,54 @@ describe('collectPublicationBlockers — affectation vers un compte supprimé (i
       'Compte Désactivé n\'est plus un compte actif',
       'Compte Supprimé n\'existe plus dans le référentiel',
     ]);
+  });
+});
+
+describe('aperçu de publication — matchs officiels du week-end', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.hydratePlanningAssignmentStates.mockImplementation(async (_db: unknown, snapshots: PlanningEventSnapshot[]) => snapshots);
+    mocks.vacateDeclinedAssignmentsFromWorkingDraft.mockResolvedValue(0);
+  });
+
+  it('exclut les matchs officiels hors week-end du diff, pas les amicaux', async () => {
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 7, 20, 10, 0, 0));
+    mocks.readAppSettings.mockResolvedValue({
+      timeZone: 'Europe/Paris',
+      features: {
+        ...openFeatures.features,
+        officialMatchesCurrentWeekendOnly: true,
+      },
+    });
+    mocks.getPublishedPlanning.mockResolvedValue(null);
+    mocks.planningPublicationDiff.mockImplementation((current: PlanningEventSnapshot[]) => ({
+      ...diff,
+      current: current.length,
+      added: current.length,
+      changed: current.length,
+    }));
+
+    const asOfficial = (snapshot: PlanningEventSnapshot): PlanningEventSnapshot => {
+      const event = snapshot.event as Match;
+      return {
+        ...snapshot,
+        eventType: 'officiel',
+        event: { ...event, type: 'officiel' },
+      };
+    };
+
+    mocks.listPlanningEventSnapshots.mockResolvedValue([
+      asOfficial(matchSnapshot('off-weekend', '22/08/2026')),
+      asOfficial(matchSnapshot('off-monday', '24/08/2026')),
+      matchSnapshot('amical-monday', '24/08/2026'),
+    ]);
+
+    try {
+      await runWithClubId('afp', () => getGlobalPlanningPublicationPreview(fakeDb({ publishedEvents: [], snapshotSaved: false })));
+      const current = mocks.planningPublicationDiff.mock.calls[0]?.[0] as PlanningEventSnapshot[];
+      expect(current.map((item) => item.eventId).sort()).toEqual(['amical-monday', 'off-weekend']);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });

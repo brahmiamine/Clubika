@@ -13,6 +13,28 @@ import { notifyAdmins } from '@/lib/notifications/service';
 import { readAppSettings } from '@/lib/settings-store';
 import { anonymizeMessagesForDeletedUser } from '@/lib/chat/service';
 
+function isMysqlDeadlock(error: unknown): boolean {
+  for (let current = error, depth = 0; current && typeof current === 'object' && depth < 5; depth += 1) {
+    const record = current as { code?: unknown; errno?: unknown; driverError?: unknown };
+    if (record.code === 'ER_LOCK_DEADLOCK' || record.errno === 1213) return true;
+    current = record.driverError;
+  }
+  return false;
+}
+
+async function retryOnMysqlDeadlock<T>(work: () => Promise<T>, attempts = 3): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await work();
+    } catch (error) {
+      lastError = error;
+      if (!isMysqlDeadlock(error) || attempt === attempts) throw error;
+    }
+  }
+  throw lastError;
+}
+
 function serializeUser(user: UserEntity) {
   return {
     id: user.id,
@@ -187,7 +209,7 @@ export async function DELETE(
     }
 
     const db = await getDb();
-    const outcome: DeleteOutcome = await db.transaction(async (manager) => {
+    const outcome: DeleteOutcome = await retryOnMysqlDeadlock(() => db.transaction(async (manager) => {
       const userRepo = manager.getRepository<UserEntity>('User');
       const locked = await lockTargetAndActiveAdmins(manager, auth.user.clubId, id);
       const user = locked.find((candidate) => candidate.id === id);
@@ -213,7 +235,7 @@ export async function DELETE(
       await userRepo.remove(user);
 
       return { kind: 'deleted', userId: user.id };
-    });
+    }));
 
     if (outcome.kind === 'not-found') {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });

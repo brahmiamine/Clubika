@@ -5,7 +5,7 @@
 `event.id` n'est unique que localement, par couple (club, type d'événement) : deux clubs
 distincts — ou deux types d'événement différents au sein d'un même club (un match officiel et
 un entraînement, par exemple) — peuvent partager le même `id`. Avant cette issue, l'UID émis
-dans le flux iCal (`app/lib/utils/ical-export.ts`) était `${event.id}@afp-planning`, sans aucun
+dans le flux iCal (`app/lib/utils/ical-export.ts`) était `${event.id}@clubika`, sans aucun
 namespace : deux événements distincts partageant le même `id` local produisaient donc le même
 UID. Or RFC 5545 (§3.8.4.7) attend un UID globalement unique et stable dans le temps pour
 chaque `VEVENT` — un client calendrier peut fusionner ou écraser deux événements qui partagent
@@ -13,7 +13,7 @@ le même UID.
 
 ## Décision
 
-L'UID devient `<type>-<id>@<clubId>.afp-planning`, où :
+L'UID devient `<type>-<id>@<clubId>.clubika`, où :
 
 - `<type>` est le type d'événement (`officiel`, `amical`, `entrainement`, `plateau`) ;
 - `<id>` est l'`id` local existant de l'événement (inchangé) ;
@@ -37,7 +37,7 @@ Deux points d'émission produisent un flux `.ics` et sont concernés :
 ## Compatibilité avec les abonnements existants — changement cassant assumé
 
 Ce changement est **cassant** pour les abonnements déjà en place : un client qui avait déjà
-synchronisé le flux avec l'ancien format `${event.id}@afp-planning` verra, après ce déploiement,
+synchronisé le flux avec l'ancien format `${event.id}@clubika` verra, après ce déploiement,
 chaque événement apparaître en doublon jusqu'à la prochaine resynchronisation complète de son
 calendrier (l'ancien UID reste dans son cache local ; le nouvel UID namespacé est traité comme
 un événement inédit, pas comme une mise à jour de l'ancien).

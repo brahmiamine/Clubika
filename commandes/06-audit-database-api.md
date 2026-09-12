@@ -1,8 +1,8 @@
 # Commande — Audit Base de données et API
 
-Réalise un **audit complet et approfondi de la base de données, du modèle de données et de toutes les API** du projet **AFP Planning** à partir du code réel présent sur `main`.
+Réalise un **audit complet et approfondi de la base de données, du modèle de données et de toutes les API** du projet **Clubika** à partir du code réel présent sur `main`.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 Stack de référence à confirmer dans le code : TypeORM + MariaDB. Si `/audits/00-global-cartography.md` existe, réutilise l'inventaire des entités/API comme base, mais revérifie chaque contrainte/relation directement dans les fichiers d'entités et les migrations.
 

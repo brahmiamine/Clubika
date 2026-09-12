@@ -12,6 +12,7 @@ import { setCurrentClubId } from '@/lib/auth/club-context';
 import { readAppSettings } from '@/lib/settings-store';
 import { roleLabelWithClub } from '@/lib/settings';
 import { getOfficialMatchesMeta } from '@/lib/db/json-migrator';
+import { filterOfficialEventsForDisplay } from '@/lib/planning/official-match-visibility';
 
 const EVENT_TYPES: PlanningEventType[] = ['officiel', 'amical', 'entrainement', 'plateau'];
 
@@ -45,23 +46,27 @@ export async function GET(request: NextRequest) {
 
   try {
     const db = await getDb();
-    const clubAbbr = (await readAppSettings(db, auth.user.clubId)).clubAbbreviation;
+    const settings = await readAppSettings(db, auth.user.clubId);
+    const clubAbbr = settings.clubAbbreviation;
     const arbitresHeader = roleLabelWithClub('Arbitres', clubAbbr);
     const encadrantsHeader = roleLabelWithClub('Encadrants', clubAbbr);
     const accompagnateursHeader = roleLabelWithClub('Accompagnateurs', clubAbbr);
     const live = await listPlanningEventSnapshots(db);
     const published = includeDrafts ? null : await listPublishedPlanningEventSnapshots(db, auth.user.clubId);
     const source = published ?? live;
-    const snapshots = (await hydratePlanningAssignmentStates(db, source, auth.user.clubId))
-      .filter((snapshot) => includeDrafts ? snapshot.planningStatus !== 'cancelled' : isVisiblePublicationStatus(snapshot.planningStatus))
-      .filter((snapshot) => !types.length || types.includes(snapshot.eventType))
-      .filter((snapshot) => {
-        const date = isoDate(snapshot.date);
-        if (!date) return false;
-        if (fromDate && date < fromDate) return false;
-        if (toDate && date > toDate) return false;
-        return true;
-      });
+    const snapshots = filterOfficialEventsForDisplay(
+      (await hydratePlanningAssignmentStates(db, source, auth.user.clubId))
+        .filter((snapshot) => includeDrafts ? snapshot.planningStatus !== 'cancelled' : isVisiblePublicationStatus(snapshot.planningStatus))
+        .filter((snapshot) => !types.length || types.includes(snapshot.eventType))
+        .filter((snapshot) => {
+          const date = isoDate(snapshot.date);
+          if (!date) return false;
+          if (fromDate && date < fromDate) return false;
+          if (toDate && date > toDate) return false;
+          return true;
+        }),
+      settings,
+    );
 
     if (format === 'json') {
       // Issue #214 : source unique pour les trois formats d'export administrateur — l'export

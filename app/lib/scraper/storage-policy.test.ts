@@ -8,7 +8,7 @@ describe('scraper storage policy', () => {
 
     expect(source).not.toMatch(/writeFile(?:Sync)?\s*\(/);
     expect(source).not.toContain('matches.json');
-    expect(source).toContain('__AFP_SCRAPER_RESULT__=');
+    expect(source).toContain('__CLUBIKA_SCRAPER_RESULT__=');
     expect(source).toContain('loadSportCoricoClubPlanning');
     expect(source).not.toContain('parseMatchDetails');
     expect(source).not.toContain('playwright');

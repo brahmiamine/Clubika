@@ -192,9 +192,10 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
   });
 
   it('rejects an unknown token', async () => {
+    const token = `unknown-${randomBytes(8).toString('hex')}`;
     const response = await POST(
-      acceptRequest('nonexistent-token', { email: `x-${Date.now()}@example.com`, password: 'password123', nom: 'X' }),
-      { params: { token: 'nonexistent-token' } },
+      acceptRequest(token, { email: `x-${Date.now()}@example.com`, password: 'password123', nom: 'X' }),
+      { params: { token } },
     );
     expect(response.status).toBe(404);
   });
@@ -240,9 +241,10 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
       expect(response.status).toBe(404);
       expect(await db.getRepository('User').findOneBy({ email })).toBeNull();
 
+      const unknownToken = `unknown-${randomBytes(8).toString('hex')}`;
       const unknownResponse = await POST(
-        acceptRequest('nonexistent-token', { email: `y-${Date.now()}@example.com`, password: 'password123', nom: 'X' }),
-        { params: { token: 'nonexistent-token' } },
+        acceptRequest(unknownToken, { email: `y-${Date.now()}@example.com`, password: 'password123', nom: 'X' }),
+        { params: { token: unknownToken } },
       );
       const body = await response.json();
       const unknownBody = await unknownResponse.json();

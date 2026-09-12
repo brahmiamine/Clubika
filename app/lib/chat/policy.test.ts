@@ -4,7 +4,7 @@ import {
   canManageChatChannel,
   directConversationKey,
   eventConversationKey,
-  isPlanningClub,
+  isClubika,
 } from './policy';
 
 const member = {
@@ -67,7 +67,7 @@ describe('chat room identities', () => {
 
 describe('planning event ownership', () => {
   it('only exposes the single-club planning corpus to its configured club', () => {
-    expect(isPlanningClub('afp', 'afp')).toBe(true);
-    expect(isPlanningClub('other', 'afp')).toBe(false);
+    expect(isClubika('afp', 'afp')).toBe(true);
+    expect(isClubika('other', 'afp')).toBe(false);
   });
 });

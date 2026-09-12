@@ -12,3 +12,4 @@ pdf
 docs/plans
 Dockerfile
 docker-compose*.yml
+deploy

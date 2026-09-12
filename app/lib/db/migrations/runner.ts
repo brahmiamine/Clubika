@@ -51,7 +51,7 @@ export interface RunSchemaMigrationsOptions {
 }
 
 const DEFAULT_TABLE_NAME = 'schema_migrations';
-const DEFAULT_LOCK_NAME = 'afp_planning_schema_migrations';
+const DEFAULT_LOCK_NAME = 'clubika_schema_migrations';
 const DEFAULT_LOCK_TIMEOUT_SECONDS = 60;
 const MIGRATIONS_DIR = dirname(fileURLToPath(import.meta.url));
 

@@ -16,13 +16,13 @@ fi
 MARIADB_IMAGE="${MARIADB_IMAGE:-mariadb:latest}"
 PHPMYADMIN_IMAGE="${PHPMYADMIN_IMAGE:-phpmyadmin:latest}"
 
-DB_CONTAINER="${DB_CONTAINER:-afp_mariadb}"
-PMA_CONTAINER="${PMA_CONTAINER:-afp_phpmyadmin}"
-DOCKER_NETWORK="${DOCKER_NETWORK:-afp_network}"
+DB_CONTAINER="${DB_CONTAINER:-clubika_mariadb}"
+PMA_CONTAINER="${PMA_CONTAINER:-clubika_phpmyadmin}"
+DOCKER_NETWORK="${DOCKER_NETWORK:-clubika_network}"
 
-DB_NAME="${DB_NAME:-afp_planning}"
-DB_USER="${DB_USER:-afp_user}"
-DB_PASSWORD="${DB_PASSWORD:-afp_password}"
+DB_NAME="${DB_NAME:-clubika}"
+DB_USER="${DB_USER:-clubika_user}"
+DB_PASSWORD="${DB_PASSWORD:-clubika_password}"
 DB_ROOT_PASSWORD="${DB_ROOT_PASSWORD:-root_password}"
 
 DB_PORT="${DB_PORT:-3306}"

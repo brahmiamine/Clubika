@@ -12,6 +12,8 @@ describe('normalizeAppSettings planning features', () => {
 
     expect(settings.features).toEqual(DEFAULT_APP_SETTINGS.features);
     expect(settings.timeZone).toBe(DEFAULT_APP_SETTINGS.timeZone);
+    expect(settings.features.publicationReadiness).toBe(false);
+    expect(settings.features.officialMatchesCurrentWeekendOnly).toBe(true);
   });
 
   it('preserves explicit feature switches and rejects non booleans', () => {

@@ -1,8 +1,8 @@
 # Commande — Audit Design, UI/UX et Responsive
 
-Réalise un **audit complet et approfondi du design, de l'UI/UX, du responsive, du dark mode, de la PWA et de l'accessibilité** du projet **AFP Planning** à partir du code réel présent sur `main`.
+Réalise un **audit complet et approfondi du design, de l'UI/UX, du responsive, du dark mode, de la PWA et de l'accessibilité** du projet **Clubika** à partir du code réel présent sur `main`.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 ## Objectif
 

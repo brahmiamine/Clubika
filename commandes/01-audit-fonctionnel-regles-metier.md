@@ -1,8 +1,8 @@
 # Commande — Audit fonctionnel et règles métier
 
-Réalise un **audit fonctionnel complet et approfondi des règles métier** du projet **AFP Planning** à partir du code réel présent sur `main`.
+Réalise un **audit fonctionnel complet et approfondi des règles métier** du projet **Clubika** à partir du code réel présent sur `main`.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 Si `/audits/00-global-cartography.md` existe, utilise-le comme point de départ pour la cartographie des routes/API/entités, mais revérifie dans le code toute règle métier avant de la considérer comme acquise : cet audit doit être auto-suffisant et ne pas se contenter de recopier `00`.
 

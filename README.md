@@ -7,7 +7,7 @@ Application Next.js multi-club de pilotage du planning des clubs de football, av
 Matrice fonctionnelle : **Disponible** (parcours UI complet, routes actives), **Partiel**
 (backend ou UI existe mais parcours incomplet — la limite est précisée), **Roadmap** (rien
 d'utilisable en l'état, renvoie vers l'issue de suivi). Cette matrice est issue de l'audit
-[#153](https://github.com/brahmiamine/afp-planning/issues/153) et doit être revérifiée à
+[#153](https://github.com/brahmiamine/Clubika/issues/153) et doit être revérifiée à
 chaque release (voir critère d'acceptation de cette issue).
 
 ### Planning et affectations
@@ -43,7 +43,7 @@ chaque release (voir critère d'acceptation de cette issue).
 | Demandes de disponibilité ponctuelles, gestion des indisponibilités | Disponible | `/club/indisponibilites` (validation admin : pending bloque l’affectation jusqu’au refus), `/club/demandes-disponibilite` (redirige depuis `/club/disponibilites`), `/mon-planning/mes-indisponibilites`, `/mon-planning/disponibilites` |
 | Préférences personnelles de planning | Disponible | `/mon-planning/preferences-planning` |
 | Commentaires, checklist, documents, rapports post-événement | Disponible | Espace événement (`EventWorkspaceView`) |
-| Ressources, réservations, transport | Roadmap | Seule une brique interne (`app/lib/planning/resources.ts`) existe, sans CRUD ni page — [#187](https://github.com/brahmiamine/afp-planning/issues/187) |
+| Ressources, réservations, transport | Roadmap | Seule une brique interne (`app/lib/planning/resources.ts`) existe, sans CRUD ni page — [#187](https://github.com/brahmiamine/Clubika/issues/187) |
 | Statistiques (acceptation, présence, délai de réponse, remplacement, couverture, charge, coefficient d'équité) | Disponible | `/club/planning/statistiques`, `app/lib/planning/analytics.ts` |
 | Météo par événement (Open-Meteo) | Disponible | Espace événement, visible par les administrateurs et les personnes réellement affectées |
 
@@ -175,7 +175,7 @@ Voir aussi [TESTING.md](./TESTING.md) et [PLANNING_REMINDERS.md](./PLANNING_REMI
 `start.sh` gère toute l'infrastructure locale :
 
 1. Vérifie que Docker tourne (le démarre sur macOS si besoin).
-2. Télécharge/démarre un conteneur MariaDB (`afp_mariadb`) et un conteneur phpMyAdmin (`afp_phpmyadmin`) sur un réseau Docker dédié (`afp_network`).
+2. Télécharge/démarre un conteneur MariaDB (`clubika_mariadb`) et un conteneur phpMyAdmin (`clubika_phpmyadmin`) sur un réseau Docker dédié (`clubika_network`).
 3. Attend que MariaDB réponde réellement aux connexions (`mariadb-admin ping`), pas juste que le conteneur soit démarré.
 4. Installe les dépendances si `node_modules` est absent, puis lance l'application.
 
@@ -189,7 +189,7 @@ Accès une fois lancé :
 - phpMyAdmin : http://localhost:8080 (utilisateur/mot de passe = `DB_USER`/`DB_PASSWORD` ci-dessous)
 - MariaDB : `127.0.0.1:3306`
 
-Variables surchargeables (toutes optionnelles, valeurs par défaut ci-dessous) : `DB_CONTAINER`, `PMA_CONTAINER`, `DOCKER_NETWORK`, `DB_NAME=afp_planning`, `DB_USER=afp_user`, `DB_PASSWORD=afp_password`, `DB_ROOT_PASSWORD`, `DB_PORT=3306`, `PMA_PORT=8080`, `MARIADB_IMAGE=mariadb:latest`, `PHPMYADMIN_IMAGE=phpmyadmin:latest`. Placez-les dans un fichier `.env` à la racine, il est chargé automatiquement par `start.sh`.
+Variables surchargeables (toutes optionnelles, valeurs par défaut ci-dessous) : `DB_CONTAINER`, `PMA_CONTAINER`, `DOCKER_NETWORK`, `DB_NAME=clubika`, `DB_USER=clubika_user`, `DB_PASSWORD=clubika_password`, `DB_ROOT_PASSWORD`, `DB_PORT=3306`, `PMA_PORT=8080`, `MARIADB_IMAGE=mariadb:latest`, `PHPMYADMIN_IMAGE=phpmyadmin:latest`. Placez-les dans un fichier `.env` à la racine, il est chargé automatiquement par `start.sh`.
 
 ## Configuration
 
@@ -201,9 +201,9 @@ Copiez-le vers `.env.local` ou exportez les variables dans votre environnement.
 ```env
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_NAME=afp_planning
-DB_USER=afp_user
-DB_PASSWORD=afp_password
+DB_NAME=clubika
+DB_USER=clubika_user
+DB_PASSWORD=clubika_password
 
 # Club par défaut de ce déploiement (voir "Multi-club" ci-dessous). Plusieurs clubs peuvent
 # partager la même base ; APP_CLUB_ID ne sert plus qu'à amorcer le premier club et de repli
@@ -345,8 +345,8 @@ Les données Open-Meteo nécessitent une attribution. L'interface affiche la sou
 L'application doit avoir la variable d'environnement `CRON_SECRET`. GitHub Actions doit avoir :
 
 ```text
-AFP_PLANNING_BASE_URL       URL HTTPS publique de l'application
-AFP_PLANNING_CRON_SECRET    copie exacte du CRON_SECRET de l'application déployée
+CLUBIKA_BASE_URL       URL HTTPS publique de l'application
+CLUBIKA_CRON_SECRET    copie exacte du CRON_SECRET de l'application déployée
 ```
 
 Le workflow appelle l'endpoint cron sécurisé avec un Bearer token. Voir `PLANNING_REMINDERS.md`.
@@ -365,9 +365,18 @@ dans [`docs/decisions/json-payloads-cartography.md`](docs/decisions/json-payload
 
 ## Déploiement
 
-L'application est un conteneur Next.js standard (build `pnpm build`, démarrage `pnpm start`) avec une dépendance MariaDB et Playwright/Chromium pour le scraping — déployable sur n'importe quel hébergeur supportant Docker/Node.js (VPS, conteneur managé, etc.). Configurez les variables d'environnement documentées ci-dessus sur votre hébergeur avant le déploiement. La CI GitHub vérifie lint, type-check, tests unitaires/intégration, tests navigateur bout-en-bout (Playwright, voir [TESTING.md](./TESTING.md)) et build.
+Le chemin prévu pour un VPS (OVH, Debian, domaine `clubika.com`) est décrit dans
+[`deploy/README.md`](deploy/README.md) : Docker Compose (une instance de l'app + MariaDB),
+Caddy en HTTPS, cron local (relances, scraper, dumps). Copiez
+`deploy/.env.production.example` vers `deploy/.env` et remplissez les secrets
+**avant** le premier `docker compose up`.
 
-**Mono-instance requis pour le chat.** Le `Dockerfile` ne démarre qu'un seul conteneur (`pnpm run start`), et c'est actuellement une contrainte réelle, pas seulement une configuration par défaut : les limites de débit du chat temps réel sont en mémoire par instance (voir « Chat temps réel » ci-dessus). Déployer plusieurs instances/replicas derrière un même load balancer sans revoir cette implémentation permet à un utilisateur de contourner ces limites en changeant de nœud.
+L'application est un conteneur Next.js (`pnpm build`, démarrage `pnpm start`) avec MariaDB
+et Playwright/Chromium pour le scraping. La CI GitHub vérifie lint, type-check, tests
+unitaires/intégration, tests navigateur bout-en-bout (Playwright, voir [TESTING.md](./TESTING.md))
+et build.
+
+**Mono-instance requis pour le chat.** Le `Dockerfile` ne démarre qu'un seul conteneur (`pnpm run start`), et c'est actuellement une contrainte réelle, pas seulement une configuration par défaut : les limites de débit du chat temps réel sont en mémoire par instance (voir « Chat temps réel » ci-dessus). Déployer plusieurs instances/replicas derrière un même load balancer sans revoir cette implémentation permet à un utilisateur de contourner ces limites en changeant de nœud. Ne pas augmenter le nombre de replicas dans `deploy/docker-compose.yml`.
 
 ## Stack
 

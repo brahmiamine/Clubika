@@ -74,6 +74,21 @@ describe('EventsPanel — signaux de contrôle', () => {
     expect(html).not.toContain('Contrôle du planning');
   });
 
+  it('ne compte que les alertes des événements actuellement listés', () => {
+    const html = renderToStaticMarkup(
+      <EventsPanel
+        events={{ '2026-09-12': [match] }}
+        onEventUpdate={() => undefined}
+        alerts={{
+          'officiel:1': alert,
+          'officiel:hidden': { ...alert, eventId: 'hidden' },
+        }}
+      />,
+    );
+
+    expect(html).toContain('1 événement à traiter avant publication.');
+  });
+
   it('indique que tout est à jour quand il n’y a pas d’alerte', () => {
     const html = renderToStaticMarkup(
       <EventsPanel

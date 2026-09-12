@@ -1,4 +1,4 @@
-export const PENDING_NOTIFICATION_NAV_CACHE = 'planningclub-notification-nav-v1';
+export const PENDING_NOTIFICATION_NAV_CACHE = 'clubika-notification-nav-v1';
 export const PENDING_NOTIFICATION_NAV_PATH = '/__pending-notification-url';
 export const PENDING_NOTIFICATION_NAV_TTL_MS = 2 * 60 * 1000;
 

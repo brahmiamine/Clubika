@@ -5,8 +5,8 @@ import { runSchemaMigrations } from './migrations/runner';
 import { schemaMigrations } from './migrations/schema-migrations';
 
 declare global {
-  var __afpDataSource: DataSource | undefined;
-  var __afpDataSourceInitPromise: Promise<DataSource> | undefined;
+  var __clubikaDataSource: DataSource | undefined;
+  var __clubikaDataSourceInitPromise: Promise<DataSource> | undefined;
 }
 
 function getPort(): number {
@@ -33,9 +33,9 @@ function createDataSource(): DataSource {
     type: 'mariadb',
     host: process.env.DB_HOST ?? '127.0.0.1',
     port: getPort(),
-    username: process.env.DB_USER ?? 'afp_user',
-    password: process.env.DB_PASSWORD ?? 'afp_password',
-    database: process.env.DB_NAME ?? 'afp_planning',
+    username: process.env.DB_USER ?? 'clubika_user',
+    password: process.env.DB_PASSWORD ?? 'clubika_password',
+    database: process.env.DB_NAME ?? 'clubika',
     entities: allSchemas,
     synchronize: false,
     logging: false,
@@ -45,19 +45,19 @@ function createDataSource(): DataSource {
 }
 
 export async function getDataSource(): Promise<DataSource> {
-  if (globalThis.__afpDataSource?.isInitialized) {
-    return globalThis.__afpDataSource;
+  if (globalThis.__clubikaDataSource?.isInitialized) {
+    return globalThis.__clubikaDataSource;
   }
 
-  const dataSource = globalThis.__afpDataSource ?? createDataSource();
-  globalThis.__afpDataSource = dataSource;
+  const dataSource = globalThis.__clubikaDataSource ?? createDataSource();
+  globalThis.__clubikaDataSource = dataSource;
 
-  if (globalThis.__afpDataSourceInitPromise) {
-    await globalThis.__afpDataSourceInitPromise;
-    return globalThis.__afpDataSource as DataSource;
+  if (globalThis.__clubikaDataSourceInitPromise) {
+    await globalThis.__clubikaDataSourceInitPromise;
+    return globalThis.__clubikaDataSource as DataSource;
   }
 
-  globalThis.__afpDataSourceInitPromise = (async () => {
+  globalThis.__clubikaDataSourceInitPromise = (async () => {
     if (!dataSource.isInitialized) {
       await dataSource.initialize();
     }
@@ -69,9 +69,9 @@ export async function getDataSource(): Promise<DataSource> {
     }
     return dataSource;
   })().finally(() => {
-    globalThis.__afpDataSourceInitPromise = undefined;
+    globalThis.__clubikaDataSourceInitPromise = undefined;
   });
 
-  await globalThis.__afpDataSourceInitPromise;
+  await globalThis.__clubikaDataSourceInitPromise;
   return dataSource;
 }

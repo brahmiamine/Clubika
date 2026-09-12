@@ -36,6 +36,7 @@ import { syncAssignmentStatesForRole } from './assignment-state-store';
 import { functionForPlanningRole, userHoldsFunction } from './person-link';
 import { activeContacts } from './p0-rules';
 import { vacateDeclinedAssignmentsFromWorkingDraft } from './declined-assignment-draft';
+import { filterOfficialEventsForDisplay } from './official-match-visibility';
 
 const CHANGE_TITLES: Record<PublicationChangeKind, string> = {
   added: 'Nouvelle affectation',
@@ -199,7 +200,7 @@ export async function getGlobalPlanningPublicationPreview(
   } catch (error) {
     console.error('Impossible d’aligner le brouillon sur les refus d’affectation:', error);
   }
-  const [current, published, settings, users] = await Promise.all([
+  const [currentRaw, published, settings, users] = await Promise.all([
     listPlanningEventSnapshots(db),
     getPublishedPlanning(db),
     readAppSettings(db, clubId),
@@ -208,6 +209,8 @@ export async function getGlobalPlanningPublicationPreview(
   // L'aperçu reflète exactement ce que la publication fera : seuls les événements dans
   // la fenêtre de publication sont candidats, les plus anciens partent en historique (issue #42).
   const windowStart = publicationWindowStart(Date.now(), settings.timeZone);
+  const current = filterOfficialEventsForDisplay(currentRaw, settings);
+  const publishedEvents = filterOfficialEventsForDisplay(published?.events ?? [], settings);
   const currentInWindow = current.filter((snapshot) => isWithinPublicationWindow(snapshot, windowStart, settings.timeZone));
   const blockerCandidates = await hydratePlanningAssignmentStates(
     db,
@@ -216,7 +219,7 @@ export async function getGlobalPlanningPublicationPreview(
   );
   return {
     lastPublishedAt: published?.publishedAt ?? null,
-    diff: planningPublicationDiff(currentInWindow, published?.events ?? []),
+    diff: planningPublicationDiff(currentInWindow, publishedEvents),
     blockers: collectPublicationBlockers(blockerCandidates, settings, users),
   };
 }
@@ -233,10 +236,12 @@ export async function publishGlobalPlanning(
   const settings = await readAppSettings(db, user.clubId);
   const beforeRaw = await getPublishedPlanning(db);
   const currentRaw = await listPlanningEventSnapshots(db);
-  const [current, previousEvents] = await Promise.all([
+  const [currentHydrated, previousHydrated] = await Promise.all([
     hydratePlanningAssignmentStates(db, currentRaw, user.clubId),
     hydratePlanningAssignmentStates(db, beforeRaw?.events ?? [], user.clubId),
   ]);
+  const current = filterOfficialEventsForDisplay(currentHydrated, settings);
+  const previousEvents = filterOfficialEventsForDisplay(previousHydrated, settings);
   const before = beforeRaw ? { ...beforeRaw, events: previousEvents } : null;
 
   // Fenêtre de publication (issue #42) : seuls les événements de J-7 (00:00 heure du club)
@@ -323,7 +328,7 @@ export async function publishGlobalPlanning(
       }
     }
 
-    const refreshedInTx = await listPlanningEventSnapshots(manager);
+    const refreshedInTx = filterOfficialEventsForDisplay(await listPlanningEventSnapshots(manager), settings);
     // Le snapshot publié actif ne porte que la fenêtre : sa taille reste maîtrisée.
     const publishable = refreshedInTx.filter(inWindow);
     const publishedPayload = await savePublishedPlanning(
