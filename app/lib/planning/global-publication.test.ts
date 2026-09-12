@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataSource } from 'typeorm';
 import type { SessionUser } from '@/lib/auth/session';
+import type { Match } from '@/types/match';
 import type { PlanningEventSnapshot } from './event-store';
 
 const mocks = vi.hoisted(() => ({
@@ -562,11 +563,14 @@ describe('aperçu de publication — matchs officiels du week-end', () => {
       changed: current.length,
     }));
 
-    const asOfficial = (snapshot: PlanningEventSnapshot): PlanningEventSnapshot => ({
-      ...snapshot,
-      eventType: 'officiel',
-      event: { ...snapshot.event, type: 'officiel' },
-    });
+    const asOfficial = (snapshot: PlanningEventSnapshot): PlanningEventSnapshot => {
+      const event = snapshot.event as Match;
+      return {
+        ...snapshot,
+        eventType: 'officiel',
+        event: { ...event, type: 'officiel' },
+      };
+    };
 
     mocks.listPlanningEventSnapshots.mockResolvedValue([
       asOfficial(matchSnapshot('off-weekend', '22/08/2026')),

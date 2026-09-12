@@ -113,7 +113,7 @@ export const CLUB_WRITABLE_SETTING_KEYS = [
 export type ClubWritableSettingKey = (typeof CLUB_WRITABLE_SETTING_KEYS)[number];
 
 export function pickClubWritableSettings(
-    input: Partial<AppSettings> & Record<string, unknown>,
+    input: Partial<AppSettings>,
 ): Pick<AppSettings, ClubWritableSettingKey> {
     const picked = {} as Pick<AppSettings, ClubWritableSettingKey>;
     for (const key of CLUB_WRITABLE_SETTING_KEYS) {
