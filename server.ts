@@ -13,9 +13,14 @@ try {
 }
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = process.env.HOSTNAME || '0.0.0.0';
+const listenHost = process.env.HOSTNAME || '0.0.0.0';
 const port = Number.parseInt(process.env.PORT || '3000', 10);
-const app = next({ dev, hostname, port });
+// Next.js utilise `hostname` pour se fetcher lui-même (images). `0.0.0.0` n'est
+// pas une origine joignable — d'où `Can't load image https://0.0.0.0:3000/...`.
+const nextHostname = listenHost === '0.0.0.0' || listenHost === '::'
+  ? '127.0.0.1'
+  : listenHost;
+const app = next({ dev, hostname: nextHostname, port });
 const handle = app.getRequestHandler();
 
 await app.prepare();
@@ -23,8 +28,8 @@ await app.prepare();
 const httpServer = createServer((request, response) => handle(request, response));
 const { io, stopSessionRevocationListener } = attachChatSocketServer(httpServer);
 
-httpServer.listen(port, hostname, () => {
-  console.log(`Clubika listening on http://${hostname}:${port}`);
+httpServer.listen(port, listenHost, () => {
+  console.log(`Clubika listening on http://${listenHost}:${port}`);
 });
 
 function shutdown() {

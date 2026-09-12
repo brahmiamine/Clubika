@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE_NAME, PLATFORM_SESSION_COOKIE_NAME } from '@/lib/auth/constants';
 import { getSessionUser } from '@/lib/auth/session';
-import { canEdit } from '@/lib/auth/roles';
+import { canEdit, homePathForAccessRole } from '@/lib/auth/roles';
 import { PWA_CLUB_ID_HEADER, normalizePwaClubId } from '@/lib/pwa/icons';
 
 // Next.js Proxy s'exécute nativement sur le runtime Node.js, nécessaire à getSessionUser (TypeORM).
@@ -85,7 +85,7 @@ function nextWithPwaClubId(request: NextRequest): NextResponse {
 }
 
 function homeForUser(user: Awaited<ReturnType<typeof getSessionUser>>): string {
-    return user && canEdit(user.accessRole) ? '/club' : '/mon-planning';
+    return homePathForAccessRole(user?.accessRole);
 }
 
 /**

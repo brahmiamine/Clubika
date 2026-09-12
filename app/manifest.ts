@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
 import { resolvePwaBranding, APP_PRODUCT_CLUB_ID } from '@/lib/pwa/branding';
+import { PWA_START_URL } from '@/lib/pwa/display-mode';
 import { buildPwaManifestIcons, clubIdFromRequestHeaders } from '@/lib/pwa/icons';
 
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     name: branding.name,
     short_name: branding.shortName,
     description: branding.description,
-    start_url: '/',
+    start_url: PWA_START_URL,
     scope: '/',
     display: 'standalone',
     display_override: ['standalone', 'minimal-ui'],

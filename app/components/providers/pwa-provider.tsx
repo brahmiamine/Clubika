@@ -24,6 +24,7 @@ import {
 } from '@/lib/pwa/web-push-client';
 import { appPathFromNotificationUrl, notificationNavigateHref } from '@/lib/notifications/destinations';
 import { consumePendingNotificationUrl } from '@/lib/notifications/pending-navigation';
+import { isStandaloneDisplay } from '@/lib/pwa/display-mode';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -33,12 +34,6 @@ interface BeforeInstallPromptEvent extends Event {
 interface PushConfig {
   enabled: boolean;
   publicKey: string | null;
-}
-
-function isStandalone(): boolean {
-  if (typeof window === 'undefined') return false;
-  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-  return window.matchMedia('(display-mode: standalone)').matches || navigatorWithStandalone.standalone === true;
 }
 
 function isMobile(): boolean {
@@ -118,7 +113,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setStandalone(isStandalone());
+    setStandalone(isStandaloneDisplay());
     setPushSupported('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
     if ('Notification' in window) setPushPermission(Notification.permission);
 

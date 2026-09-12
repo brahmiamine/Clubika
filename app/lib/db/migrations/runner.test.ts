@@ -5,6 +5,8 @@ import { isDbAvailable } from '../test-utils';
 import {
   computeMigrationChecksum,
   computeStatementsChecksum,
+  readMigrationLogicFile,
+  resolveMigrationsDir,
   runSchemaMigrations,
   validateMigrationRegistry,
   type SchemaMigration,
@@ -17,6 +19,13 @@ const dbAvailable = await isDbAvailable();
 function fakeMigration(version: string, name: string, statements: string[] = []): SchemaMigration {
   return { version, name, statements };
 }
+
+describe('resolveMigrationsDir', () => {
+  it('trouve les fichiers d\'empreinte (tsx ou repli cwd)', () => {
+    expect(resolveMigrationsDir()).toMatch(/migrations$/);
+    expect(readMigrationLogicFile('typeorm-entity-tables.ts')).toContain('TYPEORM_ENTITY_TABLE_STATEMENTS');
+  });
+});
 
 describe('validateMigrationRegistry', () => {
   it('accepte un registre ordonné', () => {
