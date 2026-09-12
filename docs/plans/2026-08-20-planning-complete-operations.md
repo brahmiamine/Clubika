@@ -2,7 +2,7 @@
 
 > **For agentic workers:** Use the host's available task-by-task implementation workflow. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Complete AFP Planning with the remaining collaboration, availability, resource, productivity, notification, analytics, sharing, calendar, weather and post-event workflows after the P0 planning operations.
+**Goal:** Complete Clubika with the remaining collaboration, availability, resource, productivity, notification, analytics, sharing, calendar, weather and post-event workflows after the P0 planning operations.
 
 **Architecture:** Keep the four existing event stores as the source of schedule truth and add normalized planning-support entities for cross-event capabilities. Reuse `PlanningEventSnapshot`, stable `personType/personId` identity, the existing notification service/PWA push channel and the existing audit log; expose bounded authenticated APIs and focused admin/personal pages instead of embedding unrelated concerns in event payloads.
 

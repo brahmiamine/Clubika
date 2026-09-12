@@ -87,13 +87,13 @@ export interface GenerateIcalOptions extends IcalIdentity {
 // id brut comme UID iCal (RFC 5545 §3.8.4.7, censé être globalement unique et stable) exposait
 // donc à des collisions : un client calendrier peut fusionner ou écraser deux événements
 // distincts qui partagent le même UID. On namespace donc l'UID par type d'événement et par
-// club : `<type>-<id>@<clubId>.afp-planning`. On ne dérive volontairement l'UID que de ces
+// club : `<type>-<id>@<clubId>.clubika`. On ne dérive volontairement l'UID que de ces
 // trois identifiants stables (jamais d'un champ éditable comme le titre, le lieu ou l'heure)
 // pour que l'UID reste inchangé quand l'événement est modifié — un nouvel UID à chaque édition
 // ferait perdre aux clients calendrier l'historique/les rappels associés à l'événement.
 //
 // ⚠️ Changement cassant pour les abonnements déjà en place : un client qui avait déjà
-// synchronisé le flux avec l'ancien format `${event.id}@afp-planning` verra, après ce
+// synchronisé le flux avec l'ancien format `${event.id}@clubika` verra, après ce
 // déploiement, chaque événement apparaître en doublon (l'ancien UID reste dans son cache tant
 // qu'il n'a pas fait de resynchronisation complète du calendrier ; le nouvel UID est traité
 // comme un événement inédit). Le flux est stateless — recalculé à chaque requête, sans état
@@ -117,7 +117,7 @@ function buildEventUid(event: Event, clubId: string | undefined): string {
   const typeKey = sanitizeUidSegment(eventTypeKey(event));
   const idKey = sanitizeUidSegment(event.id || '');
   const namespace = sanitizeUidSegment(clubId || 'club-inconnu');
-  return `${typeKey}-${idKey}@${namespace}.afp-planning`;
+  return `${typeKey}-${idKey}@${namespace}.clubika`;
 }
 
 function contactMatches(contact: AssignmentContact, identity: IcalIdentity): boolean {

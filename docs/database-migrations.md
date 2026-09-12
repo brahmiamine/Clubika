@@ -1,7 +1,7 @@
 # Migrations de schéma base de données
 
-Issues de référence : [#129](https://github.com/brahmiamine/afp-planning/issues/129),
-[#283](https://github.com/brahmiamine/afp-planning/issues/283).
+Issues de référence : [#129](https://github.com/brahmiamine/Clubika/issues/129),
+[#283](https://github.com/brahmiamine/Clubika/issues/283).
 
 ## Principe
 
@@ -117,9 +117,9 @@ Les migrations sont à sens unique et sans `down` automatisé. Stratégie :
 
 | Table | Conversion | Migration |
 |---|---|---|
-| `matches_officiels`, `matches_amicaux`, `entrainements`, `plateaux` | `PRIMARY KEY (id)` → `PRIMARY KEY (clubId, id)` (issue [#125](https://github.com/brahmiamine/afp-planning/issues/125)) | `0008` |
+| `matches_officiels`, `matches_amicaux`, `entrainements`, `plateaux` | `PRIMARY KEY (id)` → `PRIMARY KEY (clubId, id)` (issue [#125](https://github.com/brahmiamine/Clubika/issues/125)) | `0008` |
 | `matches_extras` | `PRIMARY KEY (matchId)` → `PRIMARY KEY (clubId, matchId)` | `0008` |
-| `match_audit_log` | Ajout du tenant `clubId` (nullable) puis remplissage, avant durcissement NOT NULL (issue [#126](https://github.com/brahmiamine/afp-planning/issues/126)) | `0009` |
+| `match_audit_log` | Ajout du tenant `clubId` (nullable) puis remplissage, avant durcissement NOT NULL (issue [#126](https://github.com/brahmiamine/Clubika/issues/126)) | `0009` |
 
 La migration `0008` ([`event-primary-keys.ts`](../app/lib/db/migrations/event-primary-keys.ts))
 est conditionnelle : elle ignore une table absente (base neuve, créée ensuite par

@@ -1,8 +1,8 @@
 # Commande — Audit SportCorico et Scraping
 
-Réalise un **audit complet et approfondi du scraping SportCorico** du projet **AFP Planning** à partir du code réel présent sur `main`.
+Réalise un **audit complet et approfondi du scraping SportCorico** du projet **Clubika** à partir du code réel présent sur `main`.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 Si `/audits/00-global-cartography.md` existe, réutilise-le pour situer le scraping dans l'architecture globale, mais revérifie toi-même chaque comportement décrit ici : ce fichier doit rester exploitable seul.
 
@@ -62,7 +62,7 @@ Analyse la stabilité de cette identité si changent : heure, date, terrain, adv
 
 Construis une matrice par champ indiquant : créé par scraper, mis à jour par scraper, modifiable manuellement, préservé lors du rescraping.
 
-Distingue clairement données SportCorico et données internes AFP Planning.
+Distingue clairement données SportCorico et données internes Clubika.
 
 Vérifie qu'un rescraping ne supprime pas les affectations, notes, publication, chat ou autres informations métier liées au match.
 

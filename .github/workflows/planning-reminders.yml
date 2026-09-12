@@ -17,25 +17,25 @@ jobs:
     # Un schedule GitHub ne peut pas savoir si des secrets sont présents sans démarrer
     # le job. La variable non-secrète sert donc d'interrupteur explicite : absente ou
     # différente de "true", les runs horaires sont simplement ignorés.
-    if: github.event_name == 'workflow_dispatch' || vars.AFP_PLANNING_SCHEDULE_ENABLED == 'true'
+    if: github.event_name == 'workflow_dispatch' || vars.CLUBIKA_SCHEDULE_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Preflight planning reminders
         env:
-          BASE_URL: ${{ secrets.AFP_PLANNING_BASE_URL }}
-          CRON_SECRET: ${{ secrets.AFP_PLANNING_CRON_SECRET }}
+          BASE_URL: ${{ secrets.CLUBIKA_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CLUBIKA_CRON_SECRET }}
         run: |
           set -euo pipefail
           if [ -z "${BASE_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
-            echo "::error title=Relances planning non configurées::AFP_PLANNING_BASE_URL et/ou AFP_PLANNING_CRON_SECRET sont absents. Voir PLANNING_REMINDERS.md pour la procédure de configuration des secrets du dépôt."
+            echo "::error title=Relances planning non configurées::CLUBIKA_BASE_URL et/ou CLUBIKA_CRON_SECRET sont absents. Voir PLANNING_REMINDERS.md pour la procédure de configuration des secrets du dépôt."
             exit 1
           fi
 
       - name: Trigger planning reminders
         env:
-          BASE_URL: ${{ secrets.AFP_PLANNING_BASE_URL }}
-          CRON_SECRET: ${{ secrets.AFP_PLANNING_CRON_SECRET }}
+          BASE_URL: ${{ secrets.CLUBIKA_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CLUBIKA_CRON_SECRET }}
         run: |
           set -euo pipefail
           curl --fail --silent --show-error \

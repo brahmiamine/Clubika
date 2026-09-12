@@ -1,7 +1,7 @@
 # Audit 05 — Notifications, Chat et Temps Réel
 
-**Repository :** `https://github.com/brahmiamine/afp-planning`  
-**Périmètre :** code sur `main` au 2026-09-10  
+**Repository :** `https://github.com/brahmiamine/Clubika`
+**Périmètre :** code sur `main` au 2026-09-10
 **Méthode :** revue statique + tests (`matrix.test.ts`, `notifications.test.ts`, `socket-server.integration.test.ts`, e2e `chat-direct-message.spec.ts`). Socket/push device **non vérifiés dynamiquement**. Aucune clé VAPID privée dans ce rapport.
 
 **Correctifs désormais dans le code (ancien audit obsolète) :** #345 event rooms, #346 cross-club send, #348 republish noop, #352 rate-limit DB, #344 logout push, #343 badge chat MobileTabBar.
@@ -107,8 +107,8 @@ Source canonique `docs/notifications-matrix.md` + `matrix.test.ts` (deep-links, 
 | Canal | `channel` | admin | participants |
 | Événement | `event` | lazy | **assignees snapshot publié** + admin (#345, `policy.ts:22-36`) |
 
-- User retiré du club / désaffecté : event room refusée après update snapshot.  
-- Match archivé : room `archivedAt` → accès denied.  
+- User retiré du club / désaffecté : event room refusée après update snapshot.
+- Match archivé : room `archivedAt` → accès denied.
 - Autre tenant : `user.clubId !== room.clubId` → false (`policy.ts:32`).
 
 **Messages — source de vérité = DB** (`chat_messages` chiffrés, `sequence` UNIQUE, `clientMessageId` UNIQUE). Socket n’est **pas** SoT. Pagination curseur sequence (`service.ts:548-571`). Optimistic UI côté client ; retry = même `clientMessageId`. **Pas de POST HTTP message** (CHAT-001) — écriture via `chat:send` socket.
@@ -148,19 +148,19 @@ Mark-one / mark-all : filtre `userId` session (`notifications/route.ts:71-78`). 
 
 Permission → `POST /api/push/subscribe` → `push_subscriptions` (`endpoint_hash` UNIQUE) → `triggerPushForUser` → `public/sw.js` `push` / `notificationclick`.
 
-- VAPID **privée** serveur only (`vapid.ts`) ; `GET /api/push/config` = public key.  
-- Logout : `removeAllPushSubscriptionsForUser` (`auth/logout/route.ts:11`) — **tous** les devices du compte.  
-- 410/404 endpoint : suppression (`push/service.ts`).  
+- VAPID **privée** serveur only (`vapid.ts`) ; `GET /api/push/config` = public key.
+- Logout : `removeAllPushSubscriptionsForUser` (`auth/logout/route.ts:11`) — **tous** les devices du compte.
+- 410/404 endpoint : suppression (`push/service.ts`).
 - Compte switch même navigateur : UPSERT réassigne `user_id` (`store.ts:36-37`).
 
 ---
 
 ## 9. Résilience, sécurité, observabilité
 
-- Socket down : historique HTTP `GET /api/chat/rooms/.../messages` récupérable. Produit principal (planning) **indépendant** du chat.  
-- Push down : in-app + outbox retry.  
-- XSS messages : texte React + linkify http(s)/www (`ChatConversation.tsx:154-181`).  
-- Longueur / payload : validateurs service + upload limits (`fix/218`).  
+- Socket down : historique HTTP `GET /api/chat/rooms/.../messages` récupérable. Produit principal (planning) **indépendant** du chat.
+- Push down : in-app + outbox retry.
+- XSS messages : texte React + linkify http(s)/www (`ChatConversation.tsx:154-181`).
+- Longueur / payload : validateurs service + upload limits (`fix/218`).
 - Logs : erreurs chat/socket génériques ; **pas** de trace « pourquoi user X n’a pas reçu » corrélée à un `notificationId` sans PII — observabilité faible (NOTIF-004).
 
 Tests : socket integ + e2e DM ; **7 routes HTTP chat sans `route.test.ts`**.
@@ -227,7 +227,7 @@ Audit 08.
 
 ## 12. Décisions produit
 
-**N-1** Notifier une affectation éditée sur un événement déjà publié sans attendre republish ?  
+**N-1** Notifier une affectation éditée sur un événement déjà publié sans attendre republish ?
 A) Non (actuel). B) Oui immédiat. C) Seulement les retraits.
 
 **N-2** `assignment-created` : A) brancher. B) retirer de la matrice. C) garder pour hors-publication seulement.
@@ -240,19 +240,19 @@ A) Non (actuel). B) Oui immédiat. C) Seulement les retraits.
 
 ## 13. Plan de remédiation
 
-1. Aligner matrice ↔ code (NOTIF-001/002).  
-2. Pagination inbox.  
-3. POST HTTP message (résilience).  
-4. Trancher N-3 multi-device.  
+1. Aligner matrice ↔ code (NOTIF-001/002).
+2. Pagination inbox.
+3. POST HTTP message (résilience).
+4. Trancher N-3 multi-device.
 5. Tests API chat HTTP + push (voir 08).
 
 ---
 
 ## 14. Definition of Done
 
-- [x] 16 scénarios sourcés  
-- [x] Chaque room a sa vérif serveur  
-- [x] Unread = SQL COUNT (notifs + chat)  
-- [x] Aucune clé privée VAPID  
+- [x] 16 scénarios sourcés
+- [x] Chaque room a sa vérif serveur
+- [x] Unread = SQL COUNT (notifs + chat)
+- [x] Aucune clé privée VAPID
 
 **Non vérifié dynamiquement :** push réel background, multi-device physique, reconnexion 3G.

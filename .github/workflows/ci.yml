@@ -48,9 +48,9 @@ jobs:
       mariadb:
         image: mariadb:latest
         env:
-          MARIADB_DATABASE: afp_planning
-          MARIADB_USER: afp_user
-          MARIADB_PASSWORD: afp_password
+          MARIADB_DATABASE: clubika
+          MARIADB_USER: clubika_user
+          MARIADB_PASSWORD: clubika_password
           MARIADB_ROOT_PASSWORD: root_password
         ports:
           - 3306:3306
@@ -62,9 +62,9 @@ jobs:
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
-      DB_NAME: afp_planning
-      DB_USER: afp_user
-      DB_PASSWORD: afp_password
+      DB_NAME: clubika
+      DB_USER: clubika_user
+      DB_PASSWORD: clubika_password
       BOOTSTRAP_SUPERADMIN_EMAIL: test-admin@example.com
       BOOTSTRAP_SUPERADMIN_PASSWORD: test-password-123
       REQUIRE_DB_TESTS: '1'
@@ -86,9 +86,9 @@ jobs:
       mariadb:
         image: mariadb:latest
         env:
-          MARIADB_DATABASE: afp_planning
-          MARIADB_USER: afp_user
-          MARIADB_PASSWORD: afp_password
+          MARIADB_DATABASE: clubika
+          MARIADB_USER: clubika_user
+          MARIADB_PASSWORD: clubika_password
           MARIADB_ROOT_PASSWORD: root_password
         ports:
           - 3306:3306
@@ -100,9 +100,9 @@ jobs:
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
-      DB_NAME: afp_planning
-      DB_USER: afp_user
-      DB_PASSWORD: afp_password
+      DB_NAME: clubika
+      DB_USER: clubika_user
+      DB_PASSWORD: clubika_password
       BOOTSTRAP_SUPERADMIN_EMAIL: test-admin@example.com
       BOOTSTRAP_SUPERADMIN_PASSWORD: test-password-123
     steps:

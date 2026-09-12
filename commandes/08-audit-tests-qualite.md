@@ -1,8 +1,8 @@
 # Commande — Audit Tests et Qualité
 
-Réalise un **audit complet et approfondi des tests, de la qualité du code et de la protection contre les régressions** du projet **AFP Planning** à partir du code réel présent sur `main`.
+Réalise un **audit complet et approfondi des tests, de la qualité du code et de la protection contre les régressions** du projet **Clubika** à partir du code réel présent sur `main`.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 ## Objectif principal
 

@@ -1,7 +1,7 @@
 const APP_NOTIFICATION_URL = '/club/notifications';
-const CACHE_NAME = 'planningclub-shell-v2';
+const CACHE_NAME = 'clubika-shell-v2';
 const OFFLINE_URL = '/offline';
-const PENDING_NOTIFICATION_CACHE = 'planningclub-notification-nav-v1';
+const PENDING_NOTIFICATION_CACHE = 'clubika-notification-nav-v1';
 const PENDING_NOTIFICATION_REQUEST = '/__pending-notification-url';
 /** Petite icône de notification : fichier statique, pas le blason du club (trop grand sur iOS). */
 const PWA_NOTIFICATION_ICON = '/pwa/icon-192.png';

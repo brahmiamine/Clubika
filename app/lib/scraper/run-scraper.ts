@@ -80,7 +80,7 @@ export function assertScrapedClubIdentity(config: ScraperSourceConfig, parsed: M
 
 function scraperRunLockName(clubId: string): string {
   const clubDigest = createHash('sha256').update(clubId).digest('hex').slice(0, 32);
-  return `afp_planning_scraper_${clubDigest}`;
+  return `clubika_scraper_${clubDigest}`;
 }
 
 

@@ -1,8 +1,8 @@
 # Commande — Audit Notifications, Chat et Temps Réel
 
-Réalise un **audit complet et approfondi des notifications, du chat, de Socket.IO et du Web Push/PWA** du projet **AFP Planning** à partir du code réel présent sur `main`.
+Réalise un **audit complet et approfondi des notifications, du chat, de Socket.IO et du Web Push/PWA** du projet **Clubika** à partir du code réel présent sur `main`.
 
-Repository : `https://github.com/brahmiamine/afp-planning`
+Repository : `https://github.com/brahmiamine/Clubika`
 
 Si `/audits/00-global-cartography.md` et `/audits/02-security-multitenancy.md` existent, réutilise-les pour la cartographie et les contrôles Cross-Tenant déjà établis, mais revérifie toi-même chaque scénario de ce périmètre : les notifications/chat ont leur propre surface de risque non couverte en détail ailleurs.
 

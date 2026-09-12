@@ -1,6 +1,6 @@
-# Audit 00 — Cartographie globale AFP Planning
+# Audit 00 — Cartographie globale Clubika
 
-**Repository :** `https://github.com/brahmiamine/afp-planning`
+**Repository :** `https://github.com/brahmiamine/Clubika`
 **Périmètre analysé :** code présent dans `/workspace` (branche de travail basée sur `origin/main` @ `8e1c98f`) au 2026-09-10
 **Méthode :** analyse statique exhaustive (Glob/Grep/Read) de `app/**`, `app/api/**`, `app/lib/**`, `proxy.ts`, `server.ts`, `scraper.js`, `.github/workflows/**`, `docs/**`, `package.json`. Commandes réellement exécutées dans la session des audits 01–08 : `pnpm lint` (106 warnings, FAIL), `pnpm type-check` (4 erreurs TS, FAIL), `pnpm test` sans MariaDB (11 tests failed / 666 passed / 286 skipped), `pnpm routes:coverage` (52/92), `pnpm audit --prod` (0 high/critical). CI GitHub `main` run `34512699676` : **lint, type-check, build, test, e2e = failure**. `pnpm dev`/`build`/`e2e` locaux non lancés. Toute affirmation porte sa référence `fichier:ligne`.
 **Relation avec la version précédente de ce document :** cartographie 00 conservée ; **complétée** après exécution des commandes 01–08 (CI rouge, bootstrap ALS, parser scrape dual). Voir §16 lignes 16–19 et §19.
@@ -685,7 +685,7 @@ Pipeline : écriture `notifications` (in-app, filtrée par préférences utilisa
 
 ### 14.2 Cron applicatif via GitHub Actions (`.github/workflows/planning-reminders.yml`)
 
-Déclenché toutes les heures (`cron: '15 * * * *'`) **seulement si** la variable de repo `vars.AFP_PLANNING_SCHEDULE_ENABLED == 'true'` (interrupteur explicite, `planning-reminders.yml:20`), appelle `POST {AFP_PLANNING_BASE_URL}/api/cron/planning-reminders` avec `Authorization: Bearer {AFP_PLANNING_CRON_SECRET}`. Le scraping (`/api/cron/scraper`) n'a **pas** d'équivalent GitHub Actions dans ce dépôt — son déclenchement périodique (s'il existe) est donc externe et **non déterminable statiquement**.
+Déclenché toutes les heures (`cron: '15 * * * *'`) **seulement si** la variable de repo `vars.CLUBIKA_SCHEDULE_ENABLED == 'true'` (interrupteur explicite, `planning-reminders.yml:20`), appelle `POST {CLUBIKA_BASE_URL}/api/cron/planning-reminders` avec `Authorization: Bearer {CLUBIKA_CRON_SECRET}`. Le scraping (`/api/cron/scraper`) n'a **pas** d'équivalent GitHub Actions dans ce dépôt — son déclenchement périodique (s'il existe) est donc externe et **non déterminable statiquement**.
 
 ---
 

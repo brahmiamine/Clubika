@@ -14,15 +14,15 @@ describe('planning reminders workflow (issue #150)', () => {
     const workflow = workflowSource();
 
     expect(workflow).toContain(
-      "if: github.event_name == 'workflow_dispatch' || vars.AFP_PLANNING_SCHEDULE_ENABLED == 'true'",
+      "if: github.event_name == 'workflow_dispatch' || vars.CLUBIKA_SCHEDULE_ENABLED == 'true'",
     );
   });
 
   it('garde un préflight manuel explicite sans journaliser le secret', () => {
     const workflow = workflowSource();
 
-    expect(workflow).toContain('AFP_PLANNING_BASE_URL');
-    expect(workflow).toContain('AFP_PLANNING_CRON_SECRET');
+    expect(workflow).toContain('CLUBIKA_BASE_URL');
+    expect(workflow).toContain('CLUBIKA_CRON_SECRET');
     expect(workflow).toContain('Authorization: Bearer ${CRON_SECRET}');
     expect(workflow).not.toContain('echo "$CRON_SECRET"');
     expect(workflow).not.toContain('echo "${CRON_SECRET}"');

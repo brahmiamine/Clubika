@@ -69,7 +69,7 @@ describe('generateIcal', () => {
       role: 'all',
     });
 
-    expect(ics).toContain('UID:officiel-match-1@club-inconnu.afp-planning');
+    expect(ics).toContain('UID:officiel-match-1@club-inconnu.clubika');
     expect(ics).not.toContain('match-2@');
   });
 
@@ -94,7 +94,7 @@ describe('generateIcal', () => {
       role: 'arbitre',
     });
 
-    expect(ics).toContain('UID:officiel-match-1@club-inconnu.afp-planning');
+    expect(ics).toContain('UID:officiel-match-1@club-inconnu.clubika');
     expect(ics).not.toContain('match-2@');
   });
 
@@ -125,7 +125,7 @@ describe('generateIcal', () => {
 
     const ics = generateIcal([cancelled], allExtras);
 
-    expect(ics).toContain('UID:officiel-match-annule@club-inconnu.afp-planning');
+    expect(ics).toContain('UID:officiel-match-annule@club-inconnu.clubika');
     expect(ics).toContain('STATUS:CANCELLED');
     expect(ics).toContain('SEQUENCE:1');
     expect(ics).toContain('SUMMARY:ANNULÉ : Equipe A vs Equipe B');
@@ -139,7 +139,7 @@ describe('generateIcal', () => {
 
     const ics = generateIcal([published], allExtras);
 
-    expect(ics).toContain('UID:officiel-match-ok@club-inconnu.afp-planning');
+    expect(ics).toContain('UID:officiel-match-ok@club-inconnu.clubika');
     expect(ics).not.toContain('STATUS:CANCELLED');
     expect(ics).not.toContain('ANNULÉ');
   });
@@ -158,8 +158,8 @@ describe('generateIcal', () => {
       expect(uidA).toBeTruthy();
       expect(uidB).toBeTruthy();
       expect(uidA).not.toBe(uidB);
-      expect(uidA).toBe('officiel-shared-id@club-a.afp-planning');
-      expect(uidB).toBe('officiel-shared-id@club-b.afp-planning');
+      expect(uidA).toBe('officiel-shared-id@club-a.clubika');
+      expect(uidB).toBe('officiel-shared-id@club-b.clubika');
     });
 
     it('produces different UIDs for two event types sharing the same local id and club', () => {
@@ -177,8 +177,8 @@ describe('generateIcal', () => {
 
       expect(uids).toHaveLength(2);
       expect(uids[0]).not.toBe(uids[1]);
-      expect(uids).toContain('officiel-shared-id@club-a.afp-planning');
-      expect(uids).toContain('entrainement-shared-id@club-a.afp-planning');
+      expect(uids).toContain('officiel-shared-id@club-a.clubika');
+      expect(uids).toContain('entrainement-shared-id@club-a.clubika');
     });
 
     it('keeps the UID stable when other editable fields of the event change', () => {
@@ -200,26 +200,26 @@ describe('generateIcal', () => {
       const uidAfter = icsAfter.match(/UID:([^\r\n]+)/)?.[1];
 
       expect(uidBefore).toBe(uidAfter);
-      expect(uidBefore).toBe('officiel-match-1@club-a.afp-planning');
+      expect(uidBefore).toBe('officiel-match-1@club-a.clubika');
     });
 
     it('does not fall back to the legacy pre-#278 UID format, acknowledging the breaking change for existing subscribers', () => {
       const match = makeMatch({ id: 'match-1' });
       const ics = generateIcal([match], {}, undefined, { clubId: 'club-a' });
 
-      // Ancien format (avant #278) : `${event.id}@afp-planning`, sans namespace de type ni de
+      // Ancien format (avant #278) : `${event.id}@clubika`, sans namespace de type ni de
       // club. On vérifie explicitement qu'il n'est plus émis : le garder en parallèle
       // reproduirait la collision qu'on corrige (voir le commentaire au-dessus de
       // `buildEventUid` dans ical-export.ts pour la discussion complète du compromis).
-      expect(ics).not.toContain('UID:match-1@afp-planning');
-      expect(ics).toContain('UID:officiel-match-1@club-a.afp-planning');
+      expect(ics).not.toContain('UID:match-1@clubika');
+      expect(ics).toContain('UID:officiel-match-1@club-a.clubika');
     });
 
     it('falls back to a safe namespace segment when no clubId is provided', () => {
       const match = makeMatch({ id: 'match-1' });
       const ics = generateIcal([match], {});
 
-      expect(ics).toContain('UID:officiel-match-1@club-inconnu.afp-planning');
+      expect(ics).toContain('UID:officiel-match-1@club-inconnu.clubika');
     });
 
     it('sanitizes clubId and event id into RFC 5545-safe UID characters', () => {
@@ -228,7 +228,7 @@ describe('generateIcal', () => {
 
       const uid = ics.match(/UID:([^\r\n]+)/)?.[1];
       expect(uid).toBeTruthy();
-      expect(uid).toMatch(/^officiel-match-id-with-spaces@club---space\.afp-planning$/);
+      expect(uid).toMatch(/^officiel-match-id-with-spaces@club---space\.clubika$/);
     });
   });
 });

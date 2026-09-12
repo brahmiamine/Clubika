@@ -7,7 +7,7 @@ Application Next.js multi-club de pilotage du planning des clubs de football, av
 Matrice fonctionnelle : **Disponible** (parcours UI complet, routes actives), **Partiel**
 (backend ou UI existe mais parcours incomplet — la limite est précisée), **Roadmap** (rien
 d'utilisable en l'état, renvoie vers l'issue de suivi). Cette matrice est issue de l'audit
-[#153](https://github.com/brahmiamine/afp-planning/issues/153) et doit être revérifiée à
+[#153](https://github.com/brahmiamine/Clubika/issues/153) et doit être revérifiée à
 chaque release (voir critère d'acceptation de cette issue).
 
 ### Planning et affectations
@@ -43,7 +43,7 @@ chaque release (voir critère d'acceptation de cette issue).
 | Demandes de disponibilité ponctuelles, gestion des indisponibilités | Disponible | `/club/indisponibilites` (validation admin : pending bloque l’affectation jusqu’au refus), `/club/demandes-disponibilite` (redirige depuis `/club/disponibilites`), `/mon-planning/mes-indisponibilites`, `/mon-planning/disponibilites` |
 | Préférences personnelles de planning | Disponible | `/mon-planning/preferences-planning` |
 | Commentaires, checklist, documents, rapports post-événement | Disponible | Espace événement (`EventWorkspaceView`) |
-| Ressources, réservations, transport | Roadmap | Seule une brique interne (`app/lib/planning/resources.ts`) existe, sans CRUD ni page — [#187](https://github.com/brahmiamine/afp-planning/issues/187) |
+| Ressources, réservations, transport | Roadmap | Seule une brique interne (`app/lib/planning/resources.ts`) existe, sans CRUD ni page — [#187](https://github.com/brahmiamine/Clubika/issues/187) |
 | Statistiques (acceptation, présence, délai de réponse, remplacement, couverture, charge, coefficient d'équité) | Disponible | `/club/planning/statistiques`, `app/lib/planning/analytics.ts` |
 | Météo par événement (Open-Meteo) | Disponible | Espace événement, visible par les administrateurs et les personnes réellement affectées |
 
@@ -189,7 +189,7 @@ Accès une fois lancé :
 - phpMyAdmin : http://localhost:8080 (utilisateur/mot de passe = `DB_USER`/`DB_PASSWORD` ci-dessous)
 - MariaDB : `127.0.0.1:3306`
 
-Variables surchargeables (toutes optionnelles, valeurs par défaut ci-dessous) : `DB_CONTAINER`, `PMA_CONTAINER`, `DOCKER_NETWORK`, `DB_NAME=afp_planning`, `DB_USER=afp_user`, `DB_PASSWORD=afp_password`, `DB_ROOT_PASSWORD`, `DB_PORT=3306`, `PMA_PORT=8080`, `MARIADB_IMAGE=mariadb:latest`, `PHPMYADMIN_IMAGE=phpmyadmin:latest`. Placez-les dans un fichier `.env` à la racine, il est chargé automatiquement par `start.sh`.
+Variables surchargeables (toutes optionnelles, valeurs par défaut ci-dessous) : `DB_CONTAINER`, `PMA_CONTAINER`, `DOCKER_NETWORK`, `DB_NAME=clubika`, `DB_USER=clubika_user`, `DB_PASSWORD=clubika_password`, `DB_ROOT_PASSWORD`, `DB_PORT=3306`, `PMA_PORT=8080`, `MARIADB_IMAGE=mariadb:latest`, `PHPMYADMIN_IMAGE=phpmyadmin:latest`. Placez-les dans un fichier `.env` à la racine, il est chargé automatiquement par `start.sh`.
 
 ## Configuration
 
@@ -201,9 +201,9 @@ Copiez-le vers `.env.local` ou exportez les variables dans votre environnement.
 ```env
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_NAME=afp_planning
-DB_USER=afp_user
-DB_PASSWORD=afp_password
+DB_NAME=clubika
+DB_USER=clubika_user
+DB_PASSWORD=clubika_password
 
 # Club par défaut de ce déploiement (voir "Multi-club" ci-dessous). Plusieurs clubs peuvent
 # partager la même base ; APP_CLUB_ID ne sert plus qu'à amorcer le premier club et de repli
@@ -345,8 +345,8 @@ Les données Open-Meteo nécessitent une attribution. L'interface affiche la sou
 L'application doit avoir la variable d'environnement `CRON_SECRET`. GitHub Actions doit avoir :
 
 ```text
-AFP_PLANNING_BASE_URL       URL HTTPS publique de l'application
-AFP_PLANNING_CRON_SECRET    copie exacte du CRON_SECRET de l'application déployée
+CLUBIKA_BASE_URL       URL HTTPS publique de l'application
+CLUBIKA_CRON_SECRET    copie exacte du CRON_SECRET de l'application déployée
 ```
 
 Le workflow appelle l'endpoint cron sécurisé avec un Bearer token. Voir `PLANNING_REMINDERS.md`.

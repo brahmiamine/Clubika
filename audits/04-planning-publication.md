@@ -1,8 +1,8 @@
 # Audit 04 — Planning, affectations et publication
 
-**Repository :** `https://github.com/brahmiamine/afp-planning`  
-**Périmètre :** code sur `main` au 2026-09-10  
-**Méthode :** revue statique + tests unitaires recoupés (`global-publication.test.ts`, `publication-all/route.test.ts`, E2E `publication-cycle` / `post-publication-republish`). UI non rejouée dans un navigateur.  
+**Repository :** `https://github.com/brahmiamine/Clubika`
+**Périmètre :** code sur `main` au 2026-09-10
+**Méthode :** revue statique + tests unitaires recoupés (`global-publication.test.ts`, `publication-all/route.test.ts`, E2E `publication-cycle` / `post-publication-republish`). UI non rejouée dans un navigateur.
 **Relation :** l’audit 01 fournit le contexte métier ; **toutes les règles de publication ont été revérifiées ici** dans `global-publication.ts` et les routes.
 
 ---
@@ -134,8 +134,8 @@ Mapping : `person-link.ts:10-27`.
 
 `collectPublicationBlockers` (`global-publication.ts:87-182`) :
 
-1. **Toujours :** `personId` orphelin, assignee inactif.  
-2. Si `publicationReadiness` : couverture de rôles + horaire valide (`validation.ts:74-93`).  
+1. **Toujours :** `personId` orphelin, assignee inactif.
+2. Si `publicationReadiness` : couverture de rôles + horaire valide (`validation.ts:74-93`).
 3. Si `assignmentValidation` : indispo, conflits, types (`validation.ts:129-176`).
 
 Defaults flags **true** (`settings.ts:57-61`). Officiel/amical → 3 rôles ; entraînement/plateau → encadrant only (`validation.ts:63-71`).
@@ -218,11 +218,11 @@ Multi-fonctions : une entrée par rôle, groupées par événement (`personal-pl
 
 ## 10. Notifications, chat, atomicité, perf
 
-- Publish : enqueue si `diff.changed > 0` (`global-publication.ts:381-418`) ; delivery **après** commit (`:428-432`).  
-- Draft assign : pas de notif. `notifyAssignmentChanges` **non branché**.  
-- Event chat : assignees du **snapshot publié** (`chat/policy.ts:22-36`). Désaffecté perd l’accès après update snapshot (#345).  
-- Atomicité : une TX pour statuts + snapshot + audit + outbox (`:272-426`) — « jamais de publication partielle » (commentaire).  
-- Idempotency keys ancrées sur `before.publishedAt` (`:357-362`).  
+- Publish : enqueue si `diff.changed > 0` (`global-publication.ts:381-418`) ; delivery **après** commit (`:428-432`).
+- Draft assign : pas de notif. `notifyAssignmentChanges` **non branché**.
+- Event chat : assignees du **snapshot publié** (`chat/policy.ts:22-36`). Désaffecté perd l’accès après update snapshot (#345).
+- Atomicité : une TX pour statuts + snapshot + audit + outbox (`:272-426`) — « jamais de publication partielle » (commentaire).
+- Idempotency keys ancrées sur `before.publishedAt` (`:357-362`).
 - Perf : N+1 `savePlanningPublication` + `syncAssignmentStatesForRole` par candidat (`:282-313`).
 
 ---
@@ -271,29 +271,29 @@ Contrasté avec `rewritePublishedPlanningRecord` (`published-planning.ts:638-645
 
 ## 13. Décisions produit
 
-**P-1 Validation unique ?** A) Brancher validation sur tous les writes. B) Warn-only save, hard publish. C) UI only.  
-**P-2 Dual immédiat/différé ?** A) Toujours différé. B) Toujours immédiat. C) Documenter swap (actuel).  
-**P-3 Reporté ?** A) Nouveau statut. B) Cancel+motif. C) Datetime only.  
-**P-4 Périmètre publish ?** A) Global only (actuel, `publication-service.ts:6-12`). B) Week-end filtré. C) Per-event (rejeté).  
+**P-1 Validation unique ?** A) Brancher validation sur tous les writes. B) Warn-only save, hard publish. C) UI only.
+**P-2 Dual immédiat/différé ?** A) Toujours différé. B) Toujours immédiat. C) Documenter swap (actuel).
+**P-3 Reporté ?** A) Nouveau statut. B) Cancel+motif. C) Datetime only.
+**P-4 Périmètre publish ?** A) Global only (actuel, `publication-service.ts:6-12`). B) Week-end filtré. C) Per-event (rejeté).
 **P-5 Chat après désaffectation ?** Révoquer (actuel #345) vs grâce / read-only.
 
 ---
 
 ## 14. Plan de remédiation
 
-1. Unifier `saveRoleAssignments` comme unique write path (PLAN-001).  
-2. `FOR UPDATE` sur le record snapshot (PLAN-002).  
-3. Trancher P-1 à P-5.  
-4. Tests API : dirigeant 403, publish avec blockers → 409, concurrent publish.  
+1. Unifier `saveRoleAssignments` comme unique write path (PLAN-001).
+2. `FOR UPDATE` sur le record snapshot (PLAN-002).
+3. Trancher P-1 à P-5.
+4. Tests API : dirigeant 403, publish avec blockers → 409, concurrent publish.
 5. Réduire N+1 (batch status writes).
 
 ---
 
 ## 15. Definition of Done
 
-- [x] 18 scénarios sourcés  
-- [x] Chaque règle de publication indique la contournabilité API  
-- [x] Matrice post-publish date/heure/terrain/affectation/annulation/report  
-- [x] Règles non déterminables → options concrètes  
+- [x] 18 scénarios sourcés
+- [x] Chaque règle de publication indique la contournabilité API
+- [x] Matrice post-publish date/heure/terrain/affectation/annulation/report
+- [x] Règles non déterminables → options concrètes
 
 **Non vérifié dynamiquement :** UI double-clic réel, charge N matchs, deux navigateurs admin.

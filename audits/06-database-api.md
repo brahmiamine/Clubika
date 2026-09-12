@@ -1,7 +1,7 @@
 # Audit 06 — Base de données et API
 
-**Repository :** `https://github.com/brahmiamine/afp-planning`  
-**Périmètre :** code sur `main` au 2026-09-10  
+**Repository :** `https://github.com/brahmiamine/Clubika`
+**Périmètre :** code sur `main` au 2026-09-10
 **Méthode :** schémas + 20 migrations + 92 routes. `pnpm run db:migrate` **non exécuté** ici (pas de MariaDB locale) — `Non exécuté — vérification statique uniquement`. CI `main` exécute migrate puis tests : **76 fichiers failed** (ALS bootstrap + FK tests).
 
 **Corrections vs audit 06 précédent :** « 18 migrations / aucune FK » est **faux**. Il y a **20** migrations et **3 FK** (0019). Table `chat_rate_limit_events` (0020).
@@ -134,11 +134,11 @@ Requêtes tenant-scoped via ALS `getCurrentClubId()` (`records.ts:86`) ou `where
 **FK MariaDB (0019) :** `fk_user_sessions_user_id`, `fk_notifications_user_id`, `fk_chat_participants_user_id` CASCADE (`referential-integrity.ts:48-70`). **Pas de FK** sur messages, invitations, push, outbox, planning_*, events.
 
 **Unicité :**
-- Email : `uq_users_club_email` (0017) — multi-club OK  
-- Push : `endpoint_hash` UNIQUE + UPSERT  
-- Outbox : `idempotency_key` UNIQUE  
-- Chat : `roomKey`, `(roomId,sequence)`, `(roomId,sender,clientMessageId)`  
-- Invitations : PK = token hash ; **pas** UNIQUE pending email  
+- Email : `uq_users_club_email` (0017) — multi-club OK
+- Push : `endpoint_hash` UNIQUE + UPSERT
+- Outbox : `idempotency_key` UNIQUE
+- Chat : `roomKey`, `(roomId,sequence)`, `(roomId,sender,clientMessageId)`
+- Invitations : PK = token hash ; **pas** UNIQUE pending email
 - Source scrape : **pas** UNIQUE DB sur `sourceMatchId`
 
 **Indexes justifiés :** notifications user/unread ; `planning_records.token_hash` ; chat messages sequence ; outbox `(status, next_attempt_at)` ; assignment_state person/event ; rate-limit buckets. Pas de `sort`/`orderBy` client → pas d’injection.
@@ -147,9 +147,9 @@ Requêtes tenant-scoped via ALS `getCurrentClubId()` (`records.ts:86`) ou `where
 
 ## 6. Enums, dates, suppressions
 
-- Rôles : strings TS, pas ENUM SQL.  
-- Dates match : strings `jj/mm/aaaa` / `hh:mm` ; instants via `eventStartTimestamp` TZ club défaut `Europe/Paris` (`schemas.ts:619`, `p0-rules.ts:70-82`) — DST testé côté planning, pas scraper.  
-- DB connection UTC (`data-source.ts:42`).  
+- Rôles : strings TS, pas ENUM SQL.
+- Dates match : strings `jj/mm/aaaa` / `hh:mm` ; instants via `eventStartTimestamp` TZ club défaut `Europe/Paris` (`schemas.ts:619`, `p0-rules.ts:70-82`) — DST testé côté planning, pas scraper.
+- DB connection UTC (`data-source.ts:42`).
 - Default colonne `'afp'` encore présent (`schemas.ts:4-6`) — risque si ALS oublié **avant** #333 ; maintenant throw plutôt que fuite.
 
 Suppressions : hard user après `findUserReferences` (409 sinon) ; CASCADE sessions/notifs/participants ; messages anonymisés ; soft chat `deletedAt` ; archive event retire snapshot ; club deactivate révoque sessions.
@@ -223,11 +223,11 @@ Convention 401 vs 403 **respectée**.
 
 ## 10. Validation, contrats, pagination, N+1, erreurs
 
-- BodyValidator : surtout `planning/events/**`. Directory/settings/me : hand.  
-- `serializeUser` omet `passwordHash` / `icalToken` (`users/route.ts:10-24`) ; **`GET /api/auth/me` inclut `icalToken`** (`session.ts:73`) — API-001.  
-- Pagination : notifs 100 ; messages cursor 1–200 ; archives/users/events **non bornés**.  
-- N+1 : `listChatEvents` ; publish mass (audit 04). `listRooms` batché.  
-- UNIQUE races : souvent 500 sauf quelques `ER_DUP_ENTRY` → 409 (platform admins).  
+- BodyValidator : surtout `planning/events/**`. Directory/settings/me : hand.
+- `serializeUser` omet `passwordHash` / `icalToken` (`users/route.ts:10-24`) ; **`GET /api/auth/me` inclut `icalToken`** (`session.ts:73`) — API-001.
+- Pagination : notifs 100 ; messages cursor 1–200 ; archives/users/events **non bornés**.
+- N+1 : `listChatEvents` ; publish mass (audit 04). `listRooms` batché.
+- UNIQUE races : souvent 500 sauf quelques `ER_DUP_ENTRY` → 409 (platform admins).
 - CI tests : `ER_NO_REFERENCED_ROW_2` sur `user_sessions` (fixtures créent des sessions avant users / users déjà CASCADE-supprimés) — DB-003.
 
 ---
@@ -255,7 +255,7 @@ Convention 401 vs 403 **respectée**.
 ## 12. Findings
 
 ### DB-001 — P0 — `migrateJsonData` exige ALS sur DB neuve
-`json-migrator.ts:453` depuis `getDb()` (`index.ts:18-19`). Casse login/E2E/CI. Même cause que FUNC-001.  
+`json-migrator.ts:453` depuis `getDb()` (`index.ts:18-19`). Casse login/E2E/CI. Même cause que FUNC-001.
 **Statut :** 🔴 Confirmé (CI run `34512699676`)
 
 ### DB-002 — P1 — Majorité des tables sans FK
@@ -287,11 +287,11 @@ Corrélation SEC-002.
 
 ## 13. Plan de remédiation
 
-1. **Fix bootstrap JSON** (DB-001) — débloque CI.  
-2. Adapter factories de tests à 0019 (ordre insert user→session, icalToken unique).  
-3. FK phase 2 (messages, invitations, push) après cleanup.  
-4. UNIQUE sourceMatchId par club (payload ou colonne).  
-5. Étendre BodyValidator + mapper ER_DUP → 409.  
+1. **Fix bootstrap JSON** (DB-001) — débloque CI.
+2. Adapter factories de tests à 0019 (ordre insert user→session, icalToken unique).
+3. FK phase 2 (messages, invitations, push) après cleanup.
+4. UNIQUE sourceMatchId par club (payload ou colonne).
+5. Étendre BodyValidator + mapper ER_DUP → 409.
 6. Pagination listes admin.
 
 **Décisions techniques :** (T1) garder dual stack EntitySchema + SQL planning_records vs unifier ; (T2) étendue des FK ; (T3) abandonner import `data/*.json`.
@@ -300,9 +300,9 @@ Corrélation SEC-002.
 
 ## 14. Definition of Done
 
-- [x] 22 EntitySchema + SQL-only dans l’ER avec ownership  
-- [x] 92 endpoints dans l’inventaire (détail auth = audit 02, recoupé)  
-- [x] 20 migrations listées dans l’ordre  
-- [x] Patterns `findOne/delete/update(id)` documentés  
+- [x] 22 EntitySchema + SQL-only dans l’ER avec ownership
+- [x] 92 endpoints dans l’inventaire (détail auth = audit 02, recoupé)
+- [x] 20 migrations listées dans l’ordre
+- [x] Patterns `findOne/delete/update(id)` documentés
 
 **Migrations réelles sur DB vide :** non exécutées localement ; CI les exécute puis échoue au bootstrap JSON / FK tests.

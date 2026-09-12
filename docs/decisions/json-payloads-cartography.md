@@ -1,7 +1,7 @@
 # Cartographie des payloads `simple-json` du planning (issue #128)
 
 Ce document répond au point 1 (« Cartographie ») et au point 2 (« Définir la
-frontière ») de l'issue [#128](https://github.com/brahmiamine/afp-planning/issues/128).
+frontière ») de l'issue [#128](https://github.com/brahmiamine/Clubika/issues/128).
 Il ne modifie aucun schéma existant : c'est une cartographie et une décision de
 frontière, préalables à toute normalisation.
 
