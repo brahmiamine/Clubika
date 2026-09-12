@@ -108,6 +108,16 @@ const nextConfig: NextConfig = {
   // Optimisations de production build
   productionBrowserSourceMaps: false,
 
+  // TypeORM / mysql2 hors du bundle API : le driver `mysql` 2.x mélange les
+  // paquets (`PROTOCOL_INCORRECT_PACKET_SEQUENCE`) dès que deux routes
+  // initialisent la connexion en parallèle.
+  serverExternalPackages: ['typeorm', 'mysql', 'mysql2', 'mariadb', 'reflect-metadata'],
+
+  // Les empreintes de migrations sont lues via readFileSync, invisible au tracing.
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./app/lib/db/migrations/**/*'],
+  },
+
   turbopack: {
     root: process.cwd(),
   },

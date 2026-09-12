@@ -12,21 +12,22 @@ declare global {
 export async function getDb(): Promise<DataSource> {
   const dataSource = await getDataSource();
 
-  if (!globalThis.__clubikaDbBootstrapped) {
-    if (!globalThis.__clubikaDbBootstrapPromise) {
-      globalThis.__clubikaDbBootstrapPromise = (async () => {
-        await ensureDbSchemaForAvailability(dataSource);
-        await ensureJsonDataMigrated(dataSource);
-        await ensureAdminBootstrap(dataSource);
-        await ensurePlatformAdminBootstrap(dataSource);
-        globalThis.__clubikaDbBootstrapped = true;
-      })().finally(() => {
-        globalThis.__clubikaDbBootstrapPromise = undefined;
-      });
-    }
-
-    await globalThis.__clubikaDbBootstrapPromise;
+  if (globalThis.__clubikaDbBootstrapped) {
+    return dataSource;
   }
 
+  if (!globalThis.__clubikaDbBootstrapPromise) {
+    globalThis.__clubikaDbBootstrapPromise = (async () => {
+      await ensureDbSchemaForAvailability(dataSource);
+      await ensureJsonDataMigrated(dataSource);
+      await ensureAdminBootstrap(dataSource);
+      await ensurePlatformAdminBootstrap(dataSource);
+      globalThis.__clubikaDbBootstrapped = true;
+    })().finally(() => {
+      globalThis.__clubikaDbBootstrapPromise = undefined;
+    });
+  }
+
+  await globalThis.__clubikaDbBootstrapPromise;
   return dataSource;
 }

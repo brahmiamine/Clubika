@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { DataSource } from 'typeorm';
@@ -53,11 +53,29 @@ export interface RunSchemaMigrationsOptions {
 const DEFAULT_TABLE_NAME = 'schema_migrations';
 const DEFAULT_LOCK_NAME = 'clubika_schema_migrations';
 const DEFAULT_LOCK_TIMEOUT_SECONDS = 60;
-const MIGRATIONS_DIR = dirname(fileURLToPath(import.meta.url));
+const MIGRATION_LOGIC_MARKER = 'typeorm-entity-tables.ts';
+
+/**
+ * Dossier des fichiers d'empreinte `up()`.
+ * `import.meta.url` marche avec tsx/Vitest ; dans le bundle Next.js des routes
+ * API il pointe vers un chunk `.next/server` qui ne contient pas les `.ts`.
+ */
+export function resolveMigrationsDir(): string {
+  const candidates = [
+    dirname(fileURLToPath(import.meta.url)),
+    join(process.cwd(), 'app/lib/db/migrations'),
+  ];
+  for (const dir of candidates) {
+    if (existsSync(join(dir, MIGRATION_LOGIC_MARKER))) return dir;
+  }
+  throw new Error(
+    `[migrations] Fichiers d'empreinte introuvables (cherché : ${candidates.join(', ')}).`,
+  );
+}
 
 /** Contenu UTF-8 d'un fichier du dossier migrations, pour l'empreinte de `up()`. */
 export function readMigrationLogicFile(filename: string): string {
-  return readFileSync(join(MIGRATIONS_DIR, filename), 'utf8');
+  return readFileSync(join(resolveMigrationsDir(), filename), 'utf8');
 }
 
 function statementsPayload(migration: SchemaMigration): string {
