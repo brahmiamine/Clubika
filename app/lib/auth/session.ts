@@ -18,12 +18,12 @@ export interface SessionRevocationEvent {
 type SessionRevocationListener = (event: SessionRevocationEvent) => void;
 
 declare global {
-  var __afpSessionRevocationListeners: Set<SessionRevocationListener> | undefined;
+  var __clubikaSessionRevocationListeners: Set<SessionRevocationListener> | undefined;
 }
 
 function sessionRevocationListeners(): Set<SessionRevocationListener> {
-  globalThis.__afpSessionRevocationListeners ??= new Set();
-  return globalThis.__afpSessionRevocationListeners;
+  globalThis.__clubikaSessionRevocationListeners ??= new Set();
+  return globalThis.__clubikaSessionRevocationListeners;
 }
 
 function publishSessionRevocation(event: SessionRevocationEvent): void {

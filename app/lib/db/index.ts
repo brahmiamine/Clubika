@@ -5,27 +5,27 @@ import { ensureAdminBootstrap } from './user-bootstrap';
 import { ensurePlatformAdminBootstrap } from './platform-bootstrap';
 
 declare global {
-  var __afpDbBootstrapped: boolean | undefined;
-  var __afpDbBootstrapPromise: Promise<void> | undefined;
+  var __clubikaDbBootstrapped: boolean | undefined;
+  var __clubikaDbBootstrapPromise: Promise<void> | undefined;
 }
 
 export async function getDb(): Promise<DataSource> {
   const dataSource = await getDataSource();
 
-  if (!globalThis.__afpDbBootstrapped) {
-    if (!globalThis.__afpDbBootstrapPromise) {
-      globalThis.__afpDbBootstrapPromise = (async () => {
+  if (!globalThis.__clubikaDbBootstrapped) {
+    if (!globalThis.__clubikaDbBootstrapPromise) {
+      globalThis.__clubikaDbBootstrapPromise = (async () => {
         await ensureDbSchemaForAvailability(dataSource);
         await ensureJsonDataMigrated(dataSource);
         await ensureAdminBootstrap(dataSource);
         await ensurePlatformAdminBootstrap(dataSource);
-        globalThis.__afpDbBootstrapped = true;
+        globalThis.__clubikaDbBootstrapped = true;
       })().finally(() => {
-        globalThis.__afpDbBootstrapPromise = undefined;
+        globalThis.__clubikaDbBootstrapPromise = undefined;
       });
     }
 
-    await globalThis.__afpDbBootstrapPromise;
+    await globalThis.__clubikaDbBootstrapPromise;
   }
 
   return dataSource;

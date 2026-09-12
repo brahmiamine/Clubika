@@ -1,6 +1,6 @@
 import type { MatchesData } from '@/types/match';
 
-export const SCRAPER_RESULT_PREFIX = '__AFP_SCRAPER_RESULT__=';
+export const SCRAPER_RESULT_PREFIX = '__CLUBIKA_SCRAPER_RESULT__=';
 
 function isMatchesData(value: unknown): value is MatchesData {
   if (!value || typeof value !== 'object') return false;

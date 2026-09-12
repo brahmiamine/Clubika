@@ -53,7 +53,7 @@ Le poste Tests est bas : les fixtures prouvent un module **non utilisé** en pro
 
 | Fichier | Responsabilité | Entrée | Sortie | Appelé par |
 |---------|----------------|--------|--------|------------|
-| `scraper.js` (53 777 o) | Playwright liste + détail ; **parse inline** `page.evaluate` | `SCRAPER_MATCHES_URL_KEY`, `SCRAPER_CLUB_NAME` | stdout `__AFP_SCRAPER_RESULT__=` | `run-scraper.ts` `execFile` |
+| `scraper.js` (53 777 o) | Playwright liste + détail ; **parse inline** `page.evaluate` | `SCRAPER_MATCHES_URL_KEY`, `SCRAPER_CLUB_NAME` | stdout `__CLUBIKA_SCRAPER_RESULT__=` | `run-scraper.ts` `execFile` |
 | `sportcorico-parser.js` | normalize/resolve URL key + bundle DOM | string | key / bundle | `scraper.js` (resolve + bundle **chargé mais unused**) |
 | `sportcorico-parser.dom.js` | parsers purs + `extractMatchCategorie` (#353) | Document | club/list/detail | **tests seulement** |
 | `club-identity.ts` | normalize / home / logos (#335) | noms | bool | `run-scraper.ts` ; **dupliqué inline** dans `scraper.js` |
@@ -160,7 +160,7 @@ Sélecteurs Tailwind fragiles (`section.mb-10`, `border-l-8.border-primary`, `ch
 
 `club-identity.ts:1-55` : NFD, accents, lower, non-alnum, inclusion, acronyme, overlap tokens ≥50 %.
 
-**AFP leftover :** matching `localTeam.includes("afp")` **supprimé** (`scraper.js:825` → `isHomeMatchForClub`). Résidus : fallback name `"Academie Football Paris 18"` (`:1283-1284`), filtre logo `championnet-s-paris-511117` (`:999,1050`), préfixe stdout `__AFP_`.
+**AFP leftover :** matching `localTeam.includes("afp")` **supprimé** (`scraper.js:825` → `isHomeMatchForClub`). Résidus : fallback name `"Academie Football Paris 18"` (`:1283-1284`), filtre logo `championnet-s-paris-511117` (`:999,1050`), préfixe stdout `__CLUBIKA_`.
 
 ---
 

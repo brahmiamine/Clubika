@@ -4,7 +4,7 @@ import {
 import { sportCoricoClubPageUrl } from "./app/lib/scraper/sportcorico-api.client.ts";
 import { resolveMatchesUrlKey } from "./app/lib/scraper/sportcorico-parser.js";
 
-const SCRAPER_RESULT_PREFIX = "__AFP_SCRAPER_RESULT__=";
+const SCRAPER_RESULT_PREFIX = "__CLUBIKA_SCRAPER_RESULT__=";
 
 let matchesUrlKey;
 try {

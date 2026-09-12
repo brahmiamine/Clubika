@@ -41,8 +41,8 @@ export function canManageChatChannel(user: ChatPolicyUser, room: ChatPolicyRoom)
   return room.type === 'channel' && user.clubId === room.clubId && user.accessRole === 'admin';
 }
 
-export function isClubika(userClubId: string, planningClubId: string): boolean {
-  return userClubId === planningClubId;
+export function isClubika(userClubId: string, clubId: string): boolean {
+  return userClubId === clubId;
 }
 
 function conversationKey(parts: readonly (string | number)[]): string {
