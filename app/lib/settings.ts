@@ -319,6 +319,20 @@ export function hasThemeUserOverride(): boolean {
     }
 }
 
+/**
+ * Enregistre un choix de thème utilisateur et l'applique.
+ * À utiliser depuis le menu mobile comme depuis le bouton desktop : sans ce
+ * marqueur, `AppThemeSync` réappliquerait le themeMode du club (souvent sombre)
+ * dès le prochain chargement des réglages.
+ */
+export function applyUserThemeChoice(
+    theme: ThemeMode,
+    setTheme: (theme: ThemeMode) => void,
+): void {
+    markThemeUserOverride();
+    setTheme(theme);
+}
+
 export function applyThemeVariables(settings: AppSettings): void {
     if (typeof window === 'undefined') {
         return;

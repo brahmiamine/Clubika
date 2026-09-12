@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { markThemeUserOverride } from '@/lib/settings';
+import { applyUserThemeChoice } from '@/lib/settings';
 
 export const ThemeToggle = memo(function ThemeToggle() {
   const { setTheme } = useTheme();
@@ -21,8 +21,7 @@ export const ThemeToggle = memo(function ThemeToggle() {
   }, []);
 
   const chooseTheme = (theme: 'light' | 'dark' | 'system') => {
-    markThemeUserOverride();
-    setTheme(theme);
+    applyUserThemeChoice(theme, setTheme);
   };
 
   if (!mounted) {
@@ -44,15 +43,15 @@ export const ThemeToggle = memo(function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => chooseTheme('light')}>
+        <DropdownMenuItem onSelect={() => chooseTheme('light')}>
           <Sun className="mr-2 h-4 w-4" />
           <span>Clair</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => chooseTheme('dark')}>
+        <DropdownMenuItem onSelect={() => chooseTheme('dark')}>
           <Moon className="mr-2 h-4 w-4" />
           <span>Sombre</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => chooseTheme('system')}>
+        <DropdownMenuItem onSelect={() => chooseTheme('system')}>
           <span>Système</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
