@@ -1,0 +1,17 @@
+{
+	email admin@clubika.com
+}
+
+www.clubika.com {
+	redir https://clubika.com{uri} permanent
+}
+
+clubika.com {
+	encode gzip zstd
+
+	reverse_proxy app:3000 {
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up Host {host}
+	}
+}

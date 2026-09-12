@@ -365,9 +365,18 @@ dans [`docs/decisions/json-payloads-cartography.md`](docs/decisions/json-payload
 
 ## Déploiement
 
-L'application est un conteneur Next.js standard (build `pnpm build`, démarrage `pnpm start`) avec une dépendance MariaDB et Playwright/Chromium pour le scraping — déployable sur n'importe quel hébergeur supportant Docker/Node.js (VPS, conteneur managé, etc.). Configurez les variables d'environnement documentées ci-dessus sur votre hébergeur avant le déploiement. La CI GitHub vérifie lint, type-check, tests unitaires/intégration, tests navigateur bout-en-bout (Playwright, voir [TESTING.md](./TESTING.md)) et build.
+Le chemin prévu pour un VPS (OVH, Debian, domaine `clubika.com`) est décrit dans
+[`deploy/README.md`](deploy/README.md) : Docker Compose (une instance de l'app + MariaDB),
+Caddy en HTTPS, cron local (relances, scraper, dumps). Copiez
+`deploy/.env.production.example` vers `deploy/.env` et remplissez les secrets
+**avant** le premier `docker compose up`.
 
-**Mono-instance requis pour le chat.** Le `Dockerfile` ne démarre qu'un seul conteneur (`pnpm run start`), et c'est actuellement une contrainte réelle, pas seulement une configuration par défaut : les limites de débit du chat temps réel sont en mémoire par instance (voir « Chat temps réel » ci-dessus). Déployer plusieurs instances/replicas derrière un même load balancer sans revoir cette implémentation permet à un utilisateur de contourner ces limites en changeant de nœud.
+L'application est un conteneur Next.js (`pnpm build`, démarrage `pnpm start`) avec MariaDB
+et Playwright/Chromium pour le scraping. La CI GitHub vérifie lint, type-check, tests
+unitaires/intégration, tests navigateur bout-en-bout (Playwright, voir [TESTING.md](./TESTING.md))
+et build.
+
+**Mono-instance requis pour le chat.** Le `Dockerfile` ne démarre qu'un seul conteneur (`pnpm run start`), et c'est actuellement une contrainte réelle, pas seulement une configuration par défaut : les limites de débit du chat temps réel sont en mémoire par instance (voir « Chat temps réel » ci-dessus). Déployer plusieurs instances/replicas derrière un même load balancer sans revoir cette implémentation permet à un utilisateur de contourner ces limites en changeant de nœud. Ne pas augmenter le nombre de replicas dans `deploy/docker-compose.yml`.
 
 ## Stack
 

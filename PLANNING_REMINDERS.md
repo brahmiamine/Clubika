@@ -1,6 +1,10 @@
 # Relances automatiques du planning
 
-Les relances automatiques des affectations en attente sont déclenchées par GitHub Actions via le workflow `.github/workflows/planning-reminders.yml`.
+Les relances automatiques des affectations en attente sont déclenchées soit par le
+**cron du VPS** (`deploy/scripts/install-cron.sh`, recommandé en production), soit par
+GitHub Actions via le workflow `.github/workflows/planning-reminders.yml`.
+
+N'activez **pas** les deux en même temps : chaque exécution enverrait les relances en double.
 
 Le workflow peut s'exécuter toutes les heures, à la minute 15, et appelle :
 
