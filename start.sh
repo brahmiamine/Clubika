@@ -16,9 +16,9 @@ fi
 MARIADB_IMAGE="${MARIADB_IMAGE:-mariadb:latest}"
 PHPMYADMIN_IMAGE="${PHPMYADMIN_IMAGE:-phpmyadmin:latest}"
 
-DB_CONTAINER="${DB_CONTAINER:-afp_mariadb}"
-PMA_CONTAINER="${PMA_CONTAINER:-afp_phpmyadmin}"
-DOCKER_NETWORK="${DOCKER_NETWORK:-afp_network}"
+DB_CONTAINER="${DB_CONTAINER:-clubika_mariadb}"
+PMA_CONTAINER="${PMA_CONTAINER:-clubika_phpmyadmin}"
+DOCKER_NETWORK="${DOCKER_NETWORK:-clubika_network}"
 
 DB_NAME="${DB_NAME:-clubika}"
 DB_USER="${DB_USER:-clubika_user}"

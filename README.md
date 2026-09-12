@@ -175,7 +175,7 @@ Voir aussi [TESTING.md](./TESTING.md) et [PLANNING_REMINDERS.md](./PLANNING_REMI
 `start.sh` gère toute l'infrastructure locale :
 
 1. Vérifie que Docker tourne (le démarre sur macOS si besoin).
-2. Télécharge/démarre un conteneur MariaDB (`afp_mariadb`) et un conteneur phpMyAdmin (`afp_phpmyadmin`) sur un réseau Docker dédié (`afp_network`).
+2. Télécharge/démarre un conteneur MariaDB (`clubika_mariadb`) et un conteneur phpMyAdmin (`clubika_phpmyadmin`) sur un réseau Docker dédié (`clubika_network`).
 3. Attend que MariaDB réponde réellement aux connexions (`mariadb-admin ping`), pas juste que le conteneur soit démarré.
 4. Installe les dépendances si `node_modules` est absent, puis lance l'application.
 
