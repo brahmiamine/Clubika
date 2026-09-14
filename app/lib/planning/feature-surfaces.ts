@@ -128,4 +128,13 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
     pages: [],
     routes: [],
   },
+  massExport: {
+    label: 'Export massif du planning',
+    description: 'Autorise les exports CSV, PDF et JSON du planning. Les identités et téléphones restent opt-in.',
+    pages: [],
+    routes: [
+      'app/api/planning/export/route.ts',
+      'app/api/planning/export/[token]/route.ts',
+    ],
+  },
 };
