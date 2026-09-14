@@ -114,7 +114,6 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
         generatedAt: new Date().toISOString(),
         scope: share.payload.scope,
         club: {
-          id: share.clubId,
           name: settings?.clubName ?? null,
           logo: settings?.clubLogo ?? null,
           primaryColor: settings?.primaryColor ?? DEFAULT_APP_SETTINGS.primaryColor,

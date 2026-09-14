@@ -134,12 +134,13 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] (integration)', 
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.club.id).toBe(CLUB_ID);
+    expect(body.club).not.toHaveProperty('id');
     expect(body.club.primaryColor).toMatch(/^#/);
     expect(body.club.accentColor).toMatch(/^#/);
     const titles = (body.items as Array<{ title: string }>).map((item) => item.title);
-    expect(titles).toContain('Entraînement test');
+    expect(titles).toContain('Entraînement');
     expect(titles).not.toContain('Match annulé');
+    expect(titles).not.toContain('Entraînement test');
   });
 
   it('refuse un lien de partage par ailleurs valide une fois le club désactivé (issue #213)', async () => {
