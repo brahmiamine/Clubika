@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
           const result = await runScraperAndPersistToDb(clubId);
           results.push({ clubId, runId: result.runId, sync: result.sync });
         } catch (error) {
-          results.push({ clubId, error: error instanceof Error ? error.message : 'Unknown error' });
+          console.error(`Cron scraper failed for club ${clubId}:`, error);
+          results.push({ clubId, error: 'Scraping failed' });
         }
       });
     }
