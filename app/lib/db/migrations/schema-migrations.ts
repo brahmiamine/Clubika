@@ -58,6 +58,9 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
+ * La migration 0025 stocke les rapports CSP sanitizés (hôtes + directive, jamais
+ * d'URI complète — issue #35). Rétention 7 jours, purge à l'écriture.
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -445,6 +448,22 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         PRIMARY KEY (messageId, userId, emoji),
         INDEX idx_chat_message_reactions_message (messageId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0025',
+    name: 'csp_reports_sanitized',
+    statements: [
+      `CREATE TABLE IF NOT EXISTS csp_reports (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        document_host VARCHAR(255) NOT NULL,
+        blocked_host VARCHAR(255) NULL,
+        violated_directive VARCHAR(64) NOT NULL,
+        disposition VARCHAR(16) NOT NULL,
+        PRIMARY KEY (id),
+        INDEX idx_csp_reports_created (created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
   },

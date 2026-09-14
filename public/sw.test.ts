@@ -38,6 +38,7 @@ describe('service worker installability', () => {
     expect(source).toContain("addEventListener('fetch'");
     expect(source).toContain('event.respondWith');
     expect(source).toContain("const OFFLINE_URL = '/offline'");
+    expect(source).toContain("if (event.request.method !== 'GET') return");
   });
 });
 

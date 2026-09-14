@@ -16,5 +16,7 @@ describe('Permissions-Policy', () => {
     const policy = globalHeaders.find((header) => header.key === 'Permissions-Policy')?.value ?? '';
     expect(policy).toContain('microphone=(self)');
     expect(policy).not.toMatch(/microphone=\(\s*\)/);
+    const xss = globalHeaders.find((header) => header.key === 'X-XSS-Protection')?.value ?? '';
+    expect(xss).toBe('0');
   });
 });

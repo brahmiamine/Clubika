@@ -4,6 +4,8 @@ import { SESSION_COOKIE_NAME, PLATFORM_SESSION_COOKIE_NAME } from '@/lib/auth/co
 import { getSessionUser } from '@/lib/auth/session';
 import { canEdit, homePathForAccessRole } from '@/lib/auth/roles';
 import { PWA_CLUB_ID_HEADER, normalizePwaClubId } from '@/lib/pwa/icons';
+import { enforceCsrf } from '@/lib/security/csrf';
+import { buildCspReportOnly, newCspNonce } from '@/lib/security/csp';
 
 // Next.js Proxy s'exécute nativement sur le runtime Node.js, nécessaire à getSessionUser (TypeORM).
 const LOGIN_PAGE = '/login';
@@ -21,7 +23,7 @@ const PUBLIC_PAGE_PREFIXES = ['/inscription/', '/reinitialiser/', '/partage/'];
 // reste protégée par requireRole dans le handler lui-même.
 // /api/public sert le JSON consommé par /partage/{token} (issue #211) : la validation du
 // token (SHA-256, timingSafeEqual, expiration) reste entièrement dans le handler lui-même.
-const PUBLIC_API_PREFIXES = ['/api/auth', '/api/cron', '/api/ical', '/api/public', '/api/pwa', '/api/settings'];
+const PUBLIC_API_PREFIXES = ['/api/auth', '/api/cron', '/api/ical', '/api/public', '/api/pwa', '/api/settings', '/api/security'];
 // GET /api/invitations/{token} (validation) et POST /api/invitations/{token}/accept (création
 // de compte) doivent rester accessibles sans session : la personne invitée n'en a par définition
 // pas encore. Le slash final exclut volontairement la racine `/api/invitations` (GET liste /
@@ -49,9 +51,32 @@ function isPlatformRoute(pathname: string): boolean {
         || pathname === '/api/plateforme' || pathname.startsWith('/api/plateforme/');
 }
 
+function applyCsp(response: NextResponse, nonce: string): NextResponse {
+    response.headers.set('Content-Security-Policy-Report-Only', buildCspReportOnly(nonce));
+    return response;
+}
+
+function continueRequest(request: NextRequest, extraRequestHeaders?: Headers): NextResponse {
+    const nonce = newCspNonce();
+    const requestHeaders = extraRequestHeaders ?? new Headers(request.headers);
+    requestHeaders.set('x-nonce', nonce);
+    return applyCsp(NextResponse.next({ request: { headers: requestHeaders } }), nonce);
+}
+
+function jsonWithCsp(body: unknown, status: number): NextResponse {
+    const nonce = newCspNonce();
+    const response = NextResponse.json(body, { status });
+    return applyCsp(response, nonce);
+}
+
+function redirectWithCsp(url: URL): NextResponse {
+    const nonce = newCspNonce();
+    return applyCsp(NextResponse.redirect(url), nonce);
+}
+
 function handlePlatformRoute(request: NextRequest, pathname: string) {
     if (pathname === PLATFORM_LOGIN_PAGE || pathname === PLATFORM_LOGIN_API) {
-        return NextResponse.next();
+        return continueRequest(request);
     }
 
     const platformToken = request.cookies.get(PLATFORM_SESSION_COOKIE_NAME);
@@ -59,12 +84,12 @@ function handlePlatformRoute(request: NextRequest, pathname: string) {
 
     if (!isPlatformAuthenticated) {
         if (pathname.startsWith('/api')) {
-            return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+            return jsonWithCsp({ error: 'Non authentifié' }, 401);
         }
-        return NextResponse.redirect(new URL(PLATFORM_LOGIN_PAGE, request.url));
+        return redirectWithCsp(new URL(PLATFORM_LOGIN_PAGE, request.url));
     }
 
-    return NextResponse.next();
+    return continueRequest(request);
 }
 
 function isStaticAsset(pathname: string): boolean {
@@ -77,11 +102,11 @@ function isStaticAsset(pathname: string): boolean {
 
 function nextWithPwaClubId(request: NextRequest): NextResponse {
     const clubId = normalizePwaClubId(request.nextUrl.searchParams.get('clubId'));
-    if (!clubId) return NextResponse.next();
+    if (!clubId) return continueRequest(request);
 
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(PWA_CLUB_ID_HEADER, clubId);
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return continueRequest(request, requestHeaders);
 }
 
 function homeForUser(user: Awaited<ReturnType<typeof getSessionUser>>): string {
@@ -103,12 +128,17 @@ function clearStaleSession(response: NextResponse): NextResponse {
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
+    if (!isStaticAsset(pathname)) {
+        const csrfDenied = enforceCsrf(request);
+        if (csrfDenied) return csrfDenied;
+    }
+
     if (isPlatformRoute(pathname)) {
         return handlePlatformRoute(request, pathname);
     }
 
     if (isStaticAsset(pathname)) {
-        return NextResponse.next();
+        return continueRequest(request);
     }
 
     if (pathname === '/manifest.webmanifest') {
@@ -136,25 +166,25 @@ export async function proxy(request: NextRequest) {
     // la session (voir LandingPage). On purge seulement un cookie de session mort.
     if (pathname === '/') {
         if (!sessionUser && hasWellFormedToken) {
-            return clearStaleSession(NextResponse.next());
+            return clearStaleSession(continueRequest(request));
         }
-        return NextResponse.next();
+        return continueRequest(request);
     }
 
     if (pathname === LOGIN_PAGE) {
         if (sessionUser) {
-            return NextResponse.redirect(new URL(homeForUser(sessionUser), request.url));
+            return redirectWithCsp(new URL(homeForUser(sessionUser), request.url));
         }
         // Session absente ou périmée : laisser le formulaire s'afficher et purger un
         // éventuel cookie mort pour casser la boucle de redirection.
-        return hasWellFormedToken ? clearStaleSession(NextResponse.next()) : NextResponse.next();
+        return hasWellFormedToken ? clearStaleSession(continueRequest(request)) : continueRequest(request);
     }
 
     if (!hasWellFormedToken && !isPublicRoute) {
         if (pathname.startsWith('/api')) {
-            return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+            return jsonWithCsp({ error: 'Non authentifié' }, 401);
         }
-        return NextResponse.redirect(new URL(LOGIN_PAGE, request.url));
+        return redirectWithCsp(new URL(LOGIN_PAGE, request.url));
     }
 
     // Routes API protégées : un cookie bien formé mais session révoquée/expirée/inactive
@@ -162,17 +192,17 @@ export async function proxy(request: NextRequest) {
     if (pathname.startsWith('/api') && !isPublicRoute && hasWellFormedToken) {
         const apiSessionUser = sessionUser ?? await getSessionUser(sessionToken?.value);
         if (!apiSessionUser) {
-            return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+            return jsonWithCsp({ error: 'Non authentifié' }, 401);
         }
     }
 
     if (hasWellFormedToken && isAdminOnlyPage(pathname)) {
         if (!sessionUser || !canEdit(sessionUser.accessRole)) {
-            return NextResponse.redirect(new URL('/mon-planning', request.url));
+            return redirectWithCsp(new URL('/mon-planning', request.url));
         }
     }
 
-    return NextResponse.next();
+    return continueRequest(request);
 }
 
 export const config = {
