@@ -154,7 +154,7 @@ describe.skipIf(!dbAvailable)('proxy + route publique — parcours HTTP complet 
     );
     expect(routeResponse.status).toBe(200);
     const body = await routeResponse.json();
-    expect((body.items as Array<{ title: string }>).map((item) => item.title)).toContain('Entraînement partagé');
+    expect((body.items as Array<{ title: string }>).map((item) => item.title)).toContain('Entraînement');
   });
 
   it('un token invalide répond par une erreur explicite, jamais par une redirection de connexion', async () => {
