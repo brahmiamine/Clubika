@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
 import { getPlanningRecord, savePlanningRecord } from '@/lib/planning/records';
 import { normalizeNotificationPreferences } from '@/lib/notifications/preferences';
+import { isWhatsAppGloballyEnabled } from '@/lib/notifications/whatsapp';
 import { personTypeForFunction } from '@/lib/planning/person-link';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 
@@ -12,7 +13,10 @@ export async function GET(request: NextRequest) {
   setCurrentClubId(auth.user.clubId);
   const db = await getDb();
   const record = await getPlanningRecord(db, `notification-preferences:${auth.user.id}`);
-  return NextResponse.json({ preferences: normalizeNotificationPreferences(record?.payload) });
+  return NextResponse.json({
+    preferences: normalizeNotificationPreferences(record?.payload),
+    whatsappAvailable: isWhatsAppGloballyEnabled(),
+  });
 }
 
 export async function PUT(request: NextRequest) {
@@ -22,6 +26,9 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const preferences = normalizeNotificationPreferences(body);
+    if (!isWhatsAppGloballyEnabled()) {
+      preferences.whatsapp = false;
+    }
     const db = await getDb();
     await savePlanningRecord(db, {
       id: `notification-preferences:${auth.user.id}`,

@@ -288,9 +288,15 @@ n'est plus tolérée : l'application refuse de démarrer sans `APP_ENCRYPTION_KE
 n'est pas définie, un bandeau d'alerte s'affiche aussi dans le tableau de bord plateforme
 (`/plateforme`).
 
-### WhatsApp optionnel
+### WhatsApp optionnel (désactivé par défaut)
 
-Aucun secret WhatsApp n'est présent dans le dépôt. Sans configuration, le canal reste désactivé.
+Aucun secret WhatsApp n'est présent dans le dépôt. **Le canal reste désactivé** tant que
+`WHATSAPP_PROVIDER` n'est pas posé explicitement à `meta` ou `webhook`. La présence des
+identifiants Meta ou d'une URL de webhook **n'active rien**. Chaque utilisateur doit
+encore consentir dans **Notifications**. Voir [`docs/whatsapp-activation.md`](docs/whatsapp-activation.md)
+(revue contractuelle / #12 / #40 avant toute activation réelle).
+
+Désactivation globale immédiate : vider `WHATSAPP_PROVIDER` et redémarrer.
 
 #### Meta WhatsApp Cloud API
 
@@ -308,12 +314,13 @@ WHATSAPP_META_TEMPLATE_LANGUAGE=fr
 
 Le template Meta attendu reçoit deux paramètres de corps : le titre puis le message. Il doit être créé et approuvé dans WhatsApp Business Manager avant activation. Si aucun template n'est configuré, l'adaptateur envoie un message texte, utilisable uniquement lorsque les règles de la fenêtre de conversation Meta le permettent.
 
-#### Webhook générique conservé
+#### Webhook générique
 
 ```env
 WHATSAPP_PROVIDER=webhook
 NOTIFICATION_WHATSAPP_WEBHOOK_URL=https://provider.example/whatsapp
 NOTIFICATION_WHATSAPP_WEBHOOK_TOKEN=change-me
+# WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT=true  # seulement si le prestataire a besoin d'identifiants d'événement
 ```
 
 ### PWA / Web Push

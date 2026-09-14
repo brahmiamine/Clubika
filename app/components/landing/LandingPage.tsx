@@ -57,7 +57,7 @@ const FEATURES: Feature[] = [
   {
     num: '04',
     title: 'Notifications multicanal',
-    copy: 'In-app, Web Push sur smartphone via la PWA, email et WhatsApp — avec des préférences de canal et d\'urgence propres à chaque utilisateur.',
+    copy: 'In-app, Web Push via la PWA et email. WhatsApp n’est jamais activé par défaut : il exige une configuration serveur explicite, un contrat prestataire et un opt-in de l’utilisateur.',
   },
 ];
 
@@ -129,7 +129,7 @@ const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Quelles notifications reçoivent les utilisateurs ?',
-    a: 'In-app, Web Push via la PWA, email SMTP et WhatsApp, selon les préférences de canal et d\'urgence de chacun.',
+    a: 'In-app, Web Push via la PWA et email selon vos préférences. WhatsApp n’est envoyé que si l’administrateur a activé un prestataire explicite et que vous avez consenti dans vos notifications.',
   },
 ];
 
