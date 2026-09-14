@@ -9,6 +9,7 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { migrateHealthDataFields } from './remove-health-data';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -57,6 +58,10 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  * `chat_messages`.
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
+ *
+ * La migration 0026 (issue #7) recale les motifs de refus `injury` vers `personal`
+ * et compte les commentaires libres ; la purge des commentaires n’a lieu que si
+ * `HEALTH_COMMENT_PURGE=apply`.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -447,5 +452,14 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0026',
+    name: 'retirer_donnees_sante_structurees',
+    statements: [],
+    logic: readMigrationLogicFile('remove-health-data.ts'),
+    up: async (db) => {
+      await migrateHealthDataFields(db);
+    },
   },
 ];

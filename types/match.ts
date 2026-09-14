@@ -4,7 +4,7 @@ export type AttendanceStatus = 'unknown' | 'present' | 'excused' | 'absent' | 'r
 export type ReminderStage = 'awaiting-48h' | '72h' | '24h';
 export type PlanningPublicationStatus = 'draft' | 'published' | 'modified' | 'cancelled';
 export type ScraperSourceStatus = 'active' | 'missing';
-export type DeclineReason = 'work' | 'injury' | 'travel' | 'other_assignment' | 'personal' | 'other';
+export type DeclineReason = 'work' | 'travel' | 'other_assignment' | 'personal' | 'other';
 
 export interface PlanningPublicationMeta {
   planningRevision?: number;

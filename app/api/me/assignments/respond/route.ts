@@ -11,10 +11,14 @@ import { listPublishedPlanningEventSnapshots } from '@/lib/planning/published-pl
 import { syncAssignmentStatesForRole } from '@/lib/planning/assignment-state-store';
 import { hydratePlanningAssignmentStates } from '@/lib/planning/assignment-state-overlay';
 import { eventStartTimestamp, isResponseWindowClosed, isVisiblePublicationStatus } from '@/lib/planning/p0-rules';
-import { isDeclineReason } from '@/lib/planning/advanced-rules';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { readAppSettings } from '@/lib/settings-store';
 import { vacateDeclinedAssignmentFromWorkingDraft } from '@/lib/planning/declined-assignment-draft';
+import {
+  assignmentDeclineNotificationSuffix,
+  parseIncomingDeclineReason,
+  redactAssignmentContactForAudit,
+} from '@/lib/privacy/health-data';
 
 function nextStatus(value: unknown): AssignmentStatus | null {
   return value === 'accepted' || value === 'declined' ? value : null;
@@ -38,17 +42,17 @@ function contactResponse(
   contact: AssignmentContact,
   status: AssignmentStatus,
   declineReason: DeclineReason | null,
-  declineComment: string | null,
 ): AssignmentContact {
   const now = new Date().toISOString();
-  return {
+  const next: AssignmentContact = {
     ...contact,
     status,
     respondedAt: now,
     assignedAt: contact.assignedAt ?? now,
     declineReason: status === 'declined' ? declineReason ?? undefined : undefined,
-    declineComment: status === 'declined' && declineComment ? declineComment : undefined,
   };
+  delete next.declineComment;
+  return next;
 }
 
 export async function POST(request: NextRequest) {
@@ -64,10 +68,11 @@ export async function POST(request: NextRequest) {
   const eventType = body.eventType;
   const role = body.role;
   const status = nextStatus(body.status);
-  const declineReason = isDeclineReason(body.declineReason) ? body.declineReason : null;
-  const declineComment = typeof body.declineComment === 'string'
-    ? body.declineComment.trim().slice(0, 500)
-    : null;
+  const parsedReason = parseIncomingDeclineReason(body.declineReason);
+  if (!parsedReason.ok) {
+    return NextResponse.json({ error: parsedReason.error }, { status: 400 });
+  }
+  const declineReason = parsedReason.reason;
 
   if (!eventId || !status || !validEventType(eventType) || !validRole(role)) {
     return NextResponse.json({ error: 'Réponse d’affectation invalide' }, { status: 400 });
@@ -115,7 +120,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const updatedContact = contactResponse(publishedContact, status, declineReason, declineComment);
+    const updatedContact = contactResponse(publishedContact, status, declineReason);
     await syncAssignmentStatesForRole(db, eventType, eventId, role, [updatedContact], auth.user.clubId);
     if (status === 'declined') {
       try {
@@ -136,13 +141,11 @@ export async function POST(request: NextRequest) {
       entityType: 'PlanningAssignment',
       entityId: `${eventType}:${eventId}:${role}`,
       action: 'respond',
-      before: { contact: publishedContact },
-      after: { contact: updatedContact },
+      before: { contact: redactAssignmentContactForAudit(publishedContact) },
+      after: { contact: redactAssignmentContactForAudit(updatedContact) },
     });
 
-    const reasonSuffix = status === 'declined'
-      ? ` Motif : ${declineReason}${declineComment ? ` — ${declineComment}` : ''}.`
-      : '';
+    const reasonSuffix = assignmentDeclineNotificationSuffix(status, declineReason);
     await notifyAdmins(db, {
       type: status === 'declined' ? 'assignment-replacement-required' : 'assignment-response',
       title: status === 'accepted' ? 'Affectation acceptée' : 'Remplacement requis',
@@ -153,7 +156,7 @@ export async function POST(request: NextRequest) {
       eventId,
     });
 
-    return NextResponse.json({ success: true, status, declineReason, declineComment });
+    return NextResponse.json({ success: true, status, declineReason });
   } catch (error) {
     console.error('Error responding to assignment:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer votre réponse' }, { status: 500 });

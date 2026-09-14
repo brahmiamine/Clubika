@@ -66,6 +66,8 @@ describe('ClubIndisponibilitesList (issue #320)', () => {
     expect(populated).toContain('En attente');
     expect(populated).toContain('Accepter');
     expect(populated).toContain('Refuser');
+    expect(populated).not.toContain('Motif visible par le dirigeant');
+    expect(populated).not.toContain('Blessure');
 
     const empty = renderToStaticMarkup(<ClubIndisponibilitesList items={[]} />);
     expect(empty).toContain('Aucune indisponibilité enregistrée pour ce club.');
