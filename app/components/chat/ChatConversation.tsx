@@ -1577,7 +1577,7 @@ export function ChatConversation({ roomId, title, description, compact = false, 
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,video/mp4,video/webm,video/quicktime,audio/*,application/pdf,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,application/vnd.ms-excel,.xls,text/csv,.csv"
+              accept="image/*,video/mp4,video/webm,audio/*,application/pdf,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,text/csv,.csv"
               className="hidden"
               onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)}
             />

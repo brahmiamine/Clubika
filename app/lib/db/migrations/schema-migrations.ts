@@ -58,6 +58,10 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
+ * La migration 0025 ajoute `scan_status` aux pièces jointes chat/planning (issue #23) :
+ * seuls les fichiers `clean` sont téléchargeables. Les lignes existantes sont marquées
+ * `clean` (DEFAULT) ; les nouveaux uploads passent par l’inspection avant INSERT.
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -446,6 +450,14 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         PRIMARY KEY (messageId, userId, emoji),
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0025',
+    name: 'attachment_scan_status',
+    statements: [
+      "ALTER TABLE chat_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
+      "ALTER TABLE planning_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
     ],
   },
 ];
