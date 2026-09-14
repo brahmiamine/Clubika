@@ -58,6 +58,7 @@ describe('health-data (issue #7)', () => {
       'Ne renseignez aucune donnée médicale ou autre donnée sensible concernant une personne.',
     );
     expect(publicIndispoReviewLabel({ reviewComment: 'entorse au genou' })).toBeNull();
+    expect(publicIndispoReviewLabel({ reviewComment: 'schedule_too_broad' })).toBeNull();
     expect(publicIndispoReviewLabel({ reviewCode: 'schedule_too_broad' })).toBe('Créneau trop large');
   });
 
@@ -87,6 +88,13 @@ describe('health-data (issue #7)', () => {
     const indispoApply = sanitizeIndisponibilitesForHealthData(indispoDry.next, { purgeComments: true });
     expect(indispoApply.commentsPurged).toBe(1);
     expect(indispoApply.next[0]?.reviewComment).toBeUndefined();
+
+    const coincidentalCode = sanitizeIndisponibilitesForHealthData(
+      [{ id: 'r2', type: 'day-range', dateStart: '01/10/2026', dateEnd: '02/10/2026', reviewComment: 'schedule_too_broad' }],
+      { purgeComments: true },
+    );
+    expect(coincidentalCode.next[0]?.reviewComment).toBeUndefined();
+    expect(coincidentalCode.next[0]?.reviewCode).toBeUndefined();
   });
 
   it('n’active la purge que si HEALTH_COMMENT_PURGE=apply', () => {

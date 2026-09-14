@@ -144,9 +144,6 @@ export function sanitizeIndisponibilitesForHealthData(
     if (!hasFreeComment) return item;
 
     const copy: OfficielIndisponibilite = { ...item };
-    if (!copy.reviewCode && isIndispoReviewCode(item.reviewComment)) {
-      copy.reviewCode = item.reviewComment;
-    }
     delete copy.reviewComment;
     commentsPurged += 1;
     return copy;
@@ -158,9 +155,6 @@ export function sanitizeIndisponibilitesForHealthData(
 export function publicIndispoReviewLabel(rule: Pick<OfficielIndisponibilite, 'reviewCode' | 'reviewComment'>): string | null {
   if (isIndispoReviewCode(rule.reviewCode)) {
     return indispoReviewCodeLabel(rule.reviewCode);
-  }
-  if (isIndispoReviewCode(rule.reviewComment)) {
-    return indispoReviewCodeLabel(rule.reviewComment);
   }
   return null;
 }
