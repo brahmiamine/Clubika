@@ -71,7 +71,7 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
   },
   scraperSync: {
     label: 'Synchronisation du scraper',
-    description: 'Autorise l’import des matchs officiels vers MariaDB.',
+    description: 'Import des matchs officiels depuis une source externe. Désactivé par défaut jusqu’à validation d’une autorisation écrite couvrant précisément cette source.',
     pages: [],
     routes: ['app/api/scraper/route.ts', 'app/api/cron/scraper/route.ts'],
   },

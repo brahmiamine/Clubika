@@ -14,7 +14,7 @@ chaque release (voir critère d'acceptation de cette issue).
 
 | Fonction | Statut | Détail / parcours |
 |---|---|---|
-| Matchs officiels (scraping), amicaux, entraînements, plateaux | Disponible | `/club`, `/club/planning`, scraper (`ScraperButton`, `pnpm scrape`) |
+| Matchs officiels, amicaux, entraînements, plateaux | Disponible | `/club`, `/club/planning`. La synchro d’un calendrier externe (scraper) est **désactivée par défaut** jusqu’à licence écrite (`SPORTCORICO_SYNC_ENABLED`, issue #4) |
 | Vues carte, liste et calendrier | Disponible | `ViewToggle` sur `/club` et `/club/planning` |
 | Événements récurrents | Disponible | `/club/planning/recurrent`, `app/api/recurring-events` |
 | Duplication d'un événement | Disponible | `EventCardDrag` (action « Dupliquer », copie en `draft`) |
@@ -367,7 +367,7 @@ dans [`docs/decisions/json-payloads-cartography.md`](docs/decisions/json-payload
 
 Le chemin prévu pour un VPS (OVH, Debian, domaine `clubika.com`) est décrit dans
 [`deploy/README.md`](deploy/README.md) : Docker Compose (une instance de l'app + MariaDB),
-Caddy en HTTPS, cron local (relances, scraper, dumps). Copiez
+Caddy en HTTPS, cron local (relances, scraper no-op tant que la synchro externe n'est pas licenciée, dumps). Copiez
 `deploy/.env.production.example` vers `deploy/.env` et remplissez les secrets
 **avant** le premier `docker compose up`.
 
