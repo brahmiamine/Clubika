@@ -58,7 +58,12 @@ export function ActiveSessionsCard({ listUrl, revokeOthersUrl, revokeUrl }: Acti
     setBusyId(session.id);
     try {
       await apiDelete(revokeUrl(session.id));
-      toast.success(session.current ? 'Cette session a été révoquée. Reconnectez-vous.' : 'Session révoquée');
+      if (session.current) {
+        toast.success('Cette session a été révoquée. Reconnectez-vous.');
+        window.location.assign('/login');
+        return;
+      }
+      toast.success('Session révoquée');
       await reload();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Révocation impossible');
