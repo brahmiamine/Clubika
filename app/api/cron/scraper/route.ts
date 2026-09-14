@@ -55,10 +55,9 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
+    console.error('Cron scraper failed:', error);
     return NextResponse.json(
-      { error: 'Cron scraper failed', details: errorMessage },
+      { error: 'Cron scraper failed' },
       { status: 500 },
     );
   }

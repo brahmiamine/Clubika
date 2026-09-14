@@ -39,9 +39,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error running scraper:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to run scraper', details: errorMessage },
+      { error: 'Failed to run scraper' },
       { status: 500 }
     );
   }
