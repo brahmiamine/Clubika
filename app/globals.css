@@ -48,6 +48,7 @@
 }
 
 :root {
+  color-scheme: light;
   --radius: 0.625rem;
   /* Accent institutionnel FFF (or) : indépendant du thème club, ne change
      jamais avec applyThemeVariables() ni entre clair/sombre. */
@@ -90,6 +91,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --primary-soft: color-mix(in oklab, var(--primary) 26%, transparent);
   --secondary-soft: color-mix(in oklab, var(--secondary) 28%, transparent);
   --background: #0B1220;
@@ -138,7 +140,21 @@
   body {
     @apply bg-background text-foreground;
     min-width: 320px;
-    overflow-x: hidden;
+  }
+
+  @media (min-width: 1024px) {
+    body {
+      overflow-x: hidden;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
   }
 
   button,
@@ -169,8 +185,25 @@
 }
 
 @media (display-mode: standalone) {
-  body {
+  .app-shell {
     padding-top: env(safe-area-inset-top);
+  }
+}
+
+@media (max-width: 1023px) {
+  .app-shell {
+    height: 100vh;
+    height: 100svh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-shell-main {
+    flex: 1 1 auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

@@ -70,57 +70,54 @@ export const MobileTabBar = memo(function MobileTabBar() {
   });
 
   return (
-    <>
-      <div className="h-[calc(4.5rem+env(safe-area-inset-bottom))] lg:hidden" aria-hidden="true" />
-      <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
-        aria-label="Navigation principale"
+    <nav
+      className="z-50 w-full shrink-0 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
+      aria-label="Navigation principale"
+    >
+      <div
+        className={cn(
+          'mx-auto grid h-[4.5rem] min-h-[4.5rem] max-w-3xl px-1 sm:px-4',
+          tabs.length === 4 ? 'grid-cols-4' : 'grid-cols-5',
+        )}
       >
-        <div
-          className={cn(
-            'mx-auto grid h-[4.5rem] max-w-3xl px-1 sm:px-4',
-            tabs.length === 4 ? 'grid-cols-4' : 'grid-cols-5',
-          )}
-        >
-          {tabs.map((tab) => {
-            const active = tab.isActive(pathname);
-            const Icon = tab.icon;
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                aria-current={active ? 'page' : undefined}
-                onClick={(event) => {
-                  if (active && tab.href.endsWith('/chat')) {
-                    event.preventDefault();
-                    notifyChatShowList();
-                  }
-                }}
+        {tabs.map((tab) => {
+          const active = tab.isActive(pathname);
+          const Icon = tab.icon;
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              aria-current={active ? 'page' : undefined}
+              onClick={(event) => {
+                if (active && tab.href.endsWith('/chat')) {
+                  event.preventDefault();
+                  notifyChatShowList();
+                }
+              }}
+              className={cn(
+                'flex min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-[10px] font-medium transition-colors sm:text-xs',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                active ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <span
                 className={cn(
-                  'flex min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 py-1.5 text-[10px] font-medium transition-colors sm:text-xs',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                  active ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                  'relative flex h-8 w-11 items-center justify-center rounded-full transition-colors',
+                  active && 'bg-primary-soft',
                 )}
               >
-                <span
-                  className={cn(
-                    'relative flex h-8 w-11 items-center justify-center rounded-full transition-colors',
-                    active && 'bg-primary-soft',
-                  )}
-                >
-                  <Icon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
-                  {!!tab.badge && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-semibold text-destructive-foreground">
-                      {tab.badge > 9 ? '9+' : tab.badge}
-                    </span>
-                  )}
-                </span>
-                <span className="max-w-full truncate">{tab.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
-    </>
+                <Icon className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+                {!!tab.badge && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-semibold text-destructive-foreground">
+                    {tab.badge > 9 ? '9+' : tab.badge}
+                  </span>
+                )}
+              </span>
+              <span className="max-w-full truncate">{tab.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 });

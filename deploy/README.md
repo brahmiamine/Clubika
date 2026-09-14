@@ -71,13 +71,12 @@ Ne pas activer le schedule GitHub Actions des relances si ce cron tourne déjà
 ## 6. Mise à jour
 
 ```bash
-cd /opt/clubika
-git pull
-cd deploy
-docker compose up -d --build
+/opt/clubika/deploy/scripts/update.sh
 ```
 
-Les migrations passent au démarrage du conteneur `app`. Une seule instance `app`.
+Équivalent manuel : `git pull` de `prod` puis `docker compose up -d --build` dans
+`deploy/`. Les migrations passent au démarrage du conteneur `app`. Une seule
+instance `app`.
 
 ## 7. Restaurer un dump
 
@@ -89,3 +88,44 @@ gunzip -c backups/clubika-AAAA.MM.JJ-HHMMSS.sql.gz \
 
 Puis redémarrer `app`. Remettre **la même** `APP_ENCRYPTION_KEY` qu’au moment
 du dump.
+
+## 8. Déploiement automatique (GitHub → VPS)
+
+Chaque **push** ou **merge de PR** sur la branche `prod` (et un lancement manuel
+« Run workflow ») SSH sur le VPS, `git pull` puis `docker compose up -d --build`.
+
+### Clé SSH dédiée (une fois)
+
+Sur votre machine :
+
+```bash
+ssh-keygen -t ed25519 -f clubika-github-deploy -C "github-actions-clubika" -N ""
+```
+
+Sur le VPS, coller **la clé publique** (`clubika-github-deploy.pub`) :
+
+```bash
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+cat >> ~/.ssh/authorized_keys <<'EOF'
+ssh-ed25519 AAAA… github-actions-clubika
+EOF
+chmod 600 ~/.ssh/authorized_keys
+```
+
+Le dépôt GitHub doit pouvoir être tiré **sans mot de passe** depuis le VPS
+(`git pull` en HTTPS public, ou clé de déploiement GitHub si le dépôt est privé).
+
+### Secrets du dépôt GitHub
+
+Settings → Secrets and variables → Actions :
+
+| Secret | Exemple |
+| --- | --- |
+| `VPS_HOST` | `51.75.31.112` (ou `clubika.com`) |
+| `VPS_USER` | `debian` |
+| `VPS_SSH_KEY` | contenu **privé** de `clubika-github-deploy` (tout le fichier, y compris `BEGIN`/`END`) |
+| `VPS_PORT` | optionnel, `22` par défaut |
+
+Le workflow est `.github/workflows/deploy-prod.yml`. Un seul déploiement à la
+fois (`concurrency: deploy-prod`). Le build Docker peut durer plusieurs minutes.

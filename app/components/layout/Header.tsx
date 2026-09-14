@@ -39,7 +39,7 @@ import { AddEventDialog } from "../ui/add-event-dialog";
 import { apiPost } from "@/lib/utils/api";
 import { toast } from "sonner";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { mergeClubWithSettings, type PlanningFeatureFlags } from "@/lib/settings";
+import { applyUserThemeChoice, mergeClubWithSettings, type PlanningFeatureFlags } from "@/lib/settings";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { canEdit, hasAnyPlanningFunction } from "@/lib/auth/roles";
 import { useUnreadNotificationsCount } from "@/hooks/useUnreadNotificationsCount";
@@ -244,9 +244,9 @@ export const Header = memo(function Header({ club, onScrapeComplete, onEventAdde
                     <DropdownMenuItem onClick={() => router.push(`${base}/chat`)}><MessageCircle className="h-4 w-4 mr-2" /> Discussions{!!unreadChat && <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-destructive-foreground">{unreadChat > 9 ? '9+' : unreadChat}</span>}</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => router.push(`${base}/profil`)}><UserRound className="h-4 w-4 mr-2" /> Mon profil</DropdownMenuItem>
                     {editable && settings.features.scraperSync && <DropdownMenuItem onClick={handleScrape} disabled={isScraping}><RefreshCw className={`h-4 w-4 mr-2 ${isScraping ? "animate-spin" : ""}`} />{isScraping ? "Actualisation..." : "Actualiser"}</DropdownMenuItem>}
-                    <DropdownMenuItem onClick={() => setTheme("light")}><Sun className="h-4 w-4 mr-2" /> Mode clair</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setTheme("dark")}><Moon className="h-4 w-4 mr-2" /> Mode sombre</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setTheme("system")}>Système</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => applyUserThemeChoice("light", setTheme)}><Sun className="h-4 w-4 mr-2" /> Mode clair</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => applyUserThemeChoice("dark", setTheme)}><Moon className="h-4 w-4 mr-2" /> Mode sombre</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => applyUserThemeChoice("system", setTheme)}>Système</DropdownMenuItem>
                     <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive"><LogOut className="h-4 w-4 mr-2" /> Déconnexion</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

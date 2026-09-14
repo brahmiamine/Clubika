@@ -34,3 +34,16 @@ describe('MobileTabBar — page d’accueil', () => {
     expect(html).toBe('');
   });
 });
+
+describe('MobileTabBar — ancrage mobile', () => {
+  it('reste dans le flux en bas d’écran au lieu d’être position:fixed', () => {
+    mockPathname = '/mon-planning';
+    const html = renderToStaticMarkup(<MobileTabBar />);
+
+    expect(html).toContain('aria-label="Navigation principale"');
+    expect(html).toContain('shrink-0');
+    expect(html).toContain('min-h-[4.5rem]');
+    expect(html).not.toContain('fixed inset-x-0 bottom-0');
+    expect(html).not.toContain('h-[calc(4.5rem+env(safe-area-inset-bottom))]');
+  });
+});

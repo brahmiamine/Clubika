@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { Header } from './Header';
@@ -88,5 +89,15 @@ describe('Header — badges non lus', () => {
     expect(html).toContain('Discussions');
     expect(html).toContain('>4<');
     expect(html).toContain('>2<');
+  });
+});
+
+describe('Header — thème mobile', () => {
+  it('enregistre le choix de thème depuis le menu (sans se faire écraser par le club)', () => {
+    const source = readFileSync(new URL('./Header.tsx', import.meta.url), 'utf8');
+    expect(source).toContain('applyUserThemeChoice("light"');
+    expect(source).toContain('applyUserThemeChoice("dark"');
+    expect(source).toContain('applyUserThemeChoice("system"');
+    expect(source).toContain('onSelect={() => applyUserThemeChoice');
   });
 });
