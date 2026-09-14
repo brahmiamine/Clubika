@@ -18,6 +18,7 @@ function readSurface(relativePath: string): string {
 const FORBIDDEN_PHRASE_SAMPLES: Record<string, string> = {
   '100-legal': 'Produit 100 % légal dès le lancement',
   'conforme-rgpd': 'Clubika est conforme RGPD',
+  'conformite-rgpd': 'Une conformité RGPD complète',
   'gdpr-compliant': 'This app is GDPR compliant',
   'entierement-securise': 'Un espace entièrement sécurisé',
   'totalement-securise': 'Hébergement totalement sécurisé',

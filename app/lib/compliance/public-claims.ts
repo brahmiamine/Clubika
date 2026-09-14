@@ -6,7 +6,7 @@
  * comportement testé, et ne jamais réintroduire les formulations interdites.
  *
  * Les claims positifs plus larges (pièces jointes chiffrées, DTO public sans
- * identités, conformité RGPD, prestataires autorisés) restent masqués jusqu’à
+ * identités, attestation RGPD, prestataires autorisés) restent masqués jusqu’à
  * la fermeture et la validation humaine des tickets #6, #12, #20, #24 et #30.
  */
 
@@ -59,6 +59,7 @@ export const PUBLIC_CLAIM_SURFACES = [
 export const FORBIDDEN_PUBLIC_CLAIM_PATTERNS: ReadonlyArray<{ id: string; source: string }> = [
   { id: '100-legal', source: String.raw`100\s*%\s*légal` },
   { id: 'conforme-rgpd', source: String.raw`conforme(?:\s+au)?\s+RGPD` },
+  { id: 'conformite-rgpd', source: String.raw`conformit[eé](?:\s+au)?\s+RGPD` },
   { id: 'gdpr-compliant', source: String.raw`GDPR\s+compliant` },
   { id: 'entierement-securise', source: String.raw`entièrement\s+sécurisé` },
   { id: 'totalement-securise', source: String.raw`totalement\s+sécurisé` },
