@@ -77,9 +77,10 @@ export function useAppSettings() {
             ? { ...writable, smtp: { ...writable.smtp, password: smtpPassword } }
             : writable;
         const result = await apiPut<{ success: boolean; settings: AppSettings }>('/api/settings', body);
-        setSettings(result.settings);
-        window.dispatchEvent(new CustomEvent<AppSettings>(APP_SETTINGS_UPDATED_EVENT, { detail: result.settings }));
-        return result.settings;
+        const saved = normalizeAppSettings(result.settings);
+        setSettings(saved);
+        window.dispatchEvent(new CustomEvent<AppSettings>(APP_SETTINGS_UPDATED_EVENT, { detail: saved }));
+        return saved;
     }, [settings]);
 
     return {
