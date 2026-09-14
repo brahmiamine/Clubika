@@ -76,12 +76,64 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
     const email = `invitee-${randomBytes(8).toString('hex')}@example.com`;
     createdEmails.push(email);
 
-    const response = await POST(acceptRequest(invitation.rawToken, { email, password: 'password123', nom: 'Invitee' }), {
+    const response = await POST(acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'Invitee' }), {
       params: { token: invitation.rawToken },
     });
 
     expect(response.status).toBe(200);
     expect(response.cookies.get('session_token')?.value).toBeTruthy();
+    expect((await response.json()).redirectTo).toBe('/club');
+    expect(response.headers.get('Cache-Control')).toMatch(/no-store/);
+  });
+
+  it('refuse l’acceptation sans confirmation explicite d’identité et de notice (issue #34)', async () => {
+    const invitation = await createInvitation({ accessRole: 'dirigeant', planningFunctions: [] });
+    const email = `noconfirm-${randomBytes(8).toString('hex')}@example.com`;
+    const response = await POST(
+      acceptRequest(invitation.rawToken, { email, password: 'password123', nom: 'X' }),
+      { params: { token: invitation.rawToken } },
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: expect.stringMatching(/Confirmez/) });
+  });
+
+  it('accepte via le cookie de contexte sans renvoyer le jeton (issue #34)', async () => {
+    const invitation = await createInvitation({ accessRole: 'dirigeant', planningFunctions: [] });
+    const email = `ctx-${randomBytes(8).toString('hex')}@example.com`;
+    createdEmails.push(email);
+    const { GET: validateGet } = await import('../route');
+    const { POST: acceptFromContext } = await import('../../accept/route');
+    const ip = randomBytes(8).toString('hex');
+    const validate = await validateGet(
+      new NextRequest(`http://localhost/api/invitations/${invitation.rawToken}`, {
+        headers: { 'x-forwarded-for': ip },
+      }),
+      { params: { token: invitation.rawToken } },
+    );
+    expect(validate.status).toBe(200);
+    const contextToken = validate.cookies.get('invitation_ctx')?.value;
+    expect(contextToken).toBeTruthy();
+
+    const response = await acceptFromContext(new NextRequest('http://localhost/api/invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify({
+        email,
+        password: 'password123',
+        nom: 'Invitee',
+        confirmIdentity: true,
+        acknowledgeNotice: true,
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': ip,
+        cookie: `invitation_ctx=${contextToken}`,
+      },
+    }));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.redirectTo).toBe('/mon-planning');
+    expect(JSON.stringify(body)).not.toContain(invitation.rawToken);
+    expect(JSON.stringify(body)).not.toContain(contextToken);
   });
 
   it('exactement une acceptation réussit quand deux requêtes concurrentes utilisent le même jeton (issue #271)', async () => {
@@ -91,10 +143,10 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
     createdEmails.push(emailA, emailB);
 
     const [first, second] = await Promise.all([
-      POST(acceptRequest(invitation.rawToken, { email: emailA, password: 'password123', nom: 'Course A' }), {
+      POST(acceptRequest(invitation.rawToken, { email: emailA, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'Course A' }), {
         params: { token: invitation.rawToken },
       }),
-      POST(acceptRequest(invitation.rawToken, { email: emailB, password: 'password123', nom: 'Course B' }), {
+      POST(acceptRequest(invitation.rawToken, { email: emailB, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'Course B' }), {
         params: { token: invitation.rawToken },
       }),
     ]);
@@ -130,7 +182,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
 
     const invitation = await createInvitation({ clubId, accessRole: 'dirigeant', planningFunctions: [] });
     const response = await POST(
-      acceptRequest(invitation.rawToken, { email, password: 'password123', nom: 'Nouveau' }),
+      acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'Nouveau' }),
       { params: { token: invitation.rawToken } },
     );
     expect(response.status).toBe(400);
@@ -156,7 +208,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
 
     const invitation = await createInvitation({ clubId: clubB, accessRole: 'dirigeant', planningFunctions: [] });
     const response = await POST(
-      acceptRequest(invitation.rawToken, { email, password: 'password123', nom: 'Dirigeant Club B' }),
+      acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'Dirigeant Club B' }),
       { params: { token: invitation.rawToken } },
     );
     expect(response.status).toBe(200);
@@ -176,7 +228,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
   it('rejects an expired invitation', async () => {
     const invitation = await createInvitation({ expiresAt: new Date(Date.now() - 1000) });
     const response = await POST(
-      acceptRequest(invitation.rawToken, { email: `expired-${Date.now()}@example.com`, password: 'password123', nom: 'X' }),
+      acceptRequest(invitation.rawToken, { email: `expired-${Date.now()}@example.com`, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
       { params: { token: invitation.rawToken } },
     );
     expect(response.status).toBe(410);
@@ -185,7 +237,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
   it('rejects an already-used invitation', async () => {
     const invitation = await createInvitation({ usedAt: new Date() });
     const response = await POST(
-      acceptRequest(invitation.rawToken, { email: `used-${Date.now()}@example.com`, password: 'password123', nom: 'X' }),
+      acceptRequest(invitation.rawToken, { email: `used-${Date.now()}@example.com`, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
       { params: { token: invitation.rawToken } },
     );
     expect(response.status).toBe(409);
@@ -194,7 +246,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
   it('rejects an unknown token', async () => {
     const token = `unknown-${randomBytes(8).toString('hex')}`;
     const response = await POST(
-      acceptRequest(token, { email: `x-${Date.now()}@example.com`, password: 'password123', nom: 'X' }),
+      acceptRequest(token, { email: `x-${Date.now()}@example.com`, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
       { params: { token } },
     );
     expect(response.status).toBe(404);
@@ -208,14 +260,14 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
     try {
       for (let i = 0; i < 5; i += 1) {
         const response = await POST(
-          acceptRequest(token, { email: `probe-${i}@example.com`, password: 'password123', nom: 'X' }, ip),
+          acceptRequest(token, { email: `probe-${i}@example.com`, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }, ip),
           { params: { token } },
         );
         expect(response.status).toBe(404);
       }
 
       const blocked = await POST(
-        acceptRequest(token, { email: `probe-blocked@example.com`, password: 'password123', nom: 'X' }, ip),
+        acceptRequest(token, { email: `probe-blocked@example.com`, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }, ip),
         { params: { token } },
       );
       expect(blocked.status).toBe(429);
@@ -235,7 +287,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
     try {
       const email = `disabled-club-${randomBytes(8).toString('hex')}@example.com`;
       const response = await POST(
-        acceptRequest(invitation.rawToken, { email, password: 'password123', nom: 'X' }),
+        acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
         { params: { token: invitation.rawToken } },
       );
       expect(response.status).toBe(404);
@@ -243,7 +295,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
 
       const unknownToken = `unknown-${randomBytes(8).toString('hex')}`;
       const unknownResponse = await POST(
-        acceptRequest(unknownToken, { email: `y-${Date.now()}@example.com`, password: 'password123', nom: 'X' }),
+        acceptRequest(unknownToken, { email: `y-${Date.now()}@example.com`, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
         { params: { token: unknownToken } },
       );
       const body = await response.json();
@@ -302,7 +354,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept — activati
     const email = `legacy-${randomBytes(8).toString('hex')}@example.com`;
     cleanupUserIds.push((await (await getDb()).getRepository<UserEntity>('User').findOneBy({ email }))?.id ?? -1);
     const response = await POST(
-      acceptRequest(invitation.rawToken, { email, password: 'password123', nom: 'Nouvel Utilisateur' }),
+      acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'Nouvel Utilisateur' }),
       { params: { token: invitation.rawToken } },
     );
     expect(response.status).toBe(200);
@@ -330,7 +382,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept — activati
     cleanupInvitationIds.push(invitation.id);
 
     const email = `claim-${randomBytes(8).toString('hex')}@example.com`;
-    const response = await POST(acceptRequest(invitation.rawToken, { email, password: 'password123', nom: 'Nadia Multi Fonctions' }), {
+    const response = await POST(acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'Nadia Multi Fonctions' }), {
       params: { token: invitation.rawToken },
     });
     expect(response.status).toBe(200);
@@ -366,7 +418,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept — activati
     cleanupInvitationIds.push(invitation.id);
 
     const email = `claim-admin-${randomBytes(8).toString('hex')}@example.com`;
-    const response = await POST(acceptRequest(invitation.rawToken, { email, password: 'password123', nom: 'Omar Admin' }), {
+    const response = await POST(acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'Omar Admin' }), {
       params: { token: invitation.rawToken },
     });
     expect(response.status).toBe(200);
@@ -386,7 +438,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept — activati
     cleanupInvitationIds.push(invitation.id);
 
     const response = await POST(
-      acceptRequest(invitation.rawToken, { email: `x-${randomBytes(4).toString('hex')}@example.com`, password: 'password123', nom: 'X' }),
+      acceptRequest(invitation.rawToken, { email: `x-${randomBytes(4).toString('hex')}@example.com`, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
       { params: { token: invitation.rawToken } },
     );
     expect(response.status).toBe(409);
@@ -398,7 +450,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept — activati
     cleanupInvitationIds.push(invitation.id);
 
     const response = await POST(
-      acceptRequest(invitation.rawToken, { email: `y-${randomBytes(4).toString('hex')}@example.com`, password: 'password123', nom: 'X' }),
+      acceptRequest(invitation.rawToken, { email: `y-${randomBytes(4).toString('hex')}@example.com`, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
       { params: { token: invitation.rawToken } },
     );
     expect(response.status).toBe(404);

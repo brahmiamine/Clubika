@@ -58,6 +58,9 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
+ * La migration 0025 ajoute le contexte d'échange court des invitations publiques
+ * (cookie httpOnly, issue #34).
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -446,6 +449,18 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         PRIMARY KEY (messageId, userId, emoji),
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0025',
+    name: 'invitation_validation_context',
+    // Contexte d'échange court (cookie httpOnly) pour retirer le jeton d'URL
+    // de l'historique après validation publique (issue #34). Colonnes nullables :
+    // les invitations déjà émises n'ont pas encore de contexte.
+    statements: [
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextHash VARCHAR(64) NULL AFTER createdAt',
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextExpiresAt DATETIME(6) NULL AFTER validationContextHash',
+      'CREATE INDEX IF NOT EXISTS idx_invitations_validation_context ON invitations (validationContextHash)',
     ],
   },
 ];

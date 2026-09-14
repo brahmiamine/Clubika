@@ -8,6 +8,20 @@ describe('Permissions-Policy', () => {
     );
   });
 
+  it('interdit le référent et l’indexation sur les pages d’invitation (issue #34)', async () => {
+    const headersFn = nextConfig.headers;
+    expect(headersFn).toEqual(expect.any(Function));
+    const headers = await headersFn!();
+    for (const source of ['/inscription', '/inscription/:path*']) {
+      const entry = headers.find((candidate) => candidate.source === source)?.headers ?? [];
+      expect(entry).toEqual(expect.arrayContaining([
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+        { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+      ]));
+    }
+  });
+
   it('autorise le microphone de cette origine pour afficher le prompt navigateur', async () => {
     const headersFn = nextConfig.headers;
     expect(headersFn).toEqual(expect.any(Function));

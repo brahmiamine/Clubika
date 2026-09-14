@@ -6,7 +6,12 @@ import { requireRole } from '@/lib/auth/require';
 import { isClubAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
 import { hasAccountAccess } from '@/lib/auth/placeholder-account';
 import { setCurrentClubId } from '@/lib/auth/club-context';
-import { hashInvitationToken, newInvitationToken } from '@/lib/auth/invitation-tokens';
+import {
+  DEFAULT_INVITATION_EXPIRES_IN_DAYS,
+  hashInvitationToken,
+  MAX_INVITATION_EXPIRES_IN_DAYS,
+  newInvitationToken,
+} from '@/lib/auth/invitation-tokens';
 import { isDuplicateEntryError } from '@/lib/db/duplicate-entry';
 import { BodyValidator, parseJsonBody, RequestValidationError } from '@/lib/validation/request';
 
@@ -111,7 +116,7 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = v.string('email', { required: false, maxLength: 255 })?.toLowerCase() ?? null;
     const personNom = v.string('personNom', { required: false, maxLength: 255 });
     const personId = v.number('personId', { required: false, min: 1 });
-    const expiresInDays = v.number('expiresInDays', { required: false, min: 1, max: 365 });
+    const expiresInDays = v.number('expiresInDays', { required: false, min: 1, max: MAX_INVITATION_EXPIRES_IN_DAYS });
     v.throwIfInvalid();
 
     if (!isClubAccessRole(accessRole)) {
@@ -182,7 +187,7 @@ export async function POST(request: NextRequest) {
       ? normalizePlanningFunctions(targetProfile.planningFunctions)
       : requestedFunctions;
 
-    const days = expiresInDays && expiresInDays > 0 ? expiresInDays : 7;
+    const days = expiresInDays && expiresInDays > 0 ? expiresInDays : DEFAULT_INVITATION_EXPIRES_IN_DAYS;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
     const rawToken = newInvitationToken();
@@ -203,6 +208,8 @@ export async function POST(request: NextRequest) {
       usedAt: null,
       usedByUserId: null,
       createdAt: new Date(),
+      validationContextHash: null,
+      validationContextExpiresAt: null,
     };
 
     await repo.save(invitation);

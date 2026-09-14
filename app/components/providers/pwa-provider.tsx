@@ -118,9 +118,12 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     if ('Notification' in window) setPushPermission(Notification.permission);
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
-        console.error('Service worker registration failed:', error);
-      });
+      const onInvitationPage = pathname === '/inscription' || pathname.startsWith('/inscription/');
+      if (!onInvitationPage) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
+          console.error('Service worker registration failed:', error);
+        });
+      }
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
@@ -139,7 +142,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
-  }, [settings.clubName]);
+  }, [pathname, settings.clubName]);
 
   useEffect(() => {
     if (usesTokenClubDocumentHead(pathname)) return;
