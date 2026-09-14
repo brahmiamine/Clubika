@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import type { MatchesAmicauxData } from '@/types/match';
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     const matchesData: MatchesAmicauxData = { matches: groupMatchesByDate(matches) };
     return NextResponse.json(matchesData);
   } catch (error) {
-    console.error('Error reading matches amicaux from DB:', error);
+    logError('app.unhandled', 'Error reading matches amicaux from DB:', error);
     return NextResponse.json({ error: 'Failed to load matches amicaux' }, { status: 500 });
   }
 }

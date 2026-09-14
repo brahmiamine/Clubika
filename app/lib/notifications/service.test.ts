@@ -137,7 +137,7 @@ describe('createNotificationForUser', () => {
 
   it('never throws when the in-app write fails — a notification failure must not fail the caller\'s successful command (issue #208)', async () => {
     saveNotification.mockRejectedValueOnce(new Error('DB indisponible'));
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consoleError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const db = fakeDb();
     const user = fakeUser();
 
@@ -156,7 +156,7 @@ describe('createNotificationForUser', () => {
         id: 'delivery-1', userId: 1, channel: 'email', type: 'assignment', title: 'Affectation',
         message: 'Vous êtes affecté', eventType: null, eventId: null, urgency: 'normal', attempts: 0,
       } as never);
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consoleError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const db = fakeDb();
     const user = fakeUser();
 

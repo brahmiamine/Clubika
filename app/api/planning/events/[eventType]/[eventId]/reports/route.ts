@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
     return NextResponse.json({ success: true, report: { id, payload } });
   } catch (error) {
-    console.error('Post-event report failed:', error);
+    logError('app.unhandled', 'Post-event report failed:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer le rapport' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
@@ -253,7 +254,7 @@ export async function POST(
     if (error instanceof RequestValidationError) {
       return NextResponse.json({ error: 'Requête invalide', details: error.issues }, { status: 400 });
     }
-    console.error('Canonical planning event creation failed:', error);
+    logError('app.unhandled', 'Canonical planning event creation failed:', error);
     return NextResponse.json({ error: 'Impossible de créer cet événement' }, { status: 500 });
   }
 }

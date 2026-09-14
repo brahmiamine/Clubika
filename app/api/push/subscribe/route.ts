@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Unable to save push subscription:', error);
+    logError('app.unhandled', 'Unable to save push subscription:', error);
     return NextResponse.json({ error: "Impossible d'activer les notifications push" }, { status: 500 });
   }
 }

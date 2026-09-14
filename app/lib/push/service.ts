@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { buildNotificationClubIconPath, PWA_NOTIFICATION_ICON } from '@/lib/pwa/icons';
 import type { DataSource } from 'typeorm';
 import webPush from 'web-push';
@@ -107,11 +108,11 @@ export async function triggerPushForUser(
             await removePushSubscriptionByEndpoint(db, subscription.endpoint);
             return;
           }
-          console.error('Web push delivery failed:', error);
+          logError('push.delivery_failed', error);
         }
       }),
     );
   } catch (error) {
-    console.error('Unable to trigger web push:', error);
+    logError('push.delivery_failed', error);
   }
 }

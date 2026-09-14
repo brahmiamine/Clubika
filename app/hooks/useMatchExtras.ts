@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { apiGet, apiPut, describeApiError } from '@/lib/utils/api';
@@ -54,7 +55,7 @@ export function useMatchExtras(matchId: string | undefined) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement';
       setError(errorMessage);
-      console.error('Erreur lors du chargement des extras:', err);
+      logError('app.unhandled', 'Erreur lors du chargement des extras:', err);
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +79,7 @@ export function useMatchExtras(matchId: string | undefined) {
     } catch (err) {
       const errorMessage = describeApiError(err, 'Erreur lors de la sauvegarde');
       setError(errorMessage);
-      console.error('Erreur lors de la sauvegarde:', err);
+      logError('app.unhandled', 'Erreur lors de la sauvegarde:', err);
       // Le formulaire appelant se contente de tester la valeur de retour : sans toast ici,
       // un échec (ex. affectation refusée par la validation serveur) reste invisible pour
       // l'utilisateur, qui voit juste le formulaire rester ouvert sans rien comprendre.

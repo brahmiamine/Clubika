@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error reading stades from DB:', error);
+    logError('app.unhandled', 'Error reading stades from DB:', error);
     return NextResponse.json(
       { error: 'Failed to load stades' },
       { status: 500 }
@@ -123,7 +124,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Error updating stades in DB:', error);
+    logError('app.unhandled', 'Error updating stades in DB:', error);
     return NextResponse.json(
       { error: 'Failed to update stade' },
       { status: 500 }
@@ -177,7 +178,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Error deleting stade in DB:', error);
+    logError('app.unhandled', 'Error deleting stade in DB:', error);
     return NextResponse.json(
       { error: 'Failed to delete stade' },
       { status: 500 }
@@ -243,7 +244,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Error adding stade in DB:', error);
+    logError('app.unhandled', 'Error adding stade in DB:', error);
     return NextResponse.json(
       { error: 'Failed to add stade' },
       { status: 500 }

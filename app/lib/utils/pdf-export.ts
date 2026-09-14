@@ -1,3 +1,4 @@
+import { logError, logWarn } from '@/lib/observability/client-log';
 import jsPDF from 'jspdf';
 import { Match, Entrainement, Plateau, ClubInfo } from '@/types/match';
 import { MatchExtras } from '@/hooks/useMatchExtras';
@@ -133,7 +134,7 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
     });
 
     if (!response.ok) {
-      console.warn("Impossible de charger l'image:", url);
+      logWarn('app.unhandled');
       return null;
     }
 
@@ -144,8 +145,8 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
       reader.onerror = () => resolve(null);
       reader.readAsDataURL(blob);
     });
-  } catch (error) {
-    console.warn("Erreur lors du chargement de l'image:", error);
+  } catch {
+    logWarn('app.unhandled');
     return null;
   }
 }
@@ -229,8 +230,8 @@ export async function generatePdf(
   if (club?.logo) {
     try {
       logoReady = await prepareClubLogoForPdf(club.logo);
-    } catch (error) {
-      console.error('Erreur lors du chargement du logo:', error);
+    } catch {
+      logError('app.unhandled');
     }
   }
 

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -38,7 +39,7 @@ async function deliverResetLink(email: string, resetUrl: string): Promise<boolea
     });
     return response.ok;
   } catch (error) {
-    console.error('Password reset delivery failed:', error);
+    logError('app.unhandled', 'Password reset delivery failed:', error);
     return false;
   }
 }
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     return genericResponse(pendingUrls);
   } catch (error) {
-    console.error('Password reset request failed:', error);
+    logError('app.unhandled', 'Password reset request failed:', error);
     return genericResponse();
   }
 }

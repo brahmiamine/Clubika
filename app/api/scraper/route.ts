@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { runScraperAndPersistToDb } from '@/lib/scraper/run-scraper';
 import { getDb } from '@/lib/db';
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     const { runId, stderr, sync } = await runScraperAndPersistToDb();
 
     if (stderr && !stderr.includes('✅')) {
-      console.error('Scraper stderr:', stderr);
+      logError('app.unhandled', 'Scraper stderr:', stderr);
     }
 
     return NextResponse.json({
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
       sync,
     });
   } catch (error) {
-    console.error('Error running scraper:', error);
+    logError('app.unhandled', 'Error running scraper:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
       { error: 'Failed to run scraper', details: errorMessage },

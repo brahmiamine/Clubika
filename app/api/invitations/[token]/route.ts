@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { InvitationEntity } from '@/lib/db/schemas';
@@ -50,7 +51,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error validating invitation:', error);
+    logError('app.unhandled', 'Error validating invitation:', error);
     return NextResponse.json({ valid: false, error: 'Une erreur est survenue' }, { status: 500 });
   }
 }
@@ -80,7 +81,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error revoking invitation:', error);
+    logError('app.unhandled', 'Error revoking invitation:', error);
     return NextResponse.json({ error: 'Failed to revoke invitation' }, { status: 500 });
   }
 }

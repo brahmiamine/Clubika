@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import type { ClubTenantEntity } from '@/lib/db/schemas';
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
         const settings = await readAppSettings(await getDb(), resolved.clubId);
         return NextResponse.json(toClubVisibleSettings(settings));
     } catch (error) {
-        console.error('Error reading app settings:', error);
+        logError('app.unhandled', 'Error reading app settings:', error);
         return NextResponse.json({ error: 'Failed to read settings' }, { status: 500 });
     }
 }
@@ -122,7 +123,7 @@ export async function PUT(request: NextRequest) {
         if (error instanceof RequestValidationError) {
             return NextResponse.json({ error: error.message, issues: error.issues }, { status: 400 });
         }
-        console.error('Error updating app settings:', error);
+        logError('app.unhandled', 'Error updating app settings:', error);
         return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
     }
 }

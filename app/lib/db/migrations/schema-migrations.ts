@@ -9,6 +9,7 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { purgeOutboxLastError } from './purge-outbox-last-error';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -57,6 +58,10 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  * `chat_messages`.
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
+ *
+ * La migration 0025 (issue #31) purge `planning_notification_outbox.last_error`
+ * des anciens `error.message` fournisseur ; les nouvelles valeurs sont
+ * `{"code","retryable"}`. Dry-run : `MIGRATION_DRY_RUN=1`.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -447,5 +452,14 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0025',
+    name: 'purge_outbox_last_error_messages',
+    statements: [],
+    logic: readMigrationLogicFile('purge-outbox-last-error.ts'),
+    up: async (db) => {
+      await purgeOutboxLastError(db);
+    },
   },
 ];

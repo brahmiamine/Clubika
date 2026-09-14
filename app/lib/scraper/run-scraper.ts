@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { execFile } from 'child_process';
 import { createHash } from 'node:crypto';
 import path from 'path';
@@ -156,7 +157,7 @@ export async function runScraperAndPersistToDb(clubId: string = getCurrentClubId
       try {
         await lockRunner.query('SELECT RELEASE_LOCK(?)', [lockName]);
       } catch (error) {
-        console.error('Impossible de libérer le verrou du scraper:', error);
+        logError('app.unhandled', 'Impossible de libérer le verrou du scraper:', error);
       }
     }
     await lockRunner.release();

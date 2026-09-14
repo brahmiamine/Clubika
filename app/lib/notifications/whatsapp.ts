@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 export type WhatsAppProvider = 'disabled' | 'webhook' | 'meta';
 type WhatsAppEnvironment = Readonly<Record<string, string | undefined>>;
 
@@ -100,7 +101,7 @@ async function deliverMeta(message: WhatsAppNotificationMessage): Promise<void> 
     body: JSON.stringify(buildMetaWhatsAppPayload(message)),
     signal: AbortSignal.timeout(5000),
   });
-  if (!response.ok) console.error(`Meta WhatsApp delivery failed with status ${response.status}`);
+  if (!response.ok) logError('whatsapp.delivery_failed');
 }
 
 async function deliverWebhook(message: WhatsAppNotificationMessage): Promise<void> {
@@ -119,7 +120,7 @@ async function deliverWebhook(message: WhatsAppNotificationMessage): Promise<voi
     }),
     signal: AbortSignal.timeout(5000),
   });
-  if (!response.ok) console.error(`Notification WhatsApp webhook failed with status ${response.status}`);
+  if (!response.ok) logError('whatsapp.delivery_failed');
 }
 
 export async function sendWhatsAppNotification(message: WhatsAppNotificationMessage): Promise<void> {
@@ -131,6 +132,6 @@ export async function sendWhatsAppNotification(message: WhatsAppNotificationMess
     if (provider === 'meta') await deliverMeta(normalized);
     if (provider === 'webhook') await deliverWebhook(normalized);
   } catch (error) {
-    console.error('Notification WhatsApp delivery failed:', error);
+    logError('whatsapp.delivery_failed', error);
   }
 }
