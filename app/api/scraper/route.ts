@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runScraperAndPersistToDb } from '@/lib/scraper/run-scraper';
 import { getDb } from '@/lib/db';
 import { planningFeatureGuard } from '@/lib/planning/feature-guard';
+import { externalServiceGuard } from '@/lib/compliance/external-service-guard';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
 import { listScraperRuns } from '@/lib/scraper/runs';
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest) {
   setCurrentClubId(auth.user.clubId);
 
   try {
+    const blocked = externalServiceGuard('sportcorico');
+    if (blocked) return blocked;
     const disabled = await planningFeatureGuard(await getDb(), 'scraperSync');
     if (disabled) return disabled;
     const { runId, stderr, sync } = await runScraperAndPersistToDb();

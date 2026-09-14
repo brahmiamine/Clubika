@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SportCoricoMatchApi } from './sportcorico-api.types';
 import {
   assertClubSlugMatchesKey,
@@ -185,6 +185,9 @@ describe('mapSportCoricoMatch', () => {
 });
 
 describe('fetchAndMapSportCoricoMatchesSettled', () => {
+  beforeEach(() => {
+    vi.stubEnv('SPORTCORICO_SYNC_ENABLED', 'true');
+  });
   it('conserve les matchs valides quand un autre slug échoue en 404', async () => {
     const fetchImpl: typeof fetch = vi.fn(async (input) => {
       const url = String(input);
@@ -246,6 +249,9 @@ describe('assertClubSlugMatchesKey', () => {
 });
 
 describe('loadSportCoricoClubPlanning', () => {
+  beforeEach(() => {
+    vi.stubEnv('SPORTCORICO_SYNC_ENABLED', 'true');
+  });
   it('charge le club puis enrichit les matchs, même si un détail API échoue', async () => {
     const listed = apiMatch({ infrastructure: undefined });
     const fetchImpl: typeof fetch = vi.fn(async (input) => {

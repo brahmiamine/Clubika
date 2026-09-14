@@ -36,7 +36,8 @@ describe.skipIf(!dbAvailable)('GET /api/logo-proxy — authentification (issue #
     try {
       // Hôte bloqué : la réponse 400 prouve qu'on a dépassé requireAuth (sinon 401).
       const response = await GET(proxyRequest('http://127.0.0.1/logo.png', account.token));
-      expect(response.status).toBe(400);
+      // 400 = SSRF / hôte non allowlisté ; 409 = proxy kill-switché. Les deux prouvent l’auth.
+      expect([400, 409]).toContain(response.status);
     } finally {
       await account.cleanup();
     }

@@ -12,6 +12,17 @@ describe('WhatsApp provider infrastructure', () => {
     expect(normalizeWhatsAppRecipient('0033 6 12 34 56 78', '33')).toBe('33612345678');
   });
 
+  it('n’active jamais le canal à partir des seuls secrets', () => {
+    expect(configuredWhatsAppProvider({
+      WHATSAPP_META_PHONE_NUMBER_ID: '123',
+      WHATSAPP_META_ACCESS_TOKEN: 'secret',
+      WHATSAPP_META_GRAPH_VERSION: 'v23.0',
+    })).toBe('disabled');
+    expect(configuredWhatsAppProvider({
+      NOTIFICATION_WHATSAPP_WEBHOOK_URL: 'https://provider.example/whatsapp',
+    })).toBe('disabled');
+  });
+
   it('keeps Meta disabled until phone id, access token and Graph version are all configured', () => {
     expect(configuredWhatsAppProvider({ WHATSAPP_PROVIDER: 'meta', WHATSAPP_META_PHONE_NUMBER_ID: '123' })).toBe('disabled');
     expect(configuredWhatsAppProvider({
@@ -25,6 +36,7 @@ describe('WhatsApp provider infrastructure', () => {
       WHATSAPP_META_ACCESS_TOKEN: 'secret',
       WHATSAPP_META_GRAPH_VERSION: 'v23.0',
     })).toBe('meta');
+    expect(configuredWhatsAppProvider({ WHATSAPP_PROVIDER: 'twilio' })).toBe('disabled');
   });
 
   it('builds a template payload when an approved template is configured', () => {
