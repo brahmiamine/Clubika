@@ -1,14 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const sendEmail = vi.fn(async () => true);
+const mocks = vi.hoisted(() => ({
+  sendEmail: vi.fn(async () => true),
+}));
 
-vi.mock('@/lib/notifications/email', () => ({ sendEmail }));
+vi.mock('@/lib/notifications/email', () => ({
+  sendEmail: mocks.sendEmail,
+}));
 
 import { buildPasswordResetMail, deliverPasswordResetLink } from './password-reset-delivery';
 
 describe('password reset mail (issue #30)', () => {
   afterEach(() => {
-    sendEmail.mockClear();
+    mocks.sendEmail.mockClear();
     delete process.env.SMTP_ENABLED;
     delete process.env.PASSWORD_RESET_WEBHOOK_URL;
     delete process.env.NOTIFICATION_EMAIL_WEBHOOK_URL;
@@ -33,7 +37,7 @@ describe('password reset mail (issue #30)', () => {
     )).resolves.toBe(false);
 
     expect(fetchImpl).not.toHaveBeenCalled();
-    expect(sendEmail).not.toHaveBeenCalled();
+    expect(mocks.sendEmail).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 
@@ -44,7 +48,7 @@ describe('password reset mail (issue #30)', () => {
       'https://app.example/reinitialiser/deadbeef',
       'demo-club',
     )).resolves.toBe(true);
-    expect(sendEmail).toHaveBeenCalledWith({
+    expect(mocks.sendEmail).toHaveBeenCalledWith({
       to: 'user@example.test',
       subject: 'Réinitialisation de votre mot de passe Clubika',
       text: expect.stringContaining('/reinitialiser/deadbeef'),
