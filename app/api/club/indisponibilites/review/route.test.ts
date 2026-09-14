@@ -80,7 +80,7 @@ describe.skipIf(!dbAvailable)('POST /api/club/indisponibilites/review (issue #32
       userId: dirigeant.user.id,
       indisponibiliteId: 'pending-1',
       decision: 'rejected',
-      comment: 'trop tard',
+      reviewCode: 'other',
     }));
     expect(conflict.status).toBe(409);
 
