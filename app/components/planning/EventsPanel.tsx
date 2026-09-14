@@ -128,6 +128,9 @@ export const EventsPanel = memo(function EventsPanel({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleAddClick('officiel')}>
+                      Match officiel
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleAddClick('amical')}>
                       Match amical
                     </DropdownMenuItem>

@@ -9,6 +9,7 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { runSportCoricoDataAudit } from './audit-sportcorico-data';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -57,6 +58,10 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  * `chat_messages`.
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
+ *
+ * La migration 0027 (issue #5) inventorie les données SportCorico déjà importées
+ * (dry-run par défaut). La quarantaine n'écrit que si `SPORTCORICO_DATA_PURGE=apply`
+ * au moment de l'exécution, ou via `pnpm run sportcorico:quarantine` après sauvegarde.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -447,5 +452,14 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0027',
+    name: 'audit_quarantaine_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('audit-sportcorico-data.ts'),
+    up: async (db) => {
+      await runSportCoricoDataAudit(db);
+    },
   },
 ];
