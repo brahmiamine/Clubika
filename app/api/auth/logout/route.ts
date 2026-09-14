@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSessionUser, revokeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { sessionCookieClearOptions } from '@/lib/auth/session-cookie';
 import { removeAllPushSubscriptionsForUser } from '@/lib/push/store';
 
 export async function POST(request: NextRequest) {
@@ -12,13 +13,7 @@ export async function POST(request: NextRequest) {
     }
     await revokeSession(token);
     const response = NextResponse.json({ success: true });
-    response.cookies.set(SESSION_COOKIE_NAME, '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 0,
-    });
+    response.cookies.set(SESSION_COOKIE_NAME, '', sessionCookieClearOptions());
     return response;
   } catch (error) {
     console.error('Error during logout:', error);

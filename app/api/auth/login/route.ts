@@ -3,7 +3,8 @@ import { In } from 'typeorm';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity, UserEntity } from '@/lib/db/schemas';
 import { verifyPassword } from '@/lib/auth/password';
-import { createSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { createSession, revokeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { sessionCookieSetOptions } from '@/lib/auth/session-cookie';
 import { canEdit, normalizeAccessRole } from '@/lib/auth/roles';
 import { isClubTenantActive } from '@/lib/db/club-tenants';
 import { hasAccountAccess } from '@/lib/auth/placeholder-account';
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
         recordFailedLoginAttempt(db, identityBucket),
       ]);
       if (ipResult.limited) {
-        console.warn(`[auth] Connexion : verrouillage par IP déclenché (${ip}, ${ipResult.retryAfterSeconds}s)`);
+        console.warn(`[auth] Connexion : verrouillage par IP déclenché (bucket=${hashBucketComponent(ip).slice(0, 16)}, ${ipResult.retryAfterSeconds}s)`);
       }
       return NextResponse.json(GENERIC_ERROR, { status: 401 });
     };
@@ -115,9 +116,14 @@ export async function POST(request: NextRequest) {
       resetLoginRateLimit(db, identityBucket),
     ]);
 
+    const existingToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (existingToken) {
+      await revokeSession(existingToken);
+    }
+
     const { token, expiresAt } = await createSession(matchedUser.id, {
       userAgent: request.headers.get('user-agent'),
-      ipAddress: request.headers.get('x-forwarded-for'),
+      ipAddress: ip,
     });
 
     const redirectTo = canEdit(normalizeAccessRole(matchedUser.accessRole))
@@ -125,13 +131,7 @@ export async function POST(request: NextRequest) {
       : '/mon-planning';
 
     const response = NextResponse.json({ success: true, redirectTo });
-    response.cookies.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: expiresAt,
-      path: '/',
-    });
+    response.cookies.set(SESSION_COOKIE_NAME, token, sessionCookieSetOptions(expiresAt));
     return response;
   } catch (error) {
     console.error('Error during login:', error);

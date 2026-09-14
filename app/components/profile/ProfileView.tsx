@@ -11,6 +11,7 @@ import { useCurrentUser } from '@/app/hooks/useCurrentUser';
 import { apiPost, apiPut } from '@/lib/utils/api';
 import type { NotifyChannel } from '@/lib/auth/session';
 import { toast } from 'sonner';
+import { ActiveSessionsCard } from './ActiveSessionsCard';
 
 const NOTIFY_CHANNEL_LABELS: Record<NotifyChannel, string> = {
   push: 'Notifications dans l\'application',
@@ -99,6 +100,11 @@ export function ProfileView() {
               <div className="space-y-2"><Label>Nouveau mot de passe</Label><Input type="password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></div>
               <p className="text-xs text-muted-foreground">Un changement de mot de passe déconnecte toutes les sessions actives.</p>
             </div>
+            <ActiveSessionsCard
+              listUrl="/api/me/sessions"
+              revokeOthersUrl="/api/me/sessions/revoke-others"
+              revokeUrl={(id) => `/api/me/sessions/${encodeURIComponent(id)}`}
+            />
             <Button onClick={save} disabled={saving}>{saving ? 'Enregistrement...' : 'Enregistrer'}</Button>
         </SectionCard>
   );

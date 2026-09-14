@@ -9,6 +9,7 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed-sessions';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -57,6 +58,9 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  * `chat_messages`.
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
+ *
+ * La migration 0025 (issue #29) ajoute le condensat HMAC des jetons de session
+ * (`tokenHash`) et les TTL idle/absolu, puis révoque le stockage en clair.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -447,5 +451,28 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0025',
+    name: 'sessions_token_hash_et_ttl',
+    statements: [
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS tokenHash VARCHAR(96) NULL AFTER id',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS lastSeenAt DATETIME(6) NULL AFTER createdAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS idleTtlSeconds INT NOT NULL DEFAULT 604800 AFTER expiresAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS absoluteTtlSeconds INT NOT NULL DEFAULT 2592000 AFTER idleTtlSeconds',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS clientHint VARCHAR(32) NULL AFTER revokedAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS networkHint VARCHAR(16) NULL AFTER clientHint',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS tokenHash VARCHAR(96) NULL AFTER id',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS lastSeenAt DATETIME(6) NULL AFTER createdAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS idleTtlSeconds INT NOT NULL DEFAULT 14400 AFTER expiresAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS absoluteTtlSeconds INT NOT NULL DEFAULT 43200 AFTER idleTtlSeconds',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS clientHint VARCHAR(32) NULL AFTER revokedAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS networkHint VARCHAR(16) NULL AFTER clientHint',
+    ],
+    logic: readMigrationLogicFile('hashed-sessions.ts'),
+    up: async (db) => {
+      await hashExistingSessionTokens(db);
+      await finalizeHashedSessionSchema(db);
+    },
   },
 ];

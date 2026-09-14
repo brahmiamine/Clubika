@@ -1,12 +1,12 @@
 import { randomBytes } from 'node:crypto';
-import { describe, it, expect, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, afterEach, afterAll, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { isDbAvailable } from '@/lib/db/test-utils';
 import { getDb } from '@/lib/db';
 import { InvitationEntity, UserEntity } from '@/lib/db/schemas';
 import { hashInvitationToken } from '@/lib/auth/invitation-tokens';
 import { hashBucketComponent } from '@/lib/auth/login-rate-limit';
-import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { createTestUserAndSession, enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import { POST } from './route';
 
 const dbAvailable = await isDbAvailable();
@@ -28,7 +28,7 @@ async function ensureCreatorUser() {
   return creatorUserId;
 }
 
-function acceptRequest(token: string, body: unknown, ip = randomBytes(8).toString('hex')) {
+function acceptRequest(token: string, body: unknown, ip = uniqueTestIp()) {
   return new NextRequest(`http://localhost/api/invitations/${token}/accept`, {
     method: 'POST',
     body: JSON.stringify(body),
@@ -62,8 +62,14 @@ async function createInvitation(overrides?: Partial<InvitationEntity>) {
 
 describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration)', () => {
   const createdEmails: string[] = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     if (createdEmails.length > 0) {
       await db.getRepository('User').createQueryBuilder().delete().where('email IN (:...emails)', { emails: createdEmails }).execute();
@@ -201,7 +207,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
   });
 
   it('renvoie 429 après 5 tentatives sur un jeton invalide depuis la même IP (issue #381)', async () => {
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     const token = `invalid-probe-${randomBytes(8).toString('hex')}`;
     const db = await getDb();
 

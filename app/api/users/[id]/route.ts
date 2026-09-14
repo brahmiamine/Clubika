@@ -116,9 +116,10 @@ export async function PUT(
       const user = locked.find((candidate) => candidate.id === id);
       if (!user) return { kind: 'not-found' };
 
+      const previousAccessRole = normalizeAccessRole(user.accessRole);
       const nextAccessRole = body.accessRole !== undefined
         ? normalizeAccessRole(body.accessRole)
-        : normalizeAccessRole(user.accessRole);
+        : previousAccessRole;
       const nextFunctions = body.planningFunctions !== undefined
         ? normalizePlanningFunctions(body.planningFunctions)
         : normalizePlanningFunctions(user.planningFunctions);
@@ -145,7 +146,9 @@ export async function PUT(
       return {
         kind: 'ok',
         userId: user.id,
-        revokeSessions: !user.active || (typeof password === 'string' && password.length > 0),
+        revokeSessions: !user.active
+          || (typeof password === 'string' && password.length > 0)
+          || previousAccessRole !== nextAccessRole,
         notifyDeactivatedWithAssignments: wasActive && !user.active,
       };
     });

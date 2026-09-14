@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db';
 import { createTestUserAndSession } from '@/lib/auth/test-helpers';
 import type { ClubAccessRole, PlanningFunction } from '@/lib/auth/roles';
 import type { UserEntity } from '@/lib/db/schemas';
+import { SESSION_COOKIE_NAME } from '@/lib/auth/constants';
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://127.0.0.1:3100';
 
@@ -22,7 +23,7 @@ export function freshClubId(): string {
 export async function authedContext(browser: { newContext: () => Promise<BrowserContext> }, account: TestAccount): Promise<BrowserContext> {
   const context = await browser.newContext();
   await context.addCookies([{
-    name: 'session_token',
+    name: SESSION_COOKIE_NAME,
     value: account.token,
     url: BASE_URL,
     httpOnly: true,

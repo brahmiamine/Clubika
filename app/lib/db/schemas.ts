@@ -284,12 +284,16 @@ export const UserSchema = new EntitySchema<UserEntity>({
 
 export interface UserSessionEntity {
   id: string;
+  tokenHash: string;
   userId: number;
   createdAt: Date;
+  lastSeenAt: Date;
   expiresAt: Date;
+  idleTtlSeconds: number;
+  absoluteTtlSeconds: number;
   revokedAt: Date | null;
-  userAgent: string | null;
-  ipAddress: string | null;
+  clientHint: string | null;
+  networkHint: string | null;
 }
 
 export const UserSessionSchema = new EntitySchema<UserSessionEntity>({
@@ -298,15 +302,20 @@ export const UserSessionSchema = new EntitySchema<UserSessionEntity>({
   indices: [
     { name: 'idx_user_sessions_user_id', columns: ['userId'] },
     { name: 'idx_user_sessions_expires_at', columns: ['expiresAt'] },
+    { name: 'uq_user_sessions_token_hash', columns: ['tokenHash'], unique: true },
   ],
   columns: {
     id: { type: String, primary: true },
+    tokenHash: { type: String, length: 96 },
     userId: { type: Number },
     createdAt: { type: 'datetime', createDate: true },
+    lastSeenAt: { type: 'datetime' },
     expiresAt: { type: 'datetime' },
+    idleTtlSeconds: { type: Number },
+    absoluteTtlSeconds: { type: Number },
     revokedAt: { type: 'datetime', nullable: true },
-    userAgent: { type: String, nullable: true },
-    ipAddress: { type: String, nullable: true },
+    clientHint: { type: String, nullable: true, length: 32 },
+    networkHint: { type: String, nullable: true, length: 16 },
   },
 });
 
@@ -682,22 +691,37 @@ export const PlatformAdminSchema = new EntitySchema<PlatformAdminEntity>({
 
 export interface PlatformSessionEntity {
   id: string;
+  tokenHash: string;
   platformAdminId: number;
   createdAt: Date;
+  lastSeenAt: Date;
   expiresAt: Date;
+  idleTtlSeconds: number;
+  absoluteTtlSeconds: number;
   revokedAt: Date | null;
+  clientHint: string | null;
+  networkHint: string | null;
 }
 
 export const PlatformSessionSchema = new EntitySchema<PlatformSessionEntity>({
   name: 'PlatformSession',
   tableName: 'platform_sessions',
-  indices: [{ name: 'idx_platform_sessions_admin', columns: ['platformAdminId'] }],
+  indices: [
+    { name: 'idx_platform_sessions_admin', columns: ['platformAdminId'] },
+    { name: 'uq_platform_sessions_token_hash', columns: ['tokenHash'], unique: true },
+  ],
   columns: {
     id: { type: String, primary: true },
+    tokenHash: { type: String, length: 96 },
     platformAdminId: { type: Number },
     createdAt: { type: 'datetime', createDate: true },
+    lastSeenAt: { type: 'datetime' },
     expiresAt: { type: 'datetime' },
+    idleTtlSeconds: { type: Number },
+    absoluteTtlSeconds: { type: Number },
     revokedAt: { type: 'datetime', nullable: true },
+    clientHint: { type: String, nullable: true, length: 32 },
+    networkHint: { type: String, nullable: true, length: 16 },
   },
 });
 

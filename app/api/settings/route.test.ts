@@ -1,9 +1,8 @@
-import { randomBytes } from 'node:crypto';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
-import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { createTestUserAndSession, enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import { hashBucketComponent } from '@/lib/auth/login-rate-limit';
 import { readAppSettings } from '@/lib/settings-store';
 import { GET, PUT } from './route';
@@ -22,7 +21,7 @@ function settingsRequest(method: 'GET' | 'PUT', token: string, body?: unknown) {
   });
 }
 
-function publicSettingsRequest(clubId: string, ip = randomBytes(8).toString('hex')) {
+function publicSettingsRequest(clubId: string, ip = uniqueTestIp()) {
   return new NextRequest(`http://localhost/api/settings?club=${encodeURIComponent(clubId)}`, {
     headers: { 'x-forwarded-for': ip },
   });
@@ -30,8 +29,14 @@ function publicSettingsRequest(clubId: string, ip = randomBytes(8).toString('hex
 
 describe.skipIf(!dbAvailable)('GET /api/settings public club lookup (issue #342)', () => {
   const cleanupIps: string[] = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     for (const ip of cleanupIps.splice(0)) {
       await db.query('DELETE FROM login_rate_limits WHERE bucket_key = ?', [`settings-public:ip:${hashBucketComponent(ip)}`]);
@@ -48,7 +53,7 @@ describe.skipIf(!dbAvailable)('GET /api/settings public club lookup (issue #342)
 
   it('returns 404 for an unknown club without creating a tenant', async () => {
     const unknownClub = `unknown-settings-${Date.now()}`;
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     cleanupIps.push(ip);
 
     const response = await GET(publicSettingsRequest(unknownClub, ip));
@@ -62,7 +67,7 @@ describe.skipIf(!dbAvailable)('GET /api/settings public club lookup (issue #342)
   it('returns 404 for an inactive club', async () => {
     const clubId = `inactive-settings-${Date.now()}`;
     createdClubIds.push(clubId);
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     cleanupIps.push(ip);
     const db = await getDb();
     await db.getRepository('ClubTenant').save({ id: clubId, name: 'Club inactif', active: false });
@@ -74,7 +79,7 @@ describe.skipIf(!dbAvailable)('GET /api/settings public club lookup (issue #342)
   it('returns settings for an active club', async () => {
     const clubId = `active-settings-${Date.now()}`;
     createdClubIds.push(clubId);
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     cleanupIps.push(ip);
     const db = await getDb();
     await db.getRepository('ClubTenant').save({ id: clubId, name: 'Club actif', active: true });
