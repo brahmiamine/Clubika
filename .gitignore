@@ -60,3 +60,4 @@ Thumbs.db
 # artefacts locaux à ne jamais versionner (exports, documents personnels)
 /csv/
 /pdf/
+/deploy/backups/
