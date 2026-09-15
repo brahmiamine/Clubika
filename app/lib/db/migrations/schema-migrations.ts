@@ -94,6 +94,9 @@ import { applyAuditLogMinimizeMigration } from './audit-log-minimize';
  * La migration 0038 (issue #22) ajoute les tables d’exercice des droits RGPD et les
  * colonnes de restriction / opposition sur `users`.
  *
+ * La migration 0039 (issue #25) ajoute l’état d’offboarding sur `club_tenants`
+ * et les tables d’export, d’instructions sous-traitants, d’événements et de certificats.
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -720,6 +723,61 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         expiresAt DATETIME(6) NOT NULL,
         usedAt DATETIME(6) NULL,
         createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0039',
+    name: 'offboarding_club_tenant',
+    statements: [
+      "ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS offboardingStatus VARCHAR(32) NOT NULL DEFAULT 'none' AFTER active",
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS frozenAt DATETIME(6) NULL AFTER offboardingStatus',
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS retentionUntil DATETIME(6) NULL AFTER frozenAt',
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS purgedAt DATETIME(6) NULL AFTER retentionUntil',
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS legalHoldActive TINYINT NOT NULL DEFAULT 0 AFTER purgedAt',
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS legalHoldMotive VARCHAR(64) NULL AFTER legalHoldActive',
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS legalHoldScope VARCHAR(64) NULL AFTER legalHoldMotive',
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS legalHoldExpiresAt DATETIME(6) NULL AFTER legalHoldScope',
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS legalHoldApprovedBy INT NULL AFTER legalHoldExpiresAt',
+      'ALTER TABLE club_tenants ADD COLUMN IF NOT EXISTS legalHoldCreatedAt DATETIME(6) NULL AFTER legalHoldApprovedBy',
+      `CREATE TABLE IF NOT EXISTS tenant_offboarding_exports (
+        id CHAR(64) NOT NULL PRIMARY KEY,
+        clubId VARCHAR(64) NOT NULL,
+        createdByPlatformAdminId INT NOT NULL,
+        expiresAt DATETIME(6) NOT NULL,
+        usedAt DATETIME(6) NULL,
+        revokedAt DATETIME(6) NULL,
+        manifestSha256 CHAR(64) NULL,
+        byteLength INT NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        INDEX idx_tenant_offboarding_exports_club (clubId, createdAt)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS tenant_processor_instructions (
+        id VARCHAR(64) NOT NULL PRIMARY KEY,
+        clubId VARCHAR(64) NOT NULL,
+        processorId VARCHAR(32) NOT NULL,
+        status VARCHAR(32) NOT NULL,
+        instructedAt DATETIME(6) NOT NULL,
+        responseAt DATETIME(6) NULL,
+        INDEX idx_tenant_processor_instructions_club (clubId, processorId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS tenant_offboarding_events (
+        id VARCHAR(64) NOT NULL PRIMARY KEY,
+        clubId VARCHAR(64) NOT NULL,
+        action VARCHAR(64) NOT NULL,
+        platformAdminId INT NULL,
+        payloadJson TEXT NOT NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        INDEX idx_tenant_offboarding_events_club (clubId, createdAt)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS tenant_deletion_certificates (
+        id VARCHAR(64) NOT NULL PRIMARY KEY,
+        clubId VARCHAR(64) NOT NULL,
+        clubIdHash CHAR(64) NOT NULL,
+        createdByPlatformAdminId INT NULL,
+        payloadJson TEXT NOT NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        INDEX idx_tenant_deletion_certificates_club (clubId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
   },

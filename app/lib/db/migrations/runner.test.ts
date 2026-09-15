@@ -240,6 +240,10 @@ describe.skipIf(!dbAvailable)('runSchemaMigrations (intégration MariaDB)', () =
         'chat_attachments',
         'scraper_sync_runs',
         'planning_assignment_state',
+        'tenant_offboarding_exports',
+        'tenant_processor_instructions',
+        'tenant_offboarding_events',
+        'tenant_deletion_certificates',
         ...TYPEORM_ENTITY_TABLE_NAMES,
       ]],
     ) as Array<{ name: string }>;
@@ -252,6 +256,10 @@ describe.skipIf(!dbAvailable)('runSchemaMigrations (intégration MariaDB)', () =
       'planning_records',
       'push_subscriptions',
       'scraper_sync_runs',
+      'tenant_deletion_certificates',
+      'tenant_offboarding_events',
+      'tenant_offboarding_exports',
+      'tenant_processor_instructions',
       ...TYPEORM_ENTITY_TABLE_NAMES,
     ].sort());
   });

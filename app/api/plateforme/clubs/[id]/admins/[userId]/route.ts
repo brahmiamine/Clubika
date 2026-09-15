@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
 import { requirePlatformAuth } from '@/lib/auth/platform-require';
 import { revokeAllSessionsForUser } from '@/lib/auth/session';
+import { rejectIfClubNotWritable } from '@/lib/tenant-offboarding/writable';
 
 export async function PATCH(
   request: NextRequest,
@@ -14,6 +15,8 @@ export async function PATCH(
 
   try {
     const { id, userId } = params instanceof Promise ? await params : params;
+    const blocked = await rejectIfClubNotWritable(await getDb(), id);
+    if (blocked) return blocked;
     const parsedUserId = Number.parseInt(userId, 10);
     if (!Number.isFinite(parsedUserId)) {
       return NextResponse.json({ error: 'Identifiant invalide' }, { status: 400 });

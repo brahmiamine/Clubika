@@ -1,0 +1,41 @@
+name: Tenant offboarding
+
+on:
+  schedule:
+    - cron: '40 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tenant-offboarding
+  cancel-in-progress: false
+
+jobs:
+  trigger-offboarding:
+    if: github.event_name == 'workflow_dispatch' || vars.CLUBIKA_SCHEDULE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Preflight tenant offboarding
+        env:
+          BASE_URL: ${{ secrets.CLUBIKA_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CLUBIKA_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error title=Offboarding club non configuré::CLUBIKA_BASE_URL et/ou CLUBIKA_CRON_SECRET sont absents."
+            exit 1
+          fi
+
+      - name: Trigger tenant offboarding
+        env:
+          BASE_URL: ${{ secrets.CLUBIKA_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CLUBIKA_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${CRON_SECRET}" \
+            "${BASE_URL%/}/api/cron/tenant-offboarding"
