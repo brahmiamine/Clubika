@@ -38,7 +38,7 @@ import type { AssignmentContact, AttendanceStatus, Entrainement, Match, Plateau 
 
 type PlanningStatus = 'draft' | 'published' | 'modified' | 'cancelled';
 
-interface RecordItem<T> { id: string; payload: T; }
+interface RecordItem<T> { id: string; payload: T; canDelete?: boolean; }
 interface CommentPayload { text: string; authorName: string; createdAt: string; authorUserId: number; }
 interface TaskPayload { label: string; description: string | null; dueAt: string | null; completedAt: string | null; assigneeUserId: number | null; }
 interface ReportPayload { category: string; text: string; authorName: string; authorRole: string; createdAt: string; }
@@ -213,6 +213,13 @@ export function EventWorkspaceView({
       toast.success('Rapport envoyé');
       await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Rapport impossible'); }
+  };
+
+  const removeReport = async (id: string) => {
+    try {
+      await apiDelete(withScope(`${base}/reports?id=${encodeURIComponent(id)}`));
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Suppression impossible'); }
   };
 
   const setAttendance = async (
@@ -538,7 +545,20 @@ export function EventWorkspaceView({
               <CardHeader><CardTitle className="text-base">Rapports post-événement</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {canSubmitReport && <div className="space-y-2"><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}><option value="organisation">Organisation</option><option value="incident">Incident</option><option value="sportif">Sportif</option><option value="other">Autre</option></select><textarea className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm" value={report} onChange={(event) => setReport(event.target.value)} placeholder="Compte rendu / incident / remarque..." /><Button onClick={addReport} disabled={!report.trim()}>Envoyer le rapport</Button></div>}
-                {reports.length ? reports.map((item) => <div key={item.id} className="rounded-md border p-3"><div className="mb-1 flex items-center gap-2"><Badge variant="outline">{item.payload.category}</Badge><span className="text-xs text-muted-foreground">{item.payload.authorName}</span></div><p className="whitespace-pre-wrap text-sm">{item.payload.text}</p></div>) : <p className="text-sm text-muted-foreground">Aucun rapport.</p>}
+                {reports.length ? reports.map((item) => (
+                  <div key={item.id} className="rounded-md border p-3">
+                    <div className="mb-1 flex items-center gap-2">
+                      <Badge variant="outline">{item.payload.category}</Badge>
+                      <span className="text-xs text-muted-foreground">{item.payload.authorName}</span>
+                      {item.canDelete && !readOnly && (
+                        <Button size="sm" variant="destructive" className="ml-auto" onClick={() => void removeReport(item.id)}>
+                          Supprimer
+                        </Button>
+                      )}
+                    </div>
+                    <p className="whitespace-pre-wrap text-sm">{item.payload.text}</p>
+                  </div>
+                )) : <p className="text-sm text-muted-foreground">Aucun rapport.</p>}
               </CardContent>
             </Card>
           </section>
