@@ -28,7 +28,7 @@ migration 0018, non modifiable) mais ne sont plus jamais renseignées.
 nom. L’historique lisible (`humanizeAuditEntry`) utilise le même libellé
 pseudonymisé.
 
-## Migration 0025 `assainir_journaux_audit`
+## Migration 0037 `assainir_journaux_audit`
 
 `up()` :
 
@@ -48,6 +48,6 @@ lignes synthétiques uniquement.
   Les clés nominatives connues sont dénylistées ; le catalogue n’accepte pas les
   clés inconnues.
 - La suppression d’un objet n’écrit plus son contenu personnel dans l’audit
-  (minimisation à l’écriture + purge 0025). Les corps de chat et rapports métier
+  (minimisation à l’écriture + purge 0037). Les corps de chat et rapports métier
   restent dans leurs tables jusqu’aux politiques #9 / #11 / #12.
 - Revue humaine sécurité/RGPD avant fusion en production.

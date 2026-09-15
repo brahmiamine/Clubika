@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
       share: { id, token, expiresAt, scope, path: `/partage/${token}` },
     });
   } catch (error) {
-    console.error('Creating planning share failed:', error);
+    logError('app.unhandled', 'Creating planning share failed:', error);
     return NextResponse.json({ error: 'Impossible de créer le partage' }, { status: 500 });
   }
 }

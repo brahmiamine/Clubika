@@ -13,3 +13,6 @@ docs/plans
 Dockerfile
 docker-compose*.yml
 deploy
+e2e
+audits
+commandes

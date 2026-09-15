@@ -8,6 +8,21 @@ import { PlanningFeaturesTab } from './PlanningFeaturesTab';
 vi.mock('@/lib/utils/api', () => ({
   apiGet: vi.fn(async (url: string) => {
     if (url.includes('/scraper')) return { runs: [] };
+    if (url.includes('/external-services')) {
+      return {
+        services: [{
+          id: 'smtp',
+          label: 'SMTP (e-mail)',
+          enabled: false,
+          hostnames: [],
+          purpose: 'Notifications e-mail',
+          dataCategories: ['contact.email'],
+          legalReview: 'required',
+          enabledEnv: 'SMTP_ENABLED',
+        }],
+        notice: 'Désactiver une intégration n’efface aucune donnée.',
+      };
+    }
     return { features: DEFAULT_PLANNING_FEATURES, timeZone: 'Europe/Paris' };
   }),
   apiPut: vi.fn(),
@@ -26,6 +41,9 @@ describe('PlanningFeaturesTab — registre unique des flags (issue #279)', () =>
       expect(screen.getByText(surface.label)).toBeTruthy();
     }
     expect(screen.getAllByRole('switch')).toHaveLength(Object.keys(PLANNING_FEATURE_SURFACES).length);
+    expect(screen.getByText('Intégrations sortantes')).toBeTruthy();
+    expect(screen.getByText('SMTP (e-mail)')).toBeTruthy();
+    expect(screen.getByText('Désactivée')).toBeTruthy();
   });
 
   it('n’affiche plus le réglage « Approbation administrateur » retiré (issue #279)', async () => {

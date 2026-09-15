@@ -116,6 +116,8 @@ describe('planning weather', () => {
 
 describe('geocodeLocation — cache applicatif court (issue #222)', () => {
   it('ne rappelle pas le fournisseur de géocodage pour un même lieu dans la fenêtre de cache', async () => {
+    vi.stubEnv('OPEN_METEO_ENABLED', 'true');
+    vi.stubEnv('OPEN_METEO_GEOCODING_URL', 'https://geocoding.example.test/v1/search');
     const location = `Stade de test ${Math.random()}`;
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
@@ -135,6 +137,8 @@ describe('geocodeLocation — cache applicatif court (issue #222)', () => {
   });
 
   it('interroge de nouveau le fournisseur pour un lieu différent', async () => {
+    vi.stubEnv('OPEN_METEO_ENABLED', 'true');
+    vi.stubEnv('OPEN_METEO_GEOCODING_URL', 'https://geocoding.example.test/v1/search');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: async () => ({ results: [{ latitude: 43.6, longitude: 1.44 }] }),

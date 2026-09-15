@@ -30,18 +30,25 @@ describe.skipIf(!dbAvailable)('GET/POST /api/users (integration)', () => {
     createdEmails.length = 0;
   });
 
-  it('creates a user as admin', async () => {
+  it('creates an unclaimed profile and refuses a third-party password (issue #32)', async () => {
     const { token, cleanup } = await createTestUserAndSession('admin');
     try {
       const email = `new-user-${Date.now()}@example.com`;
       createdEmails.push(email);
 
+      const rejected = await POST(
+        usersRequest('POST', token, { email, password: 'invitee-passphrase-12', nom: 'New User', accessRole: 'admin', planningFunctions: [] }),
+      );
+      expect(rejected.status).toBe(400);
+
       const response = await POST(
-        usersRequest('POST', token, { email, password: 'password123', nom: 'New User', accessRole: 'admin', planningFunctions: [] }),
+        usersRequest('POST', token, { email, nom: 'New User', accessRole: 'admin', planningFunctions: [] }),
       );
       expect(response.status).toBe(200);
-      const body = await response.json();
-      expect(body.success).toBe(true);
+      const db = await getDb();
+      const created = await db.getRepository<UserEntity>('User').findOneBy({ email, clubId: process.env.APP_CLUB_ID || 'afp' })
+        ?? (await db.getRepository<UserEntity>('User').find({ where: { email } }))[0];
+      expect(created?.claimedAt).toBeNull();
     } finally {
       await cleanup();
     }
@@ -51,7 +58,7 @@ describe.skipIf(!dbAvailable)('GET/POST /api/users (integration)', () => {
     const { token, cleanup } = await createTestUserAndSession('dirigeant', undefined, ['arbitre_club']);
     try {
       const response = await POST(
-        usersRequest('POST', token, { email: `forbidden-${Date.now()}@example.com`, password: 'password123', nom: 'X', accessRole: 'admin', planningFunctions: [] }),
+        usersRequest('POST', token, { email: `forbidden-${Date.now()}@example.com`, nom: 'X', accessRole: 'admin', planningFunctions: [] }),
       );
       expect(response.status).toBe(403);
     } finally {
@@ -65,9 +72,9 @@ describe.skipIf(!dbAvailable)('GET/POST /api/users (integration)', () => {
       const email = `dup-user-${Date.now()}@example.com`;
       createdEmails.push(email);
 
-      await POST(usersRequest('POST', token, { email, password: 'password123', nom: 'First', accessRole: 'admin', planningFunctions: [] }));
+      await POST(usersRequest('POST', token, { email, nom: 'First', accessRole: 'admin', planningFunctions: [] }));
       const secondResponse = await POST(
-        usersRequest('POST', token, { email, password: 'password123', nom: 'Second', accessRole: 'admin', planningFunctions: [] }),
+        usersRequest('POST', token, { email, nom: 'Second', accessRole: 'admin', planningFunctions: [] }),
       );
       expect(secondResponse.status).toBe(400);
     } finally {
@@ -85,14 +92,12 @@ describe.skipIf(!dbAvailable)('GET/POST /api/users (integration)', () => {
       createdEmails.push(email);
 
       const firstResponse = await POST(
-        usersRequest('POST', tokenA, { email, password: 'password123', nom: 'Dirigeant Club A', accessRole: 'admin', planningFunctions: [] }),
+        usersRequest('POST', tokenA, { email, nom: 'Dirigeant Club A', accessRole: 'admin', planningFunctions: [] }),
       );
       expect(firstResponse.status).toBe(200);
 
-      // Même email, club différent : accepté — deux comptes indépendants, chacun
-      // avec son propre mot de passe et profil (issue #266).
       const secondResponse = await POST(
-        usersRequest('POST', tokenB, { email, password: 'un-autre-mot-de-passe', nom: 'Dirigeant Club B', accessRole: 'admin', planningFunctions: [] }),
+        usersRequest('POST', tokenB, { email, nom: 'Dirigeant Club B', accessRole: 'admin', planningFunctions: [] }),
       );
       expect(secondResponse.status).toBe(200);
 
@@ -101,7 +106,6 @@ describe.skipIf(!dbAvailable)('GET/POST /api/users (integration)', () => {
       expect(accounts).toHaveLength(2);
       const clubIds = accounts.map((account) => account.clubId).sort();
       expect(clubIds).toEqual([clubA, clubB].sort());
-      // Deux lignes distinctes, pas un compte partagé entre les deux clubs.
       const ids = new Set(accounts.map((account) => account.id));
       expect(ids.size).toBe(2);
     } finally {

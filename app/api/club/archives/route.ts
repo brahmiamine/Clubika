@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { MatchExtraEntity, MatchOfficialEntity } from '@/lib/db/schemas';
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items });
   } catch (error) {
-    console.error('Error listing match archives:', error);
+    logError('app.unhandled', 'Error listing match archives:', error);
     return NextResponse.json({ error: 'Impossible de charger les archives' }, { status: 500 });
   }
 }

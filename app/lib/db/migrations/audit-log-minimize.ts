@@ -23,7 +23,7 @@ function hasActorPii(row: MatchAuditLogEntity): boolean {
 }
 
 /**
- * Migration 0025 (issue #20) — assainit les journaux d'audit existants.
+ * Migration 0037 (issue #20) — assainit les journaux d'audit existants.
  *
  * 1. Inventaire (dry-run) : compte les lignes dont l'acteur nominatif ou le
  *    payload n'est pas conforme au catalogue v1.
@@ -91,10 +91,10 @@ export async function applyAuditLogMinimizeMigration(db: DataSource): Promise<vo
 
   const inventory = await sanitizeHistoricalAuditLogs(db, { dryRun: true });
   console.info(
-    `[migration 0025] inventaire audit : scanned=${inventory.scanned} actorCleared=${inventory.actorCleared} payloadRedacted=${inventory.payloadRedacted} mutated=${inventory.mutated}`,
+    `[migration 0037] inventaire audit : scanned=${inventory.scanned} actorCleared=${inventory.actorCleared} payloadRedacted=${inventory.payloadRedacted} mutated=${inventory.mutated}`,
   );
   const applied = await sanitizeHistoricalAuditLogs(db, { dryRun: false });
   console.info(
-    `[migration 0025] application audit : scanned=${applied.scanned} actorCleared=${applied.actorCleared} payloadRedacted=${applied.payloadRedacted} mutated=${applied.mutated}`,
+    `[migration 0037] application audit : scanned=${applied.scanned} actorCleared=${applied.actorCleared} payloadRedacted=${applied.payloadRedacted} mutated=${applied.mutated}`,
   );
 }

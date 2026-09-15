@@ -1,8 +1,11 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
+import { loadSecretFilesFromEnv } from '../ops/load-secret-files';
 import { allSchemas } from './schemas';
 import { runSchemaMigrations } from './migrations/runner';
 import { schemaMigrations } from './migrations/schema-migrations';
+
+loadSecretFilesFromEnv();
 
 declare global {
   var __clubikaDataSource: DataSource | undefined;

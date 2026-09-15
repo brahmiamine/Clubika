@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '@/lib/utils/api';
 
@@ -39,7 +40,7 @@ export function useMatchAuditLog(matchId: string | undefined | null) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement de l\'historique';
       setError(errorMessage);
-      console.error('Error loading match audit log:', err);
+      logError('app.unhandled', 'Error loading match audit log:', err);
     } finally {
       setIsLoading(false);
     }

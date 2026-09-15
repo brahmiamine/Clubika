@@ -136,6 +136,8 @@ export const AUDIT_ALLOWED_KEYS: ReadonlySet<string> = new Set([
   'current',
   'events',
   'removedevents',
+  'reportid',
+  'deleted',
   'participantids',
   'participantuserids',
 ]);

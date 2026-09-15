@@ -1,0 +1,10 @@
+# Pins immuables des images runtime (issue #36).
+# Ne jamais utiliser :latest. Mettre à jour : ./deploy/scripts/refresh-image-pins.sh
+# Puis relancer les tests `deploy/runtime-hardening.test.ts`.
+
+NODE_IMAGE=node:20.20.2-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+MARIADB_IMAGE=mariadb:11.4.13@sha256:80494b9810694179889f7281ec44ca928241df577159c0356a1070e2e94616a1
+CADDY_IMAGE=caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+PHPMYADMIN_IMAGE=phpmyadmin:5.2.2@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd
+APP_UID=10001
+APP_GID=10001

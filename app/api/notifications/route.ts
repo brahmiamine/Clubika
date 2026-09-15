@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -86,7 +87,7 @@ export async function GET(request: NextRequest) {
           };
         });
       } catch (enrichError) {
-        console.error('Notification logo enrichment failed:', enrichError);
+        logError('app.unhandled', 'Notification logo enrichment failed:', enrichError);
       }
     }
 
@@ -106,7 +107,7 @@ export async function GET(request: NextRequest) {
     const nextBeforeId = hasMore ? notifications[notifications.length - 1]?.id ?? null : null;
     return NextResponse.json({ notifications: payload, unread, hasMore, nextBeforeId });
   } catch (error) {
-    console.error('Error loading notifications:', error);
+    logError('app.unhandled', 'Error loading notifications:', error);
     return NextResponse.json({ error: 'Impossible de charger les notifications' }, { status: 500 });
   }
 }
@@ -146,7 +147,7 @@ export async function PATCH(request: NextRequest) {
     emitNotificationsChanged(auth.user.clubId, auth.user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error updating notification:', error);
+    logError('app.unhandled', 'Error updating notification:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour la notification' }, { status: 500 });
   }
 }

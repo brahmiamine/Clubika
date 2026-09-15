@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { DataSource, QueryRunner } from 'typeorm';
 import type { ChatAttachmentType } from '@/lib/db/schemas';
+import { inspectAttachment, normalizeMimeType, safeFileName } from '@/lib/security/file-inspect';
 
 export interface ChatAttachmentMeta {
   id: string;
@@ -23,7 +24,7 @@ const MIME_BY_KIND: Record<ChatAttachmentType, RegExp> = {
   gif: /^image\/gif$/,
   video: /^video\/(mp4|webm|quicktime)$/,
   audio: /^audio\/(mpeg|mp4|webm|ogg|wav|m4a|x-m4a)$/,
-  document: /^(application\/pdf|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|application\/vnd\.ms-excel|text\/csv)$/,
+  document: /^(application\/pdf|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|text\/csv)$/,
 };
 
 const MAX_SIZE_BY_KIND: Record<ChatAttachmentType, number> = {
@@ -90,14 +91,7 @@ export function assertChatUploadUsageWithinLimits(
   }
 }
 
-/**
- * Type de média nu : on retire les paramètres (`;codecs=opus`, `;charset=…`),
- * les espaces et la casse. `MediaRecorder` renvoie par exemple
- * `audio/webm;codecs=opus`, ce qui ne doit pas être rejeté (issue chat vocal).
- */
-export function normalizeMimeType(mimeType: string): string {
-  return mimeType.split(';', 1)[0]!.trim().toLowerCase();
-}
+export { normalizeMimeType } from '@/lib/security/file-inspect';
 
 export function attachmentKindForMime(mimeType: string): ChatAttachmentType | null {
   const normalized = normalizeMimeType(mimeType);
@@ -108,71 +102,56 @@ export function attachmentKindForMime(mimeType: string): ChatAttachmentType | nu
 }
 
 /**
- * Le contenu ressemble-t-il à du texte (pour CSV, qui n'a pas de signature binaire) ?
- * Un octet nul ou une forte proportion de caractères de contrôle trahit un binaire
- * déguisé en `.csv` — un document, contrairement à une image/vidéo/audio, est
- * susceptible d'être rouvert manuellement par un autre membre (issue #265, revue Codex).
- */
-function looksLikeText(content: Buffer): boolean {
-  if (content.length === 0) return false;
-  const sample = content.subarray(0, Math.min(content.length, 8_192));
-  let controlBytes = 0;
-  for (const byte of sample) {
-    if (byte === 0x00) return false;
-    const isAllowedWhitespace = byte === 0x09 || byte === 0x0a || byte === 0x0d;
-    if (!isAllowedWhitespace && byte < 0x20) controlBytes += 1;
-  }
-  return controlBytes / sample.length < 0.01;
-}
-
-const PDF_SIGNATURE = Buffer.from('%PDF-', 'latin1');
-const OLE_SIGNATURE = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]);
-
-/**
- * Vérifie que le contenu réel du fichier correspond au type de document annoncé, au
- * lieu de se fier à la seule MIME fournie par le client (falsifiable). PDF et XLS(X)
- * ont une signature binaire ; CSV n'en a pas, on se contente de vérifier qu'il s'agit
- * bien de texte.
+ * Vérifie que le contenu réel correspond au type de document annoncé (issue #23 :
+ * magic + structure, plus seulement la signature ZIP pour XLSX).
  */
 export function documentContentMatchesMime(mimeType: string, content: Buffer): boolean {
+  try {
+    const inspected = inspectAttachment({
+      usage: 'chat',
+      fileName: `file.${extensionHint(mimeType)}`,
+      declaredMime: mimeType,
+      content,
+    });
+    return inspected.kind === 'document' && inspected.canonicalMime === normalizeMimeType(mimeType);
+  } catch {
+    return false;
+  }
+}
+
+function extensionHint(mimeType: string): string {
   switch (normalizeMimeType(mimeType)) {
-    case 'application/pdf':
-      return content.subarray(0, PDF_SIGNATURE.length).equals(PDF_SIGNATURE);
-    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
-      // .xlsx est une archive ZIP (OOXML) : signature locale PK\x03\x04, ou une archive
-      // vide/scindée (PK\x05\x06 / PK\x07\x08) — on ne valide pas la structure interne,
-      // seulement qu'il s'agit bien d'une archive ZIP et non d'un binaire arbitraire.
-      return content.length >= 4 && content[0] === 0x50 && content[1] === 0x4b
-        && (content[2] === 0x03 || content[2] === 0x05 || content[2] === 0x07);
-    case 'application/vnd.ms-excel':
-      return content.subarray(0, OLE_SIGNATURE.length).equals(OLE_SIGNATURE);
-    case 'text/csv':
-      return looksLikeText(content);
-    default:
-      return false;
+    case 'application/pdf': return 'pdf';
+    case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': return 'xlsx';
+    case 'text/csv': return 'csv';
+    default: return 'bin';
   }
 }
 
 const DOCUMENT_MIME_BY_EXTENSION: Record<string, string> = {
   pdf: 'application/pdf',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  xls: 'application/vnd.ms-excel',
   csv: 'text/csv',
 };
 
 /**
- * Détermine si un fichier dont la MIME n'a pas été reconnue est malgré tout l'un des
- * documents supportés : certains navigateurs/OS annoncent une MIME vide ou générique
- * pour `.csv`/`.xls` (ex. `text/plain`, `application/octet-stream`) alors que le
- * sélecteur de fichier les propose bien (issue #265, revue Codex). On se rabat alors
- * sur l'extension — mais uniquement si le contenu confirme réellement ce format,
- * jamais sur la seule extension (qui serait tout aussi falsifiable que la MIME).
+ * MIME générique + extension, seulement si l’inspection confirme le format.
  */
 export function documentKindFromExtension(fileName: string, content: Buffer): { mimeType: string } | null {
-  const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
-  const mimeType = DOCUMENT_MIME_BY_EXTENSION[extension];
-  if (!mimeType || !documentContentMatchesMime(mimeType, content)) return null;
-  return { mimeType };
+  try {
+    const inspected = inspectAttachment({
+      usage: 'chat',
+      fileName,
+      declaredMime: 'application/octet-stream',
+      content,
+    });
+    if (inspected.kind !== 'document') return null;
+    const extension = safeFileName(fileName).split('.').pop()?.toLowerCase() ?? '';
+    if (DOCUMENT_MIME_BY_EXTENSION[extension] !== inspected.canonicalMime) return null;
+    return { mimeType: inspected.canonicalMime };
+  } catch {
+    return null;
+  }
 }
 
 export function assertAttachmentWithinLimits(kind: ChatAttachmentType, sizeBytes: number): void {
@@ -212,8 +191,8 @@ export async function saveChatAttachment(
   const id = randomUUID();
   await db.query(
     `INSERT INTO chat_attachments
-      (id, club_id, room_id, kind, file_name, mime_type, size_bytes, content, uploaded_by_user_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, club_id, room_id, kind, file_name, mime_type, size_bytes, content, uploaded_by_user_id, scan_status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'clean')`,
     [id, input.clubId, input.roomId, input.kind, input.fileName.slice(0, 200), input.mimeType, input.content.length, input.content, input.uploadedByUserId],
   );
   return {
@@ -326,7 +305,7 @@ export async function getChatAttachment(db: Pick<DataSource, 'query'>, id: strin
   const rows = (await db.query(
     `SELECT id, club_id AS clubId, room_id AS roomId, kind, file_name AS fileName, mime_type AS mimeType,
             size_bytes AS sizeBytes, content, uploaded_by_user_id AS uploadedByUserId, created_at AS createdAt
-       FROM chat_attachments WHERE id = ? LIMIT 1`,
+       FROM chat_attachments WHERE id = ? AND scan_status = 'clean' LIMIT 1`,
     [id],
   )) as Record<string, unknown>[];
   const row = rows[0];

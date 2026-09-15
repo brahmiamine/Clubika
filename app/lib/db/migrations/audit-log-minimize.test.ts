@@ -11,7 +11,7 @@ const SENTINEL_EMAIL = 'sentinel.hist@example.test';
 const SENTINEL_NAME = 'Historique Sentinel';
 const SENTINEL_TEXT = 'Ancien commentaire d’audit';
 
-describe.skipIf(!dbAvailable)('migration 0025 — assainir_journaux_audit (issue #20)', () => {
+describe.skipIf(!dbAvailable)('migration 0037 — assainir_journaux_audit (issue #20)', () => {
   const entityId = `test-audit-minimize-${Date.now()}`;
 
   afterEach(async () => {
@@ -101,7 +101,7 @@ describe.skipIf(!dbAvailable)('migration 0025 — assainir_journaux_audit (issue
   it('est journalisée après init', async () => {
     const db = await getDb();
     const journal = await db.query(
-      "SELECT name FROM schema_migrations WHERE version = '0025'",
+      "SELECT name FROM schema_migrations WHERE version = '0037'",
     );
     expect(journal[0]?.name).toBe('assainir_journaux_audit');
   });

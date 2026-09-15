@@ -103,6 +103,19 @@ export async function readAppSettings(db: Queryable, clubId: string): Promise<Ap
   return tenantToSettings(tenant);
 }
 
+/**
+ * Lecture sans effet de bord : ne crée ni tenant, ni paramètres.
+ * Retourne null si le club n'existe pas ou n'est pas actif.
+ */
+export async function readExistingActiveAppSettings(
+  db: Queryable,
+  clubId: string,
+): Promise<AppSettings | null> {
+  const tenant = await db.getRepository<ClubTenantEntity>('ClubTenant').findOneBy({ id: clubId });
+  if (!tenant?.active) return null;
+  return tenantToSettings(tenant);
+}
+
 export async function saveAppSettings(
   db: Queryable,
   clubId: string,
