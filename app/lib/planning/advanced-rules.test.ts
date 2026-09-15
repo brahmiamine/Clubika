@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PlanningEventSnapshot } from './event-store';
 import {
   assignmentWithinAvailabilityResponse,
+  isDeclineReason,
   normalizeAvailabilityResponse,
   normalizePlanningPreferences,
   scorePreferenceMatch,
@@ -33,6 +34,11 @@ const target: PlanningEventSnapshot = {
 };
 
 describe('advanced planning rules', () => {
+  it('rejects injury as a structured decline reason (issue #7)', () => {
+    expect(isDeclineReason('injury')).toBe(false);
+    expect(isDeclineReason('personal')).toBe(true);
+  });
+
   it('normalizes preferences and scores matching category, time and location', () => {
     const preferences = normalizePlanningPreferences({
       preferredCategories: [' U15 ', 'U15'],
