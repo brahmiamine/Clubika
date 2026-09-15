@@ -707,9 +707,82 @@ export async function generatePdf(
     yPosition += 4;
   });
 
-  // Générer le nom du fichier
-  const fileName = `export-matches-${new Date().toISOString().split('T')[0]}.pdf`;
-
-  // Télécharger le PDF
-  doc.save(fileName);
+  doc.save(`planning-export.pdf`);
 }
+
+export async function generateProjectedPdf(input: {
+  clubName: string;
+  clubLogo?: string;
+  columns: Array<{ id: string; label: string }>;
+  rows: Array<Record<string, string>>;
+  branding?: PdfClubBranding;
+}): Promise<void> {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 8;
+  const contentWidth = pageWidth - 2 * margin;
+  const palette = resolvePdfPalette(input.branding);
+  let yPosition = margin;
+
+  const headerHeight = 16;
+  doc.setFillColor(palette.headerBand[0], palette.headerBand[1], palette.headerBand[2]);
+  doc.rect(margin, yPosition, contentWidth, headerHeight, 'F');
+  doc.setDrawColor(palette.primary[0], palette.primary[1], palette.primary[2]);
+  doc.setLineWidth(0.5);
+  doc.line(margin, yPosition + headerHeight, margin + contentWidth, yPosition + headerHeight);
+
+  doc.setTextColor(palette.primary[0], palette.primary[1], palette.primary[2]);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text(input.clubName || 'Planning', margin + 3, yPosition + 10);
+  yPosition += headerHeight + 6;
+
+  const visible = input.columns.filter((column) => column.id && column.label);
+  if (!visible.length) {
+    doc.save('planning-export.pdf');
+    return;
+  }
+
+  const colWidth = contentWidth / visible.length;
+  const drawHeader = () => {
+    doc.setFillColor(palette.primary[0], palette.primary[1], palette.primary[2]);
+    doc.rect(margin, yPosition, contentWidth, 7, 'F');
+    doc.setTextColor(palette.headerText[0], palette.headerText[1], palette.headerText[2]);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    visible.forEach((column, index) => {
+      const label = column.label.length > 18 ? `${column.label.slice(0, 16)}…` : column.label;
+      doc.text(label, margin + 1 + index * colWidth, yPosition + 5);
+    });
+    yPosition += 7;
+  };
+
+  drawHeader();
+  let rowIndex = 0;
+  for (const row of input.rows) {
+    if (yPosition + 8 > pageHeight - margin) {
+      doc.addPage();
+      yPosition = margin;
+      drawHeader();
+      rowIndex = 0;
+    }
+    if (rowIndex % 2 === 0) {
+      doc.setFillColor(palette.altRow[0], palette.altRow[1], palette.altRow[2]);
+      doc.rect(margin, yPosition, contentWidth, 8, 'F');
+    }
+    doc.setTextColor(palette.bodyText[0], palette.bodyText[1], palette.bodyText[2]);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    visible.forEach((column, index) => {
+      const value = row[column.id] ?? '';
+      const lines = doc.splitTextToSize(value, colWidth - 2);
+      doc.text(lines[0] || '', margin + 1 + index * colWidth, yPosition + 5);
+    });
+    yPosition += 8;
+    rowIndex += 1;
+  }
+
+  doc.save('planning-export.pdf');
+}
+

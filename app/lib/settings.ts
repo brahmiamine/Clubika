@@ -21,6 +21,8 @@ export interface PlanningFeatureFlags {
     requireArbitreForPublication: boolean;
     requireEncadrantForPublication: boolean;
     requireAccompagnateurForPublication: boolean;
+    /** Export massif du planning (CSV/PDF/JSON). Désactivable par club (issue #33). */
+    massExport: boolean;
 }
 
 export interface SmtpSettings {
@@ -67,6 +69,7 @@ export const DEFAULT_PLANNING_FEATURES: PlanningFeatureFlags = {
     requireArbitreForPublication: true,
     requireEncadrantForPublication: true,
     requireAccompagnateurForPublication: true,
+    massExport: true,
 };
 
 export const DEFAULT_SMTP_SETTINGS: SmtpSettings = {

@@ -20,7 +20,9 @@ export type PlanningRecordKind =
   | 'event-template'
   | 'published-planning'
   | 'published-planning-history'
-  | 'assignment-state-backfill';
+  | 'assignment-state-backfill'
+  | 'export-download'
+  | 'export-audit';
 
 export interface PlanningRecord<T = Record<string, unknown>> {
   id: string;
