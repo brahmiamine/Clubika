@@ -132,8 +132,8 @@ Notifications disponibles :
 
 - liens publics temporaires de 1 à 90 jours ;
 - seul le SHA-256 du token de partage est enregistré ;
-- le DTO public n'inclut pas le téléphone, `personId`, les commentaires, les rapports ni l'audit ; il peut encore contenir les **noms** des personnes affectées (restriction plus stricte suivie séparément) ;
-- export CSV UTF-8 administrateur protégé contre l'injection de formules tableur ;
+- le DTO public est une liste blanche calendrier (type, horaires, catégorie, compétition, équipes, stade officiel, météo) ; pas de noms, téléphones, `personId`, commentaires, rapports ni audit ;
+- export CSV UTF-8 protégé contre l'injection de formules tableur ;
 - vue imprimable HTML et export PDF ;
 - abonnement iCal personnel et raccourcis `webcal://`, Google Calendar et Outlook.
 
