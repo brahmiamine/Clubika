@@ -15,6 +15,7 @@ import { runSportCoricoDataAudit } from './audit-sportcorico-data';
 import { purgeOutboxLastError } from './purge-outbox-last-error';
 import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed-sessions';
 import { redactHistoricalReportAudits } from './redact-report-audit';
+import { applyAuditLogMinimizeMigration } from './audit-log-minimize';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -86,6 +87,9 @@ import { redactHistoricalReportAudits } from './redact-report-audit';
  *
  * La migration 0036 (issue #11) ajoute les colonnes de fermeture de compte sur
  * `users` et la table d'agrégats `account_closures` (preuve sans identité).
+ *
+ * La migration 0037 (issue #20) assainit `match_audit_log` : inventaire dry-run,
+ * puis purge/anonymisation des lignes existantes (aucun texte métier conservé).
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -662,5 +666,12 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_account_closures_club_closed (club_id, closed_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0037',
+    name: 'assainir_journaux_audit',
+    statements: [],
+    logic: readMigrationLogicFile('audit-log-minimize.ts'),
+    up: applyAuditLogMinimizeMigration,
   },
 ];
