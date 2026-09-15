@@ -205,6 +205,11 @@ export function mapSportCoricoMatch(
     staff: mapOfficials(api.officials),
     sourceStatus: 'active',
     sourceLastSeenAt: fetchedAt,
+    importProvenance: {
+      provider: 'sportcorico-api',
+      providerId: sourceMatchId,
+      importedAt: fetchedAt,
+    },
   };
 }
 

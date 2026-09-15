@@ -11,6 +11,31 @@ export const INDISPO_REVIEW_LABELS: Record<IndispoReviewStatus, string> = {
   rejected: 'Refusée',
 };
 
+/** Motifs de refus administratifs structurés (issue #7) — aucun texte libre. */
+export const INDISPO_REVIEW_CODES = [
+  'schedule_too_broad',
+  'conflict',
+  'insufficient_notice',
+  'other',
+] as const;
+
+export type IndispoReviewCode = (typeof INDISPO_REVIEW_CODES)[number];
+
+export const INDISPO_REVIEW_CODE_LABELS: Record<IndispoReviewCode, string> = {
+  schedule_too_broad: 'Créneau trop large',
+  conflict: 'Conflit de planning',
+  insufficient_notice: 'Délai insuffisant',
+  other: 'Autre motif opérationnel',
+};
+
+export function isIndispoReviewCode(value: unknown): value is IndispoReviewCode {
+  return typeof value === 'string' && (INDISPO_REVIEW_CODES as readonly string[]).includes(value);
+}
+
+export function indispoReviewCodeLabel(code: IndispoReviewCode): string {
+  return INDISPO_REVIEW_CODE_LABELS[code];
+}
+
 export function reviewStatusOf(rule: OfficielIndisponibilite): IndispoReviewStatus {
   return rule.status === 'pending' || rule.status === 'rejected' ? rule.status : 'accepted';
 }
@@ -42,6 +67,7 @@ export function mergePersonalIndisponibilites(
         reviewedAt: undefined,
         reviewedByUserId: undefined,
         reviewComment: undefined,
+        reviewCode: undefined,
       };
     }
     if (scheduleKey(existing) === scheduleKey(rule)) {
@@ -52,6 +78,7 @@ export function mergePersonalIndisponibilites(
         reviewedAt: existing.reviewedAt,
         reviewedByUserId: existing.reviewedByUserId,
         reviewComment: existing.reviewComment,
+        reviewCode: existing.reviewCode,
       };
     }
     return {
@@ -61,6 +88,7 @@ export function mergePersonalIndisponibilites(
       reviewedAt: undefined,
       reviewedByUserId: undefined,
       reviewComment: undefined,
+      reviewCode: undefined,
     };
   });
 }
@@ -76,7 +104,7 @@ export function applyIndispoReview(
   indisponibiliteId: string,
   decision: IndispoReviewDecision,
   reviewerUserId: number,
-  comment: string | null,
+  reviewCode: IndispoReviewCode | null,
   now: Date = new Date(),
 ): ApplyIndispoReviewResult {
   const index = items.findIndex((item) => item.id === indisponibiliteId);
@@ -98,7 +126,8 @@ export function applyIndispoReview(
     status: decision,
     reviewedAt: now.toISOString(),
     reviewedByUserId: reviewerUserId,
-    reviewComment: decision === 'rejected' ? (comment?.trim() || undefined) : undefined,
+    reviewComment: undefined,
+    reviewCode: decision === 'rejected' ? (reviewCode ?? undefined) : undefined,
   };
   const next = [...items];
   next[index] = reviewed;

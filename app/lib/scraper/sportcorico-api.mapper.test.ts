@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SportCoricoMatchApi } from './sportcorico-api.types';
 import {
   assertClubSlugMatchesKey,
@@ -13,6 +13,16 @@ import {
 
 const FETCHED_AT = '2026-09-12T11:00:00.000Z';
 const CLUB_NAME = 'Academie Football Paris 18';
+const PREVIOUS_SYNC = process.env.SPORTCORICO_SYNC_ENABLED;
+
+beforeAll(() => {
+  process.env.SPORTCORICO_SYNC_ENABLED = 'true';
+});
+
+afterAll(() => {
+  if (PREVIOUS_SYNC === undefined) delete process.env.SPORTCORICO_SYNC_ENABLED;
+  else process.env.SPORTCORICO_SYNC_ENABLED = PREVIOUS_SYNC;
+});
 
 function apiMatch(overrides: Partial<SportCoricoMatchApi> = {}): SportCoricoMatchApi {
   return {
@@ -121,6 +131,11 @@ describe('mapSportCoricoMatch', () => {
       url: 'https://www.sportcorico.com/match/afp-18-seniors-1-ca-de-paris-14-seniors-1-eeelb',
       sourceStatus: 'active',
       sourceLastSeenAt: FETCHED_AT,
+      importProvenance: {
+        provider: 'sportcorico-api',
+        providerId: '5710278',
+        importedAt: FETCHED_AT,
+      },
     });
     expect(mapped.details).toMatchObject({
       stadium: 'Stade Poissonniers N° 2 - PARIS',
@@ -185,6 +200,9 @@ describe('mapSportCoricoMatch', () => {
 });
 
 describe('fetchAndMapSportCoricoMatchesSettled', () => {
+  beforeEach(() => {
+    vi.stubEnv('SPORTCORICO_SYNC_ENABLED', 'true');
+  });
   it('conserve les matchs valides quand un autre slug échoue en 404', async () => {
     const fetchImpl: typeof fetch = vi.fn(async (input) => {
       const url = String(input);
@@ -246,6 +264,9 @@ describe('assertClubSlugMatchesKey', () => {
 });
 
 describe('loadSportCoricoClubPlanning', () => {
+  beforeEach(() => {
+    vi.stubEnv('SPORTCORICO_SYNC_ENABLED', 'true');
+  });
   it('charge le club puis enrichit les matchs, même si un détail API échoue', async () => {
     const listed = apiMatch({ infrastructure: undefined });
     const fetchImpl: typeof fetch = vi.fn(async (input) => {

@@ -1,6 +1,11 @@
 import { logError } from '@/lib/observability/log';
+import { guardedFetch } from '@/lib/compliance/external-services';
+
 export type WhatsAppProvider = 'disabled' | 'webhook' | 'meta';
 type WhatsAppEnvironment = Readonly<Record<string, string | undefined>>;
+
+export const WHATSAPP_PROVIDER_ENV = 'WHATSAPP_PROVIDER';
+export const WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT_ENV = 'WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT';
 
 export interface WhatsAppNotificationMessage {
   to: string;
@@ -46,13 +51,25 @@ function metaConfigured(env: WhatsAppEnvironment): boolean {
   );
 }
 
+/**
+ * Le canal n’est actif que si `WHATSAPP_PROVIDER` vaut exactement `meta` ou `webhook`
+ * **et** que la configuration correspondante est complète. Les secrets seuls
+ * n’activent rien (issues #17 et #30).
+ */
 export function configuredWhatsAppProvider(env: WhatsAppEnvironment = process.env): WhatsAppProvider {
-  const requested = env.WHATSAPP_PROVIDER?.trim().toLowerCase();
+  const requested = env[WHATSAPP_PROVIDER_ENV]?.trim().toLowerCase();
+  if (!requested || requested === 'disabled') return 'disabled';
   if (requested === 'meta') return metaConfigured(env) ? 'meta' : 'disabled';
   if (requested === 'webhook') return env.NOTIFICATION_WHATSAPP_WEBHOOK_URL?.trim() ? 'webhook' : 'disabled';
-  if (metaConfigured(env)) return 'meta';
-  if (env.NOTIFICATION_WHATSAPP_WEBHOOK_URL?.trim()) return 'webhook';
   return 'disabled';
+}
+
+export function isWhatsAppGloballyEnabled(env: WhatsAppEnvironment = process.env): boolean {
+  return configuredWhatsAppProvider(env) !== 'disabled';
+}
+
+export function webhookIncludesEventContext(env: WhatsAppEnvironment = process.env): boolean {
+  return env[WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT_ENV] === 'true';
 }
 
 export function buildMetaWhatsAppPayload(
@@ -89,46 +106,69 @@ export function buildMetaWhatsAppPayload(
   };
 }
 
+export function buildWebhookWhatsAppPayload(
+  message: WhatsAppNotificationMessage,
+  env: WhatsAppEnvironment = process.env,
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    to: message.to,
+    text: `${message.title}\n${message.message}`,
+  };
+  if (webhookIncludesEventContext(env)) {
+    payload.eventType = message.eventType ?? null;
+    payload.eventId = message.eventId ?? null;
+    payload.urgency = message.urgency ?? 'normal';
+  }
+  return payload;
+}
+
+function logWhatsAppFailure(kind: 'meta' | 'webhook' | 'delivery', status?: number): void {
+  if (typeof status === 'number') {
+    logError('whatsapp.delivery_failed', { kind, status });
+    return;
+  }
+  logError('whatsapp.delivery_failed', { kind });
+}
+
 async function deliverMeta(message: WhatsAppNotificationMessage): Promise<void> {
   const phoneNumberId = process.env.WHATSAPP_META_PHONE_NUMBER_ID?.trim();
   const token = process.env.WHATSAPP_META_ACCESS_TOKEN?.trim();
   const graphVersion = process.env.WHATSAPP_META_GRAPH_VERSION?.trim();
   if (!phoneNumberId || !token || !graphVersion) return;
 
-  const response = await fetch(`https://graph.facebook.com/${encodeURIComponent(graphVersion)}/${encodeURIComponent(phoneNumberId)}/messages`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildMetaWhatsAppPayload(message)),
-    signal: AbortSignal.timeout(5000),
-  });
-  if (!response.ok) logError('whatsapp.delivery_failed');
+  const response = await guardedFetch(
+    'whatsapp',
+    `https://graph.facebook.com/${encodeURIComponent(graphVersion)}/${encodeURIComponent(phoneNumberId)}/messages`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildMetaWhatsAppPayload(message)),
+      signal: AbortSignal.timeout(5000),
+    },
+  );
+  if (!response.ok) logWhatsAppFailure('meta', response.status);
 }
 
 async function deliverWebhook(message: WhatsAppNotificationMessage): Promise<void> {
   const url = process.env.NOTIFICATION_WHATSAPP_WEBHOOK_URL?.trim();
   if (!url) return;
   const token = process.env.NOTIFICATION_WHATSAPP_WEBHOOK_TOKEN?.trim();
-  const response = await fetch(url, {
+  const response = await guardedFetch('whatsapp', url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-    body: JSON.stringify({
-      to: message.to,
-      text: `${message.title}\n${message.message}`,
-      eventType: message.eventType ?? null,
-      eventId: message.eventId ?? null,
-      urgency: message.urgency ?? 'normal',
-    }),
+    body: JSON.stringify(buildWebhookWhatsAppPayload(message)),
     signal: AbortSignal.timeout(5000),
   });
-  if (!response.ok) logError('whatsapp.delivery_failed');
+  if (!response.ok) logWhatsAppFailure('webhook', response.status);
 }
 
 export async function sendWhatsAppNotification(message: WhatsAppNotificationMessage): Promise<void> {
+  const provider = configuredWhatsAppProvider();
+  if (provider === 'disabled') return;
   const recipient = normalizeWhatsAppRecipient(message.to);
   if (!recipient) return;
   const normalized = { ...message, to: recipient };
   try {
-    const provider = configuredWhatsAppProvider();
     if (provider === 'meta') await deliverMeta(normalized);
     if (provider === 'webhook') await deliverWebhook(normalized);
   } catch (error) {

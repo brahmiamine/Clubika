@@ -30,7 +30,7 @@ Valeurs : e-mail, JWT, Bearer, IPv4, téléphone, URL avec query/userinfo.
 
 ## Outbox `last_error`
 
-Stocke `{"code":"...","retryable":true|false}`. La migration `0025` purge les anciens `error.message`. Dry-run : `MIGRATION_DRY_RUN=1`.
+Stocke `{"code":"...","retryable":true|false}`. La migration `0028` purge les anciens `error.message`. Dry-run : `MIGRATION_DRY_RUN=1`.
 
 ## Accès, destination, rétention
 
