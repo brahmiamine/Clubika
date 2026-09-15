@@ -1,0 +1,25 @@
+{
+  "blockSeverities": ["high", "critical"],
+  "slaDays": {
+    "critical": 7,
+    "high": 14,
+    "moderate": 60,
+    "low": 120
+  },
+  "exceptions": [
+    {
+      "id": "CVE-2026-33845",
+      "scanner": "trivy-image-os",
+      "reason": "Debian bookworm libgnutls30 in the official node:20-bookworm-slim image is not yet patched (fixed in 3.7.9-2+deb12u7; image still ships 3.7.9-2+deb12u6). Clubika's Node process uses OpenSSL, not GnuTLS; TLS is terminated at Caddy in production.",
+      "compensation": "Dependabot docker weekly + issue #36 digest-pinned rebuild once node:20-bookworm-slim publishes the Debian point release. Trivy still blocks every other OS CRITICAL.",
+      "expires": "2026-10-15"
+    },
+    {
+      "id": "CVE-2026-42010",
+      "scanner": "trivy-image-os",
+      "reason": "Same libgnutls30 package as CVE-2026-33845 in the official Node slim base image. Clubika does not call GnuTLS.",
+      "compensation": "Same as CVE-2026-33845: wait for the Debian-patched Node image, then drop this exception.",
+      "expires": "2026-10-15"
+    }
+  ]
+}

@@ -8,9 +8,9 @@ import { POST } from './route';
 const dbAvailable = await isDbAvailable();
 
 type Case = {
-  eventType: 'amical' | 'entrainement' | 'plateau';
+  eventType: 'amical' | 'officiel' | 'entrainement' | 'plateau';
   body: Record<string, unknown>;
-  entity: 'MatchAmical' | 'Entrainement' | 'Plateau';
+  entity: 'MatchAmical' | 'MatchOfficial' | 'Entrainement' | 'Plateau';
   responseKey: 'match' | 'entrainement' | 'plateau';
 };
 
@@ -26,6 +26,20 @@ const cases: Case[] = [
       localTeam: 'AFP',
       awayTeam: 'Visiteurs',
       venue: 'domicile',
+    },
+  },
+  {
+    eventType: 'officiel',
+    entity: 'MatchOfficial',
+    responseKey: 'match',
+    body: {
+      date: '20/09/2026',
+      time: '10:00',
+      competition: 'Championnat',
+      localTeam: 'AFP',
+      awayTeam: 'Visiteurs',
+      venue: 'domicile',
+      rightsAttested: true,
     },
   },
   {
@@ -88,14 +102,14 @@ describe.skipIf(!dbAvailable)('POST /api/planning/events/[eventType] — créati
         });
         expect(audit).toBeTruthy();
 
-        if (testCase.eventType === 'amical') {
+        if (testCase.eventType === 'amical' || testCase.eventType === 'officiel') {
           const extras = await db.getRepository('MatchExtra').findOneBy({ matchId: id, clubId: user.clubId });
           expect(extras).toBeTruthy();
         }
       } finally {
         if (id) {
           const db = await getDb();
-          if (testCase.eventType === 'amical') {
+          if (testCase.eventType === 'amical' || testCase.eventType === 'officiel') {
             await db.getRepository('MatchExtra').delete({ matchId: id, clubId: user.clubId });
           }
           await db.getRepository(testCase.entity).delete({ id, clubId: user.clubId });
@@ -144,14 +158,19 @@ describe.skipIf(!dbAvailable)('POST /api/planning/events/[eventType] — créati
     }
   });
 
-  it('refuse la création d’un match officiel, qui reste piloté par le scraper', async () => {
+  it('refuse un match officiel sans attestation de droits', async () => {
     const { token, cleanup } = await createTestUserAndSession('admin');
     try {
       const response = await POST(requestFor('officiel', {
         date: '20/09/2026',
         time: '10:00',
+        competition: 'Championnat',
+        localTeam: 'AFP',
+        awayTeam: 'Visiteurs',
+        venue: 'domicile',
+        rightsAttested: false,
       }, token), { params: { eventType: 'officiel' } });
-      expect(response.status).toBe(405);
+      expect(response.status).toBe(400);
     } finally {
       await cleanup();
     }

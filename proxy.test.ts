@@ -160,7 +160,7 @@ describe.skipIf(!dbAvailable)('proxy + route publique — parcours HTTP complet 
     );
     expect(routeResponse.status).toBe(200);
     const body = await routeResponse.json();
-    expect((body.items as Array<{ title: string }>).map((item) => item.title)).toContain('Entraînement partagé');
+    expect((body.items as Array<{ title: string }>).map((item) => item.title)).toContain('Entraînement');
   });
 
   it('un token invalide répond par une erreur explicite, jamais par une redirection de connexion', async () => {
@@ -176,3 +176,38 @@ describe.skipIf(!dbAvailable)('proxy + route publique — parcours HTTP complet 
     expect([400, 404]).toContain(routeResponse.status);
   });
 });
+
+describe('proxy — CSRF (issue #35)', () => {
+  function postRequest(path: string, origin?: string, cookie?: string) {
+    const headers = new Headers();
+    if (origin) headers.set('origin', origin);
+    if (cookie) headers.set('cookie', `${SESSION_COOKIE_NAME}=${cookie}`);
+    return new NextRequest(new Request(`http://localhost${path}`, { method: 'POST', headers }));
+  }
+
+  it('refuse un POST cookie-authenticated cross-site', async () => {
+    const response = await proxy(postRequest('/api/auth/login', 'https://evil.example', 'a'.repeat(64)));
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'Origine non autorisée' });
+  });
+
+  it('refuse un POST sans Origin', async () => {
+    const response = await proxy(postRequest('/api/auth/login'));
+    expect(response.status).toBe(403);
+  });
+
+  it('laisse passer un POST same-origin jusqu’au handler', async () => {
+    const response = await proxy(postRequest('/api/auth/login', 'http://localhost'));
+    expect(response.status).not.toBe(403);
+    expect(response.headers.get('location')).toBeNull();
+  });
+
+  it('pose une CSP report-only sur les documents', async () => {
+    const response = await proxy(anonymousRequest('/login'));
+    const csp = response.headers.get('Content-Security-Policy-Report-Only') ?? '';
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain('report-uri /api/security/csp-report');
+  });
+});
+

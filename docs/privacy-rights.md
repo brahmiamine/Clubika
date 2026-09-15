@@ -14,7 +14,7 @@ procédure et modèles de réponse : [#12](https://github.com/brahmiamine/Clubik
 
 L’application **n’invente pas** de délai légal, de prolongation ni de refus. Le bandeau `PRIVACY_NO_LEGAL_PROMISE` le rappelle partout.
 
-## Migration 0025 `exercice_droits_rgpd`
+## Migration 0038 `exercice_droits_rgpd`
 
 Tables `privacy_requests`, `privacy_export_tokens`, `privacy_contact_changes` et colonnes `processingRestrictedAt` / `processingOpposedAt`. Idempotente (`IF NOT EXISTS`). Pas de purge destructive.
 

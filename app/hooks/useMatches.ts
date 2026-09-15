@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { MatchesData } from '@/types/match';
 import { apiGet } from '@/lib/utils/api';
@@ -22,7 +23,7 @@ export function useMatches() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des matchs';
       setError(errorMessage);
-      console.error('Error loading matches:', err);
+      logError('app.unhandled', 'Error loading matches:', err);
     } finally {
       setIsLoading(false);
     }

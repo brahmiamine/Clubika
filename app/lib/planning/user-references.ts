@@ -27,9 +27,10 @@ export interface UserReferenceReport {
  * Détecte toute référence métier à un utilisateur — brouillon, planning publié,
  * historique de publication, autre enregistrement de planning le ciblant (échange
  * d'affectation, disponibilité, commentaire…), participation à une conversation de
- * chat (issue #273). Un compte référencé ne doit jamais être supprimé physiquement :
- * la désactivation (`active = false`) est la seule option qui préserve l'historique
- * et l'affichage des données passées.
+ * chat (issue #273). Un compte référencé n'est plus un obstacle à la fermeture :
+ * l'identité est anonymisée en place (issue #11) et un stub technique conserve les
+ * clés étrangères. La désactivation (`active = false`) reste disponible sans
+ * effacement d'identité.
  *
  * Nécessite `setCurrentClubId` déjà positionné (ambiant, comme
  * `listPlanningEventSnapshots`).

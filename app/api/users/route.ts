@@ -1,24 +1,29 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
 import { requireRole } from '@/lib/auth/require';
-import { hashPassword } from '@/lib/auth/password';
+import { UNUSABLE_PASSWORD_HASH } from '@/lib/auth/password';
 import { normalizeAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
+import { isClosedAccount } from '@/lib/account-closure/constants';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 
 function serializeUser(user: UserEntity) {
+  const closed = isClosedAccount(user);
   return {
     id: user.id,
-    email: user.email,
+    email: closed ? '' : user.email,
     nom: user.nom,
     accessRole: user.accessRole,
     planningFunctions: user.planningFunctions,
     active: user.active,
-    telephone: user.telephone,
+    telephone: closed ? null : user.telephone,
     // Issue #204 : un profil sans accès (jamais activé) n'est pas un compte actif.
     claimedAt: user.claimedAt,
-    hasAccess: user.claimedAt != null,
+    hasAccess: user.claimedAt != null && !closed,
+    closedAt: user.closedAt,
+    closureRequestedAt: user.closureRequestedAt,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -39,7 +44,7 @@ export async function GET(request: NextRequest) {
     const visible = unclaimedOnly ? users.filter((user) => user.claimedAt == null) : users;
     return NextResponse.json({ users: visible.map(serializeUser) });
   } catch (error) {
-    console.error('Error reading users from DB:', error);
+    logError('app.unhandled', 'Error reading users from DB:', error);
     return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
   }
 }
@@ -55,11 +60,13 @@ export async function POST(request: NextRequest) {
     const accessRole = normalizeAccessRole(body.accessRole);
     const planningFunctions = normalizePlanningFunctions(body.planningFunctions);
 
+    if (typeof password === 'string' && password.length > 0) {
+      return NextResponse.json({
+        error: 'Un administrateur ne peut pas définir le mot de passe d\'un tiers. Envoyez une invitation.',
+      }, { status: 400 });
+    }
     if (!email || typeof email !== 'string' || email.trim() === '') {
       return NextResponse.json({ error: 'L\'email est requis' }, { status: 400 });
-    }
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, { status: 400 });
     }
     if (!nom || typeof nom !== 'string' || nom.trim() === '') {
       return NextResponse.json({ error: 'Le nom est requis' }, { status: 400 });
@@ -74,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Un utilisateur avec cet email existe déjà dans ce club' }, { status: 400 });
     }
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = UNUSABLE_PASSWORD_HASH;
     await repo.save({
       clubId: auth.user.clubId,
       email: normalizedEmail,
@@ -83,8 +90,8 @@ export async function POST(request: NextRequest) {
       accessRole,
       planningFunctions,
       active: true,
-      // Compte créé directement par un administrateur : accès actif immédiat.
-      claimedAt: new Date(),
+      // Profil créé sans identifiants : la prise de contrôle passe par une invitation (issue #32).
+      claimedAt: null,
       telephone: typeof telephone === 'string' && telephone.trim() ? telephone.trim() : null,
       icalToken: randomBytes(24).toString('hex'),
     });
@@ -92,7 +99,7 @@ export async function POST(request: NextRequest) {
     const users = await repo.find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
     return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
   } catch (error) {
-    console.error('Error creating user in DB:', error);
+    logError('app.unhandled', 'Error creating user in DB:', error);
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

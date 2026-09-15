@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DataSource, EntityManager } from 'typeorm';
+import { serializeOutboxError } from '@/lib/observability/redact';
 import type { NotificationUrgency } from './preferences';
 
 type Queryable = DataSource | EntityManager;
@@ -73,7 +74,7 @@ export async function markNotificationSent(db: DataSource, id: string): Promise<
 }
 
 export async function markNotificationFailed(db: DataSource, id: string, attempts: number, error: unknown): Promise<void> {
-  const message = error instanceof Error ? error.message : 'Erreur de livraison inconnue';
+  const stored = serializeOutboxError(error);
   const delayMinutes = Math.min(360, 2 ** Math.min(attempts, 8));
   await db.query(
     `UPDATE planning_notification_outbox
@@ -82,7 +83,7 @@ export async function markNotificationFailed(db: DataSource, id: string, attempt
          next_attempt_at = DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL ? MINUTE),
          last_error = ?
      WHERE id = ?`,
-    [delayMinutes, message.slice(0, 4000), id],
+    [delayMinutes, stored, id],
   );
 }
 

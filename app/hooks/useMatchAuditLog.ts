@@ -1,19 +1,21 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '@/lib/utils/api';
 
 export interface MatchAuditLogEntry {
   id: number;
+  clubId: string;
   entityType: string;
   entityId: string;
-  action: 'create' | 'update' | 'delete';
+  action: string;
   userId: number | null;
-  userEmail: string | null;
-  userNom: string | null;
+  actorLabel: string;
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
   createdAt: string;
+  schemaVersion: number;
 }
 
 interface AuditLogData {
@@ -38,7 +40,7 @@ export function useMatchAuditLog(matchId: string | undefined | null) {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement de l\'historique';
       setError(errorMessage);
-      console.error('Error loading match audit log:', err);
+      logError('app.unhandled', 'Error loading match audit log:', err);
     } finally {
       setIsLoading(false);
     }

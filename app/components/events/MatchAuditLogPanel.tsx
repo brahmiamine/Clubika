@@ -50,7 +50,7 @@ export function MatchAuditLogPanel({ matchId }: { matchId: string | undefined | 
                     {formatEntryDate(entry.createdAt)} — {ACTION_LABELS[entry.action] || entry.action}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    par {entry.userNom || entry.userEmail || 'utilisateur inconnu'}
+                    par {entry.actorLabel}
                   </p>
                 </li>
               ))}

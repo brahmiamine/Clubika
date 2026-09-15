@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { IsNull, type DataSource } from 'typeorm';
 import type { MatchAuditLogEntity, NotificationEntity, UserEntity } from '@/lib/db/schemas';
 import type { AssignmentContact } from '@/types/match';
@@ -30,6 +31,7 @@ import { requiredRolesForEvent, type PublicationRoleRequirements } from './valid
 import { createTeamLogoResolver } from './team-logos';
 import { vacateDeclinedAssignmentsFromWorkingDraft } from './declined-assignment-draft';
 import { filterOfficialEventsForDisplay } from './official-match-visibility';
+import { auditActorLabel } from '@/lib/audit/catalog';
 
 export interface DashboardDeclinedContact {
   nom: string;
@@ -355,7 +357,7 @@ export async function buildClubDashboardData(
   try {
     await vacateDeclinedAssignmentsFromWorkingDraft(db, clubId);
   } catch (error) {
-    console.error('Impossible d’aligner le brouillon sur les refus d’affectation:', error);
+    logError('app.unhandled', 'Impossible d’aligner le brouillon sur les refus d’affectation:', error);
   }
   const [snapshots, publishedSnapshots, users, unreadNotifications, recentNotifications, recentAudit, settings] = await Promise.all([
     listPlanningEventSnapshots(db),
@@ -478,8 +480,7 @@ export async function buildClubDashboardData(
       entityType: item.entityType,
       entityId: item.entityId,
       action: item.action,
-      userNom: item.userNom,
-      userEmail: item.userEmail,
+      actorLabel: auditActorLabel(item.userId),
       createdAt: item.createdAt,
     })),
   };

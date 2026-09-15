@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -8,6 +9,7 @@ import { normalizePlanningFunctions, WRITE_ROLES, type PlanningFunction } from '
 import { hashPassword } from '@/lib/auth/password';
 import { generatePlaceholderEmail } from '@/lib/auth/placeholder-account';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { isClosedAccount } from '@/lib/account-closure/constants';
 
 /** Fonction opérationnelle représentée par ce référentiel (issue #209). */
 const FUNCTION: PlanningFunction = 'arbitre_club';
@@ -46,6 +48,7 @@ async function findAllOfficiels(
   const users = await repo.find({ where: { clubId }, order: { nom: 'ASC' } });
   return users
     .filter((user) => normalizePlanningFunctions(user.planningFunctions).includes(FUNCTION))
+    .filter((user) => !isClosedAccount(user))
     .filter((user) => !activeOnly || user.active);
 }
 
@@ -62,7 +65,7 @@ export async function GET(request: NextRequest) {
     const all = await findAllOfficiels(db, auth.user.clubId, { activeOnly: true });
     return NextResponse.json({ officiels: all.map(serialize) } satisfies OfficielsData);
   } catch (error) {
-    console.error('Error reading officiels from DB:', error);
+    logError('app.unhandled', 'Error reading officiels from DB:', error);
     return NextResponse.json({ error: 'Failed to load officiels' }, { status: 500 });
   }
 }
@@ -109,7 +112,7 @@ export async function PUT(request: NextRequest) {
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error updating officiels in DB:', error);
+    logError('app.unhandled', 'Error updating officiels in DB:', error);
     return NextResponse.json({ error: 'Failed to update officiels' }, { status: 500 });
   }
 }
@@ -155,7 +158,7 @@ export async function POST(request: NextRequest) {
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error adding officiel in DB:', error);
+    logError('app.unhandled', 'Error adding officiel in DB:', error);
     return NextResponse.json({ error: 'Failed to add officiel' }, { status: 500 });
   }
 }
@@ -192,7 +195,7 @@ export async function DELETE(request: NextRequest) {
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error deleting officiel in DB:', error);
+    logError('app.unhandled', 'Error deleting officiel in DB:', error);
     return NextResponse.json({ error: 'Failed to delete officiel' }, { status: 500 });
   }
 }

@@ -78,7 +78,7 @@ describe('groupPersonalAssignmentsByEvent (issue #281)', () => {
         assignmentId: 'amical:evt-1:accompagnateur',
         status: 'declined',
         declineReason: 'work',
-        declineComment: 'astreinte',
+        declineComment: null,
       }),
     ];
 
@@ -87,7 +87,7 @@ describe('groupPersonalAssignmentsByEvent (issue #281)', () => {
     expect(events).toHaveLength(1);
     expect(events[0]!.functions).toHaveLength(3);
     expect(events[0]!.functions.map((fn) => fn.status)).toEqual(['pending', 'accepted', 'declined']);
-    expect(events[0]!.functions[2]).toMatchObject({ declineReason: 'work', declineComment: 'astreinte' });
+    expect(events[0]!.functions[2]).toMatchObject({ declineReason: 'work', declineComment: null });
   });
 
   it('ne regroupe pas des fonctions appartenant à des événements distincts', () => {

@@ -67,8 +67,13 @@ appliqué, et **sans** `synchronize` en production), donc un oubli de l'étape
 explicite ne laisse pas le schéma à la traîne — mais l'étape `db:migrate` permet de
 faire échouer le déploiement **avant** la mise en service.
 
-La migration `0025` (issue #22) crée les tables d’exercice des droits et ajoute
+La migration `0038` (issue #22) crée les tables d’exercice des droits et ajoute
 les drapeaux de restriction/opposition sur `users`. Idempotente.
+
+La migration `0037` (issue #20) n'ajoute pas de colonne : elle inventorie puis
+assainit les lignes de `match_audit_log` (voir [`docs/audit-log.md`](audit-log.md)).
+Prendre une sauvegarde SQL avant `db:migrate` sur une instance qui contient déjà
+de l'audit ; le retour arrière est la restauration de cette sauvegarde.
 
 ### CI
 
@@ -110,6 +115,7 @@ Les migrations sont à sens unique et sans `down` automatisé. Stratégie :
 | `scraper_sync_runs` | `app/lib/scraper/runs.ts` | `0006` |
 | `planning_assignment_state` | `app/lib/planning/assignment-state-store.ts` | `0007` |
 | tables d'entités TypeORM (`users`, `clubs`, chat, …) | `DataSource.synchronize()` au boot | `0018` |
+| `account_closures` + colonnes `users.closedAt` / `closureRequestedAt` / `closedByUserId` | fermeture de compte (issue #11) | `0036` |
 
 ## Conversions de schéma encadrées
 
@@ -136,6 +142,13 @@ ensuite la colonne en NOT NULL et crée l'index tenant
 `(clubId, entityType, entityId, createdAt)`. Sur une base neuve, la table est
 absente au passage de `0009` : la migration n'a rien à remplir et `0018`
 crée directement la colonne NOT NULL.
+
+La migration `0027` ([`audit-sportcorico-data.ts`](../app/lib/db/migrations/audit-sportcorico-data.ts),
+issue #5) inventorie les payloads SportCorico déjà stockés. Par défaut elle
+n’écrit rien (dry-run, compteurs uniquement). La quarantaine réelle exige
+`SPORTCORICO_DATA_PURGE=apply` et se lance avec `pnpm run sportcorico:quarantine`
+après une sauvegarde — voir
+[`docs/sportcorico-data-quarantine.md`](./sportcorico-data-quarantine.md).
 
 Restent hors périmètre volontairement : les `ALTER TABLE` défensifs du
 `json-migrator` (migration de données héritées JSON → SQL, bornée par marqueur et

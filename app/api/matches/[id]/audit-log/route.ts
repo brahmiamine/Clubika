@@ -1,9 +1,11 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { MatchAuditLogEntity } from '@/lib/db/schemas';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { toAuditLogDto } from '@/lib/audit/dto';
 
 export async function GET(
   request: NextRequest,
@@ -32,9 +34,9 @@ export async function GET(
       order: { createdAt: 'DESC' },
     });
 
-    return NextResponse.json({ entries });
+    return NextResponse.json({ entries: entries.map(toAuditLogDto) });
   } catch (error) {
-    console.error('Erreur GET audit log:', error);
+    logError('app.unhandled', 'Erreur GET audit log:', error);
     return NextResponse.json({ error: 'Erreur lors de la récupération de l\'historique' }, { status: 500 });
   }
 }

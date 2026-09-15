@@ -1,15 +1,15 @@
 import { randomBytes } from 'node:crypto';
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
-import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { createTestUserAndSession, enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import { hashBucketComponent } from '@/lib/auth/login-rate-limit';
 import { GET } from './route';
 
 const dbAvailable = await isDbAvailable();
 
-function icalRequest(token: string, ip = randomBytes(8).toString('hex')) {
+function icalRequest(token: string, ip = uniqueTestIp()) {
   return new NextRequest(`http://localhost/api/ical/${token}`, {
     headers: { 'x-forwarded-for': ip },
   });
@@ -18,8 +18,14 @@ function icalRequest(token: string, ip = randomBytes(8).toString('hex')) {
 describe.skipIf(!dbAvailable)('GET /api/ical/[token] — limitation de débit (issue #381)', () => {
   const cleanupIps: string[] = [];
   const cleanupTokens: string[] = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     for (const ip of cleanupIps.splice(0)) {
       await db.query('DELETE FROM login_rate_limits WHERE bucket_key = ?', [`ical-feed:ip:${hashBucketComponent(ip)}`]);
@@ -30,7 +36,7 @@ describe.skipIf(!dbAvailable)('GET /api/ical/[token] — limitation de débit (i
   });
 
   it('renvoie 429 après 5 sondes sur un jeton invalide depuis la même IP', async () => {
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     cleanupIps.push(ip);
     const token = `invalid-probe-${randomBytes(8).toString('hex')}`;
 
@@ -51,7 +57,7 @@ describe.skipIf(!dbAvailable)('GET /api/ical/[token] — club désactivé (issue
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const { user, cleanup } = await createTestUserAndSession('dirigeant', { clubId }, ['arbitre_club']);
     const db = await getDb();
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
 
     try {
       const workingResponse = await GET(
