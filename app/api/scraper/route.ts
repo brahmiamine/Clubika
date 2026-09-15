@@ -6,6 +6,11 @@ import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
 import { listScraperRuns } from '@/lib/scraper/runs';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import {
+  isSportCoricoSyncEnabled,
+  SPORTCORICO_SYNC_DISABLED_MESSAGE,
+  SportCoricoSyncDisabledError,
+} from '@/lib/scraper/sync-gate';
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole(request, ['admin']);
@@ -23,6 +28,12 @@ export async function POST(request: NextRequest) {
   setCurrentClubId(auth.user.clubId);
 
   try {
+    if (!isSportCoricoSyncEnabled()) {
+      return NextResponse.json(
+        { error: SPORTCORICO_SYNC_DISABLED_MESSAGE },
+        { status: 409 },
+      );
+    }
     const disabled = await planningFeatureGuard(await getDb(), 'scraperSync');
     if (disabled) return disabled;
     const { runId, stderr, sync } = await runScraperAndPersistToDb();
@@ -38,6 +49,9 @@ export async function POST(request: NextRequest) {
       sync,
     });
   } catch (error) {
+    if (error instanceof SportCoricoSyncDisabledError) {
+      return NextResponse.json({ error: SPORTCORICO_SYNC_DISABLED_MESSAGE }, { status: 409 });
+    }
     console.error('Error running scraper:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(

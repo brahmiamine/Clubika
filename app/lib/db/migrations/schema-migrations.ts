@@ -9,6 +9,7 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { disableScraperSyncOnAllClubs } from './disable-sportcorico-sync';
 import { migrateHealthDataFields } from './remove-health-data';
 
 /**
@@ -58,6 +59,8 @@ import { migrateHealthDataFields } from './remove-health-data';
  * `chat_messages`.
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
+ *
+ * La migration 0025 (issue #4) désactive `scraperSync` sur tous les clubs existants.
  *
  * La migration 0026 (issue #7) recale les motifs de refus `injury` vers `personal`
  * et compte les commentaires libres ; la purge des commentaires n’a lieu que si
@@ -452,6 +455,15 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0025',
+    name: 'desactiver_scraper_sync_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('disable-sportcorico-sync.ts'),
+    up: async (db) => {
+      await disableScraperSyncOnAllClubs(db);
+    },
   },
   {
     version: '0026',
