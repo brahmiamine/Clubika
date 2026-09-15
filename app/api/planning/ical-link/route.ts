@@ -4,6 +4,7 @@ import { UserEntity } from '@/lib/db/schemas';
 import { requireAuth } from '@/lib/auth/require';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { planningFeatureGuard } from '@/lib/planning/feature-guard';
+import { resolveCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
 import { buildIcalFeedUrl } from '@/lib/planning/ical-link';
 
 /** Flux volontaire pour récupérer l’URL iCal personnelle (issue #382) — hors `/api/auth/me`. */
@@ -26,7 +27,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
   }
 
-  const origin = process.env.APP_BASE_URL?.replace(/\/$/, '') || new URL(request.url).origin;
+  const origin = resolveCanonicalPublicOrigin() ?? (process.env.NODE_ENV === 'production' ? null : 'http://localhost:3000');
+  if (!origin) {
+    return NextResponse.json({ error: 'APP_BASE_URL est requis pour générer un lien iCal' }, { status: 503 });
+  }
   return NextResponse.json({
     feedUrl: buildIcalFeedUrl(origin, user.icalToken),
   });

@@ -294,6 +294,8 @@ export interface UserSessionEntity {
   revokedAt: Date | null;
   clientHint: string | null;
   networkHint: string | null;
+  /** Instant de la dernière preuve de mot de passe (issue #32). */
+  authenticatedAt: Date | null;
 }
 
 export const UserSessionSchema = new EntitySchema<UserSessionEntity>({
@@ -316,6 +318,7 @@ export const UserSessionSchema = new EntitySchema<UserSessionEntity>({
     revokedAt: { type: 'datetime', nullable: true },
     clientHint: { type: String, nullable: true, length: 32 },
     networkHint: { type: String, nullable: true, length: 16 },
+    authenticatedAt: { type: 'datetime', nullable: true },
   },
 });
 
@@ -332,7 +335,8 @@ export interface InvitationEntity {
   personNom: string | null;
   personType: string | null;
   personId: number | null;
-  createdByUserId: number;
+  createdByUserId: number | null;
+  createdByPlatformAdminId: number | null;
   expiresAt: Date;
   usedAt: Date | null;
   usedByUserId: number | null;
@@ -359,7 +363,8 @@ export const InvitationSchema = new EntitySchema<InvitationEntity>({
     personNom: { type: String, nullable: true },
     personType: { type: String, nullable: true },
     personId: { type: Number, nullable: true },
-    createdByUserId: { type: Number },
+    createdByUserId: { type: Number, nullable: true },
+    createdByPlatformAdminId: { type: Number, nullable: true },
     expiresAt: { type: 'datetime' },
     usedAt: { type: 'datetime', nullable: true },
     usedByUserId: { type: Number, nullable: true },
@@ -679,6 +684,8 @@ export interface PlatformAdminEntity {
   passwordHash: string;
   nom: string;
   active: boolean;
+  totpSecretEncrypted: string | null;
+  totpEnrolledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -692,6 +699,8 @@ export const PlatformAdminSchema = new EntitySchema<PlatformAdminEntity>({
     passwordHash: { type: String },
     nom: { type: String },
     active: { type: Boolean, default: true },
+    totpSecretEncrypted: { type: 'text', nullable: true },
+    totpEnrolledAt: { type: 'datetime', nullable: true },
     createdAt: { type: 'datetime', createDate: true },
     updatedAt: { type: 'datetime', updateDate: true },
   },
@@ -709,6 +718,8 @@ export interface PlatformSessionEntity {
   revokedAt: Date | null;
   clientHint: string | null;
   networkHint: string | null;
+  authenticatedAt: Date | null;
+  mfaVerifiedAt: Date | null;
 }
 
 export const PlatformSessionSchema = new EntitySchema<PlatformSessionEntity>({
@@ -730,6 +741,79 @@ export const PlatformSessionSchema = new EntitySchema<PlatformSessionEntity>({
     revokedAt: { type: 'datetime', nullable: true },
     clientHint: { type: String, nullable: true, length: 32 },
     networkHint: { type: String, nullable: true, length: 16 },
+    authenticatedAt: { type: 'datetime', nullable: true },
+    mfaVerifiedAt: { type: 'datetime', nullable: true },
+  },
+});
+
+export interface PlatformMfaChallengeEntity {
+  tokenHash: string;
+  platformAdminId: number;
+  purpose: string;
+  totpSecretEncrypted: string | null;
+  expiresAt: Date;
+  consumedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PlatformMfaChallengeSchema = new EntitySchema<PlatformMfaChallengeEntity>({
+  name: 'PlatformMfaChallenge',
+  tableName: 'platform_mfa_challenges',
+  indices: [{ name: 'idx_platform_mfa_challenges_admin', columns: ['platformAdminId'] }],
+  columns: {
+    tokenHash: { type: String, primary: true },
+    platformAdminId: { type: Number },
+    purpose: { type: String },
+    totpSecretEncrypted: { type: 'text', nullable: true },
+    expiresAt: { type: 'datetime' },
+    consumedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface PlatformMfaRecoveryCodeEntity {
+  id: number;
+  platformAdminId: number;
+  codeHash: string;
+  usedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PlatformMfaRecoveryCodeSchema = new EntitySchema<PlatformMfaRecoveryCodeEntity>({
+  name: 'PlatformMfaRecoveryCode',
+  tableName: 'platform_mfa_recovery_codes',
+  indices: [{ name: 'idx_platform_mfa_recovery_admin', columns: ['platformAdminId'] }],
+  columns: {
+    id: { type: Number, primary: true, generated: 'increment' },
+    platformAdminId: { type: Number },
+    codeHash: { type: String },
+    usedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface PrivilegedAuthEventEntity {
+  id: number;
+  action: string;
+  actorType: string;
+  actorId: number | null;
+  clubId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+}
+
+export const PrivilegedAuthEventSchema = new EntitySchema<PrivilegedAuthEventEntity>({
+  name: 'PrivilegedAuthEvent',
+  tableName: 'privileged_auth_events',
+  indices: [{ name: 'idx_privileged_auth_events_created', columns: ['createdAt'] }],
+  columns: {
+    id: { type: Number, primary: true, generated: 'increment' },
+    action: { type: String },
+    actorType: { type: String },
+    actorId: { type: Number, nullable: true },
+    clubId: { type: String, nullable: true },
+    metadata: { type: 'simple-json', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
   },
 });
 
@@ -757,4 +841,7 @@ export const allSchemas = [
   ClubTenantSchema,
   PlatformAdminSchema,
   PlatformSessionSchema,
+  PlatformMfaChallengeSchema,
+  PlatformMfaRecoveryCodeSchema,
+  PrivilegedAuthEventSchema,
 ];

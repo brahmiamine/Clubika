@@ -1,5 +1,6 @@
 export const SESSION_COOKIE_NAME = resolveLoadedSessionCookieName();
 export const PLATFORM_SESSION_COOKIE_NAME = resolveLoadedPlatformSessionCookieName();
+export const PLATFORM_MFA_PENDING_COOKIE_NAME = 'platform_mfa_pending';
 /** Contexte court d'une invitation publique, httpOnly, jamais le jeton d'URL (issue #34). */
 export const INVITATION_CONTEXT_COOKIE = 'invitation_ctx';
 

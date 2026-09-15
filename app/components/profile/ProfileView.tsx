@@ -97,8 +97,8 @@ export function ProfileView() {
             <div className="space-y-4 rounded-xl border p-4">
               <h3 className="flex items-center gap-2 font-semibold"><span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary-soft text-primary"><KeyRound className="h-4 w-4" /></span> Changer le mot de passe</h3>
               <div className="space-y-2"><Label>Mot de passe actuel</Label><Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} /></div>
-              <div className="space-y-2"><Label>Nouveau mot de passe</Label><Input type="password" minLength={8} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></div>
-              <p className="text-xs text-muted-foreground">Un changement de mot de passe déconnecte toutes les sessions actives.</p>
+              <div className="space-y-2"><Label>Nouveau mot de passe</Label><Input type="password" minLength={12} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} /></div>
+              <p className="text-xs text-muted-foreground">Au moins 12 caractères, phrase de passe acceptée. Un changement déconnecte toutes les sessions.</p>
             </div>
             <ActiveSessionsCard
               listUrl="/api/me/sessions"

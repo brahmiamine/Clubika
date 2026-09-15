@@ -213,20 +213,49 @@ describe.skipIf(!dbAvailable)('DELETE/PUT /api/users/[id] — invariant du derni
   });
 });
 
-describe.skipIf(!dbAvailable)('PUT /api/users/[id] — révocation à l\'élévation de rôle (issue #29)', () => {
+describe.skipIf(!dbAvailable)('PUT /api/users/[id] — mots de passe, élévation et révocation', () => {
+  it('refuse qu\'un admin pose le mot de passe d\'un tiers', async () => {
+    const clubId = `test-club-${randomBytes(6).toString('hex')}`;
+    const admin = await createTestUserAndSession('admin', { clubId });
+    const dirigeant = await createTestUserAndSession('dirigeant', { clubId });
+    try {
+      const response = await PUT(
+        putRequest({ password: 'invitee-passphrase-12' }, admin.token),
+        { params: { id: String(dirigeant.user.id) } },
+      );
+      expect(response.status).toBe(400);
+    } finally {
+      await admin.cleanup();
+      await dirigeant.cleanup();
+    }
+  });
+
   it('révoque les sessions existantes quand un dirigeant devient administrateur', async () => {
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const admin = await createTestUserAndSession('admin', { clubId });
     const dirigeant = await createTestUserAndSession('dirigeant', { clubId });
     try {
       expect(await getSessionUser(dirigeant.token)).not.toBeNull();
+      const db = await getDb();
+      const before = await db.getRepository('UserSession').findBy({ userId: dirigeant.user.id }) as Array<{ revokedAt: Date | null }>;
+      expect(before.some((row) => row.revokedAt == null)).toBe(true);
+
       const response = await PUT(
         putRequest({ accessRole: 'admin' }, admin.token),
         { params: { id: String(dirigeant.user.id) } },
       );
       expect(response.status).toBe(200);
       expect(await getSessionUser(dirigeant.token)).toBeNull();
+
+      const sessions = await db.getRepository('UserSession').findBy({ userId: dirigeant.user.id }) as Array<{ revokedAt: Date | null }>;
+      expect(sessions.every((row) => row.revokedAt != null)).toBe(true);
+
+      const notes = await db.getRepository<NotificationEntity>('Notification').find({ where: { userId: dirigeant.user.id } });
+      expect(notes.some((n) => n.type === 'privileged-role-changed')).toBe(true);
     } finally {
+      const db = await getDb();
+      await db.getRepository('Notification').delete({ userId: admin.user.id });
+      await db.getRepository('Notification').delete({ userId: dirigeant.user.id });
       await admin.cleanup();
       await dirigeant.cleanup();
     }

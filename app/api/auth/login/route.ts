@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { In } from 'typeorm';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity, UserEntity } from '@/lib/db/schemas';
-import { verifyPassword } from '@/lib/auth/password';
+import { verifyPasswordAndMaybeRehash } from '@/lib/auth/password';
 import { createSession, revokeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { sessionCookieSetOptions } from '@/lib/auth/session-cookie';
 import { canEdit, normalizeAccessRole } from '@/lib/auth/roles';
@@ -83,7 +83,12 @@ export async function POST(request: NextRequest) {
       const candidateClubId = resolveUserClubId(candidate);
       if (!(await isClubTenantActive(db, candidateClubId))) continue;
 
-      if (await verifyPassword(password, candidate.passwordHash)) {
+      const verified = await verifyPasswordAndMaybeRehash(password, candidate.passwordHash);
+      if (verified.ok && verified.newHash) {
+        candidate.passwordHash = verified.newHash;
+        await repo.save(candidate);
+      }
+      if (verified.ok) {
         passwordMatches.push(candidate);
       }
     }

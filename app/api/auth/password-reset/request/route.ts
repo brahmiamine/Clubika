@@ -5,12 +5,20 @@ import { getDb } from '@/lib/db';
 import type { PasswordResetTokenEntity, UserEntity } from '@/lib/db/schemas';
 import { hasAccountAccess } from '@/lib/auth/placeholder-account';
 import {
+  capabilityTooManyRequests,
   checkCapabilityIpRateLimit,
   recordCapabilityIpAttempt,
 } from '@/lib/auth/capability-rate-limit';
+import { CanonicalPublicOriginError, requireCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
+import {
+  checkLoginRateLimit,
+  hashBucketComponent,
+  recordFailedLoginAttempt,
+} from '@/lib/auth/login-rate-limit';
 import { deliverPasswordResetLink } from '@/lib/auth/password-reset-delivery';
 
 const RATE_LIMIT_ROUTE_KEY = 'password-reset-request';
+const GENERIC_MESSAGE = 'Si ce compte existe, les instructions de réinitialisation ont été préparées.';
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
@@ -22,7 +30,7 @@ export async function POST(request: NextRequest) {
   // repli quand l'envoi SMTP n'est pas configuré.
   const genericResponse = (resetUrls: string[] = []) => NextResponse.json({
     success: true,
-    message: 'Si ce compte existe, les instructions de réinitialisation ont été préparées.',
+    message: GENERIC_MESSAGE,
     ...(process.env.NODE_ENV !== 'production' && resetUrls.length > 0
       ? { resetUrl: resetUrls[0], ...(resetUrls.length > 1 ? { resetUrls } : {}) }
       : {}),
@@ -39,27 +47,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email requis' }, { status: 400 });
     }
 
+    const accountBucket = `${RATE_LIMIT_ROUTE_KEY}:account:${hashBucketComponent(email)}`;
+    const accountLimit = await checkLoginRateLimit(db, accountBucket);
+    if (accountLimit.limited) return capabilityTooManyRequests(accountLimit.retryAfterSeconds!);
+
     await recordCapabilityIpAttempt(db, request, RATE_LIMIT_ROUTE_KEY);
-    // Unicité par club, et non globale (issue #266) : cette adresse peut porter un
-    // compte indépendant dans plusieurs clubs — chacun reçoit son propre jeton
-    // (une réinitialisation ne doit jamais agir sur le mot de passe d'un autre
-    // compte), sans révéler leur nombre en dehors du mode développement.
+    await recordFailedLoginAttempt(db, accountBucket);
+
+    let origin: string;
+    try {
+      origin = requireCanonicalPublicOrigin();
+    } catch (error) {
+      if (error instanceof CanonicalPublicOriginError && process.env.NODE_ENV === 'production') {
+        logError('app.unhandled', '[auth] Réinitialisation refusée : APP_BASE_URL canonique manquant.');
+        return genericResponse();
+      }
+      if (error instanceof CanonicalPublicOriginError) {
+        return genericResponse();
+      }
+      throw error;
+    }
+
     const users = await db.getRepository<UserEntity>('User').find({ where: { email } });
-    // Un profil sans accès (issue #204) ne peut pas être activé par cette voie :
-    // seule une invitation ciblée rattache des identifiants à son profil.
     const eligibleUsers = users.filter((user) => user.active && hasAccountAccess(user));
     if (eligibleUsers.length === 0) return genericResponse();
 
     const repo = db.getRepository<PasswordResetTokenEntity>('PasswordResetToken');
-    const baseUrl = process.env.APP_BASE_URL?.replace(/\/$/, '') || new URL(request.url).origin;
     const pendingUrls: string[] = [];
 
     for (const user of eligibleUsers) {
       const latest = await repo.findOne({ where: { userId: user.id }, order: { createdAt: 'DESC' } });
       if (latest && Date.now() - new Date(latest.createdAt).getTime() < 5 * 60_000) {
-        // Déjà demandé récemment pour ce compte précis : on passe au suivant plutôt
-        // que d'abandonner toute la requête, pour ne pas bloquer les autres comptes
-        // éligibles de cette même adresse.
         continue;
       }
 
@@ -71,7 +89,7 @@ export async function POST(request: NextRequest) {
         usedAt: null,
       });
 
-      const resetUrl = `${baseUrl}/reinitialiser/${rawToken}`;
+      const resetUrl = `${origin}/reinitialiser/${rawToken}`;
       const delivered = await deliverPasswordResetLink(user.email, resetUrl, user.clubId);
       if (!delivered) pendingUrls.push(resetUrl);
     }

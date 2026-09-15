@@ -19,6 +19,7 @@ function requestReset(body: unknown, ip = uniqueTestIp()) {
 }
 
 describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request (issue #286)', () => {
+  const previousBase = process.env.APP_BASE_URL;
   const cleanups: Array<() => Promise<void>> = [];
   let restoreProxy: (() => void) | undefined;
 
@@ -28,6 +29,8 @@ describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request (issue #286
 
   afterEach(async () => {
     restoreProxy?.();
+    if (previousBase === undefined) delete process.env.APP_BASE_URL;
+    else process.env.APP_BASE_URL = previousBase;
     while (cleanups.length) {
       const cleanup = cleanups.pop();
       if (cleanup) await cleanup();
@@ -60,6 +63,7 @@ describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request (issue #286
       await db.getRepository('PasswordResetToken').delete({ userId: unclaimed.user.id });
     });
 
+    process.env.APP_BASE_URL = 'http://localhost:3000';
     const claimedResponse = await POST(requestReset({ email: claimed.user.email }));
     expect(claimedResponse.status).toBe(200);
     const claimedBody = await claimedResponse.json() as { success: boolean; resetUrl?: string };
@@ -81,6 +85,30 @@ describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request (issue #286
       userId: unclaimed.user.id,
     });
     expect(unclaimedTokens).toHaveLength(0);
+  });
+
+  it('never builds the reset URL from a forged Host header (issue #32)', async () => {
+    process.env.APP_BASE_URL = 'http://localhost:3000';
+    const claimed = await createTestUserAndSession('dirigeant', {}, ['arbitre_club']);
+    cleanups.push(claimed.cleanup, async () => {
+      const db = await getDb();
+      await db.getRepository('PasswordResetToken').delete({ userId: claimed.user.id });
+    });
+
+    const response = await POST(new NextRequest('http://evil.example/api/auth/password-reset/request', {
+      method: 'POST',
+      body: JSON.stringify({ email: claimed.user.email }),
+      headers: {
+        'Content-Type': 'application/json',
+        host: 'evil.example',
+        'x-forwarded-host': 'evil.example',
+        'x-forwarded-for': randomBytes(8).toString('hex'),
+      },
+    }));
+    expect(response.status).toBe(200);
+    const body = await response.json() as { resetUrl?: string };
+    expect(body.resetUrl).toMatch(/^http:\/\/localhost:3000\/reinitialiser\/[a-f0-9]{64}$/);
+    expect(body.resetUrl).not.toContain('evil.example');
   });
 });
 

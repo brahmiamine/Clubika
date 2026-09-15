@@ -13,7 +13,7 @@ import {
 import { sessionTtlSeconds } from './session-ttl';
 import type { PublicSessionInfo } from './session';
 
-export { PLATFORM_SESSION_COOKIE_NAME } from './constants';
+export { PLATFORM_SESSION_COOKIE_NAME, PLATFORM_MFA_PENDING_COOKIE_NAME } from './constants';
 
 export interface PlatformAdminSessionUser {
   id: number;
@@ -80,6 +80,8 @@ export async function createPlatformSession(
     revokedAt: null,
     clientHint: coarseClientHint(meta?.userAgent),
     networkHint: networkHint(meta?.ipAddress),
+    authenticatedAt: new Date(),
+    mfaVerifiedAt: new Date(),
   });
 
   return { token, expiresAt, id: saved.id };
@@ -132,6 +134,17 @@ export async function revokePlatformSession(token: string | undefined | null): P
     session.revokedAt = new Date();
     await db.getRepository<PlatformSessionEntity>('PlatformSession').save(session);
   }
+}
+
+export async function revokeAllPlatformSessionsForAdmin(platformAdminId: number): Promise<void> {
+  const db = await getDb();
+  await db.getRepository<PlatformSessionEntity>('PlatformSession')
+    .createQueryBuilder()
+    .update()
+    .set({ revokedAt: new Date() })
+    .where('platformAdminId = :platformAdminId', { platformAdminId })
+    .andWhere('revokedAt IS NULL')
+    .execute();
 }
 
 export async function revokePlatformSessionById(adminId: number, sessionId: string): Promise<boolean> {

@@ -2,10 +2,13 @@ import { createServer } from 'node:http';
 import next from 'next';
 import { attachChatSocketServer } from './app/lib/chat/socket-server';
 import { assertEncryptionConfiguredForProduction } from './app/lib/crypto/secret-box';
+import { assertEncryptionConfiguredForProduction } from './app/lib/crypto/secret-box';
+import { assertCanonicalPublicOriginForProduction } from './app/lib/auth/canonical-public-origin';
 import { logError, logInfo } from './app/lib/observability/log';
 
 try {
   assertEncryptionConfiguredForProduction();
+  assertCanonicalPublicOriginForProduction();
 } catch (error) {
   logError('crypto.decrypt_failed', error);
   process.exit(1);

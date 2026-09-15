@@ -63,32 +63,12 @@ import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
- * La migration 0025 (issue #4) désactive `scraperSync` sur tous les clubs existants.
- *
- * La migration 0026 (issue #7) recale les motifs de refus `injury` vers `personal`
- * et compte les commentaires libres ; la purge des commentaires n’a lieu que si
- * `HEALTH_COMMENT_PURGE=apply`.
- *
- * La migration 0027 (issue #5) inventorie les données SportCorico déjà importées
- * (dry-run par défaut). La quarantaine n'écrit que si `SPORTCORICO_DATA_PURGE=apply`
- * au moment de l'exécution, ou via `pnpm run sportcorico:quarantine` après sauvegarde.
- *
- * La migration 0028 (issue #31) purge `planning_notification_outbox.last_error`
- * des anciens `error.message` fournisseur ; les nouvelles valeurs sont
- * `{"code","retryable"}`. Dry-run : `MIGRATION_DRY_RUN=1`.
- *
- * La migration 0029 (issue #34) ajoute le contexte d'échange court des invitations
- * publiques (cookie httpOnly).
- *
- * La migration 0030 (issue #35) stocke les rapports CSP sanitizés (hôtes + directive,
- * jamais d'URI complète). Rétention 7 jours, purge à l'écriture.
- *
- * La migration 0031 (issue #23) ajoute `scan_status` aux pièces jointes chat/planning :
- * seuls les fichiers `clean` sont téléchargeables. Les lignes existantes sont marquées
- * `clean` (DEFAULT) ; les nouveaux uploads passent par l’inspection avant INSERT.
- *
  * La migration 0032 (issue #29) ajoute le condensat HMAC des jetons de session
  * (`tokenHash`) et les TTL idle/absolu, puis révoque le stockage en clair.
+ *
+ * La migration 0033 (issue #32) durcit les comptes privilégiés : colonnes MFA
+ * plateforme, preuves d'authentification récente, journal d'événements, et
+ * invitations émises sans compte club (createdByUserId nullable).
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -574,5 +554,51 @@ export const schemaMigrations: readonly SchemaMigration[] = [
       await hashExistingSessionTokens(db);
       await finalizeHashedSessionSchema(db);
     },
+  },
+  {
+    version: '0033',
+    name: 'privileged_auth_mfa_et_origine',
+    statements: [
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS authenticatedAt DATETIME(6) NULL AFTER networkHint',
+      'UPDATE user_sessions SET authenticatedAt = createdAt WHERE authenticatedAt IS NULL',
+      'ALTER TABLE platform_admins ADD COLUMN IF NOT EXISTS totpSecretEncrypted TEXT NULL AFTER active',
+      'ALTER TABLE platform_admins ADD COLUMN IF NOT EXISTS totpEnrolledAt DATETIME(6) NULL AFTER totpSecretEncrypted',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS authenticatedAt DATETIME(6) NULL AFTER networkHint',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS mfaVerifiedAt DATETIME(6) NULL AFTER authenticatedAt',
+      'UPDATE platform_sessions SET authenticatedAt = createdAt WHERE authenticatedAt IS NULL',
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS createdByPlatformAdminId INT NULL AFTER createdByUserId',
+      'ALTER TABLE invitations MODIFY createdByUserId INT NULL',
+      `CREATE TABLE IF NOT EXISTS platform_mfa_challenges (
+        tokenHash VARCHAR(64) NOT NULL,
+        platformAdminId INT NOT NULL,
+        purpose VARCHAR(32) NOT NULL,
+        totpSecretEncrypted TEXT NULL,
+        expiresAt DATETIME(6) NOT NULL,
+        consumedAt DATETIME(6) NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        PRIMARY KEY (tokenHash),
+        INDEX idx_platform_mfa_challenges_admin (platformAdminId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS platform_mfa_recovery_codes (
+        id INT NOT NULL AUTO_INCREMENT,
+        platformAdminId INT NOT NULL,
+        codeHash VARCHAR(64) NOT NULL,
+        usedAt DATETIME(6) NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        PRIMARY KEY (id),
+        INDEX idx_platform_mfa_recovery_admin (platformAdminId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS privileged_auth_events (
+        id INT NOT NULL AUTO_INCREMENT,
+        action VARCHAR(64) NOT NULL,
+        actorType VARCHAR(32) NOT NULL,
+        actorId INT NULL,
+        clubId VARCHAR(255) NULL,
+        metadata TEXT NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        PRIMARY KEY (id),
+        INDEX idx_privileged_auth_events_created (createdAt)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
   },
 ];

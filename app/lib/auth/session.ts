@@ -157,6 +157,7 @@ export async function createSession(
     revokedAt: null,
     clientHint: coarseClientHint(meta?.userAgent),
     networkHint: networkHint(meta?.ipAddress),
+    authenticatedAt: new Date(),
   });
 
   return { token, expiresAt, id: saved.id };

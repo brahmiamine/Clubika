@@ -245,7 +245,7 @@ administrateur de club et plateforme sont plus courtes. Derrière un reverse-pro
 l'en-tête est ignoré. Le profil (`Sessions actives`) permet de révoquer une session
 ou toutes les autres.
 
-Les variables bootstrap servent uniquement à créer le premier administrateur lorsque la base ne contient aucun utilisateur. Retirez-les après la première connexion.
+Les variables bootstrap servent uniquement à créer le premier administrateur lorsque la base ne contient aucun utilisateur. En production, un second secret (`BOOTSTRAP_APPROVAL`, `PLATFORM_BOOTSTRAP_APPROVAL`) est exigé (double contrôle, issue #32). Retirez-les après la première connexion. L'accès plateforme impose ensuite un TOTP ; les codes de récupération sont hashés et affichés une seule fois.
 
 ### Multi-club
 
@@ -278,7 +278,9 @@ PLATFORM_ADMIN_PASSWORD=change-me
 ```
 
 Comme pour le bootstrap administrateur, ces variables ne servent qu'à créer le premier compte
-plateforme lorsque la table est vide ; retirez-les après la première connexion à `/plateforme`.
+plateforme lorsque la table est vide. En production, `PLATFORM_BOOTSTRAP_APPROVAL` est
+obligatoire. Retirez-les après la première connexion à `/plateforme` et l'enrôlement MFA.
+Le MFA club-admin n'est pas imposé ici : périmètre à trancher par analyse de risque.
 
 ### Email SMTP
 

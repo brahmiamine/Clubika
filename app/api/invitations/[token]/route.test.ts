@@ -52,6 +52,7 @@ async function makeInvitation(clubId: string, createdByUserId: number, overrides
     personType: null,
     personId: null,
     createdByUserId,
+    createdByPlatformAdminId: null,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     usedAt: null,
     usedByUserId: null,
