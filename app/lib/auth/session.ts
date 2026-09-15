@@ -128,7 +128,7 @@ export async function getSessionUser(token: string | undefined | null): Promise<
   }
 
   const user = await userRepo.findOneBy({ id: session.userId });
-  if (!user || !user.active) {
+  if (!user || !user.active || user.closedAt) {
     return null;
   }
 

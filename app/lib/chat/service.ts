@@ -969,7 +969,7 @@ export async function toggleMessageReaction(
  * sinon partiellement le chiffrement au repos pour l'identité de l'auteur après
  * suppression du compte. Le contenu des messages n'est pas purgé — seule l'identité.
  */
-export const ANONYMIZED_SENDER_NAME = 'Compte supprimé';
+export const ANONYMIZED_SENDER_NAME = 'Utilisateur supprimé';
 
 /**
  * Accepte un `EntityManager` déjà ouvert (issue #273 : appelée depuis la transaction

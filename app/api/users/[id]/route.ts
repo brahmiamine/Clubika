@@ -1,4 +1,3 @@
-import type { EntityManager } from 'typeorm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
@@ -8,10 +7,15 @@ import { normalizeAccessRole, normalizePlanningFunctions } from '@/lib/auth/role
 import { revokeAllSessionsForUser } from '@/lib/auth/session';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { hasFuturePlanningAssignments } from '@/lib/planning/person-link';
-import { findUserReferences } from '@/lib/planning/user-references';
 import { notifyAdmins } from '@/lib/notifications/service';
 import { readAppSettings } from '@/lib/settings-store';
-import { anonymizeMessagesForDeletedUser } from '@/lib/chat/service';
+import {
+  AccountClosureError,
+  closeAccount,
+  countLockedActiveAdmins,
+  lockTargetAndActiveAdmins,
+} from '@/lib/account-closure/close-account';
+import { isClosedAccount } from '@/lib/account-closure/constants';
 
 function isMysqlDeadlock(error: unknown): boolean {
   for (let current = error, depth = 0; current && typeof current === 'object' && depth < 5; depth += 1) {
@@ -36,14 +40,17 @@ async function retryOnMysqlDeadlock<T>(work: () => Promise<T>, attempts = 3): Pr
 }
 
 function serializeUser(user: UserEntity) {
+  const closed = isClosedAccount(user);
   return {
     id: user.id,
-    email: user.email,
+    email: closed ? '' : user.email,
     nom: user.nom,
     accessRole: user.accessRole,
     planningFunctions: user.planningFunctions,
     active: user.active,
-    telephone: user.telephone,
+    telephone: closed ? null : user.telephone,
+    closedAt: user.closedAt,
+    closureRequestedAt: user.closureRequestedAt,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
@@ -53,39 +60,10 @@ function getRepo(db: Awaited<ReturnType<typeof getDb>>) {
   return db.getRepository<UserEntity>('User');
 }
 
-/**
- * Verrou pessimiste, en une seule requête et un ordre déterministe (id croissant),
- * sur la ligne ciblée ET sur tous les administrateurs actifs du club (issue #273).
- *
- * Locker les deux ensembles en deux requêtes séparées — d'abord la ligne ciblée,
- * puis (seulement si besoin) l'ensemble des admins — expose à un interblocage :
- * deux requêtes visant chacune un administrateur différent verrouillent d'abord
- * leur propre ligne (déjà incluse dans l'ensemble complet), puis se bloquent
- * mutuellement en tentant de verrouiller la ligne que l'autre détient déjà. Une
- * unique requête, toujours dans le même ordre, élimine cette attente circulaire :
- * la seconde transaction attend l'ensemble complet avant d'avoir elle-même acquis
- * le moindre verrou contesté.
- */
-async function lockTargetAndActiveAdmins(
-  manager: EntityManager,
-  clubId: string,
-  targetId: number,
-): Promise<UserEntity[]> {
-  return manager
-    .getRepository<UserEntity>('User')
-    .createQueryBuilder('user')
-    .setLock('pessimistic_write')
-    .where(
-      'user.clubId = :clubId AND (user.id = :targetId OR (user.active = :active AND user.accessRole = :role))',
-      { clubId, targetId, active: true, role: 'admin' },
-    )
-    .orderBy('user.id', 'ASC')
-    .getMany();
-}
-
 type PutOutcome =
   | { kind: 'not-found' }
   | { kind: 'last-admin' }
+  | { kind: 'closed' }
   | { kind: 'ok'; userId: number; revokeSessions: boolean; notifyDeactivatedWithAssignments: boolean };
 
 export async function PUT(
@@ -115,6 +93,7 @@ export async function PUT(
       const locked = await lockTargetAndActiveAdmins(manager, auth.user.clubId, id);
       const user = locked.find((candidate) => candidate.id === id);
       if (!user) return { kind: 'not-found' };
+      if (isClosedAccount(user)) return { kind: 'closed' };
 
       const nextAccessRole = body.accessRole !== undefined
         ? normalizeAccessRole(body.accessRole)
@@ -128,8 +107,7 @@ export async function PUT(
       const wasAdmin = user.accessRole === 'admin';
       const staysAdmin = nextAccessRole === 'admin';
       if (wasAdmin && (!staysAdmin || !nextActive)) {
-        const activeAdmins = locked.filter((candidate) => candidate.active && candidate.accessRole === 'admin').length;
-        if (activeAdmins <= 1) return { kind: 'last-admin' };
+        if (countLockedActiveAdmins(locked) <= 1) return { kind: 'last-admin' };
       }
 
       if (typeof nom === 'string' && nom.trim() !== '') user.nom = nom.trim();
@@ -158,6 +136,9 @@ export async function PUT(
         { error: 'Impossible de désactiver ou rétrograder le dernier administrateur' },
         { status: 400 },
       );
+    }
+    if (outcome.kind === 'closed') {
+      return NextResponse.json({ error: 'Ce compte est déjà fermé et ne peut plus être modifié' }, { status: 409 });
     }
 
     if (outcome.revokeSessions) {
@@ -190,8 +171,8 @@ export async function PUT(
 type DeleteOutcome =
   | { kind: 'not-found' }
   | { kind: 'last-admin' }
-  | { kind: 'referenced'; reasons: string[] }
-  | { kind: 'deleted'; userId: number };
+  | { kind: 'closed'; result: Awaited<ReturnType<typeof closeAccount>> }
+  | { kind: 'ok'; result: Awaited<ReturnType<typeof closeAccount>> };
 
 export async function DELETE(
   request: NextRequest,
@@ -207,60 +188,53 @@ export async function DELETE(
     if (!Number.isFinite(id)) {
       return NextResponse.json({ error: 'Identifiant invalide' }, { status: 400 });
     }
+    const dryRun = new URL(request.url).searchParams.get('dryRun') === 'true';
 
     const db = await getDb();
     const outcome: DeleteOutcome = await retryOnMysqlDeadlock(() => db.transaction(async (manager) => {
-      const userRepo = manager.getRepository<UserEntity>('User');
       const locked = await lockTargetAndActiveAdmins(manager, auth.user.clubId, id);
       const user = locked.find((candidate) => candidate.id === id);
-      if (!user) return { kind: 'not-found' };
+      if (!user) return { kind: 'not-found' as const };
 
-      if (user.accessRole === 'admin') {
-        const activeAdmins = locked.filter((candidate) => candidate.active && candidate.accessRole === 'admin').length;
-        if (activeAdmins <= 1) return { kind: 'last-admin' };
+      try {
+        const result = await closeAccount(manager, {
+          target: user,
+          processedByUserId: auth.user.id,
+          processedByRole: 'admin',
+          dryRun,
+          activeAdminCount: countLockedActiveAdmins(locked),
+        });
+        return { kind: result.alreadyClosed ? 'closed' as const : 'ok' as const, result };
+      } catch (error) {
+        if (error instanceof AccountClosureError && error.code === 'last-admin') {
+          return { kind: 'last-admin' as const };
+        }
+        throw error;
       }
-
-      // Préférer la désactivation à la suppression physique pour tout compte référencé
-      // par des données métier existantes (issue #273) : une suppression laisserait des
-      // références orphelines dans les brouillons, le planning publié, l'historique, un
-      // autre enregistrement de planning ou une conversation de chat.
-      const references = await findUserReferences(manager, auth.user.clubId, user.id);
-      if (references.referenced) return { kind: 'referenced', reasons: references.reasons };
-
-      // RGPD / droit à l'effacement (issue #259) : le nom d'expéditeur est dénormalisé en
-      // clair sur chat_messages pour l'affichage — anonymisé avant la suppression du compte
-      // pour ne pas laisser son identité attribuée à d'anciens messages. Dans la même
-      // transaction que la suppression : l'un ne peut pas réussir sans l'autre.
-      await anonymizeMessagesForDeletedUser(manager, user.id);
-      await userRepo.remove(user);
-
-      return { kind: 'deleted', userId: user.id };
     }));
 
     if (outcome.kind === 'not-found') {
       return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 });
     }
     if (outcome.kind === 'last-admin') {
-      return NextResponse.json({ error: 'Impossible de supprimer le dernier administrateur' }, { status: 400 });
-    }
-    if (outcome.kind === 'referenced') {
       return NextResponse.json(
-        {
-          // `details` : convention partagée par les routes qui renvoient une liste
-          // structurée en plus du message générique (voir ApiRequestError.details).
-          error: 'Ce compte est référencé par des données existantes et ne peut pas être supprimé définitivement : désactivez-le à la place.',
-          details: outcome.reasons,
-        },
-        { status: 409 },
+        { error: 'Impossible de fermer le dernier administrateur : transférez d’abord le rôle à un autre compte.' },
+        { status: 400 },
       );
     }
 
-    await revokeAllSessionsForUser(outcome.userId);
+    if (!dryRun) {
+      await revokeAllSessionsForUser(outcome.result.userId);
+    }
 
     const users = await getRepo(db).find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
-    return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
+    return NextResponse.json({
+      success: true,
+      closure: outcome.result,
+      data: { users: users.map(serializeUser) },
+    });
   } catch (error) {
-    console.error('Error deleting user in DB:', error);
-    return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
+    console.error('Error closing user account:', error);
+    return NextResponse.json({ error: 'Failed to close user account' }, { status: 500 });
   }
 }

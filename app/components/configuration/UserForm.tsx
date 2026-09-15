@@ -43,6 +43,23 @@ export function UserForm({ user }: UserFormProps) {
   const [form, setForm] = useState<UserFormState>(() => initialState(user));
   const [isSaving, setIsSaving] = useState(false);
 
+  if (user?.closedAt) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Compte fermé</CardTitle>
+          <CardDescription>
+            Ce compte a été anonymisé. L’identité nominative n’est plus disponible et le
+            profil ne peut plus être modifié.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => router.push('/club/utilisateurs')}>Retour à la liste</Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const handleCancel = () => router.push('/club/utilisateurs');
 
   const handleSubmit = async () => {

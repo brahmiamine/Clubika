@@ -110,15 +110,14 @@ football pouvant compter des mineurs dans ses effectifs :
   participant — il n'y a de toute façon pas accès en lecture.
 - Un auteur ne peut pas encore supprimer son propre message (hors modération admin) ;
   périmètre volontairement limité pour cette première itération.
-- La suppression d'un compte (`DELETE /api/users/[id]`) anonymise `senderName` sur tous
-  ses messages passés (`Compte supprimé`) plutôt que de purger leur contenu : le
-  contenu des messages reste visible pour les autres participants (l'historique d'une
-  conversation de groupe ou d'événement n'est pas retiré aux autres membres), seule
-  l'attribution nominative disparaît.
-- Aucune purge automatique par ancienneté n'est implémentée à ce stade (pas de politique
-  de rétention par durée) : les messages et pièces jointes sont conservés indéfiniment,
-  au-delà de la modération admin ci-dessus. À revisiter si une politique de rétention
-  légale ou contractuelle l'exige.
+- La suppression d'un compte (`DELETE /api/users/[id]` ou `POST /api/me/account-closure`)
+  anonymise `senderName` / `forwardedFromName` sur tous ses messages passés
+  (`Utilisateur supprimé`) plutôt que de purger leur contenu : le contenu des
+  messages reste visible pour les autres participants, seule l'attribution
+  nominative disparaît (issue #11). Voir [docs/account-closure.md](docs/account-closure.md).
+- Une purge automatique par ancienneté est définie comme politique produit (#9) ;
+  cette branche ne l'empile pas. Les messages restent jusqu'à application de cette
+  politique, hors modération admin ci-dessus.
 
 Notifications disponibles :
 

@@ -244,6 +244,15 @@ export interface UserEntity {
    * peut pas se connecter et n'est pas présenté comme un compte actif.
    */
   claimedAt: Date | null;
+  /**
+   * Fermeture RGPD (issue #11) : date à laquelle l'identité a été remplacée par le
+   * stub « Utilisateur supprimé ». `null` = compte non fermé.
+   */
+  closedAt: Date | null;
+  /** Demande de fermeture initiée par le titulaire, en attente ou déjà traitée. */
+  closureRequestedAt: Date | null;
+  /** Utilisateur (admin ou soi-même) qui a exécuté la fermeture. */
+  closedByUserId: number | null;
   telephone: string | null;
   indisponibilites: OfficielIndisponibilite[] | null;
   icalToken: string;
@@ -273,6 +282,9 @@ export const UserSchema = new EntitySchema<UserEntity>({
     planningFunctions: { type: 'simple-json' },
     active: { type: Boolean, default: true },
     claimedAt: { type: 'datetime', nullable: true },
+    closedAt: { type: 'datetime', nullable: true },
+    closureRequestedAt: { type: 'datetime', nullable: true },
+    closedByUserId: { type: Number, nullable: true },
     telephone: { type: String, nullable: true },
     indisponibilites: { type: 'simple-json', nullable: true },
     icalToken: { type: String, unique: true },
