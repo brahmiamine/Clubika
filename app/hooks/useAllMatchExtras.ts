@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '@/lib/utils/api';
 import { MatchExtras } from './useMatchExtras';
@@ -22,7 +23,7 @@ export function useAllMatchExtras() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement';
       setError(errorMessage);
-      console.error('Erreur lors du chargement des extras:', err);
+      logError('app.unhandled', 'Erreur lors du chargement des extras:', err);
     } finally {
       setIsLoading(false);
     }

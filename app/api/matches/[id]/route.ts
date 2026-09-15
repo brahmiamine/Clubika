@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -38,7 +39,7 @@ export async function GET(
     const row = await db.getRepository('MatchExtra').findOneBy({ matchId, clubId: auth.user.clubId });
     return NextResponse.json(row ? parseMatchExtrasPayload(row.payload, matchId) : null);
   } catch (error) {
-    console.error('Erreur GET match extras:', error);
+    logError('app.unhandled', 'Erreur GET match extras:', error);
     return NextResponse.json({ error: 'Erreur lors de la récupération des informations' }, { status: 500 });
   }
 }
@@ -148,7 +149,7 @@ export async function PUT(
         after: extras as unknown as Record<string, unknown>,
       });
     } catch (auditError) {
-      console.error('Erreur audit log match extras:', auditError);
+      logError('app.unhandled', 'Erreur audit log match extras:', auditError);
     }
 
     return NextResponse.json({ success: true, extras: savedExtras });
@@ -162,7 +163,7 @@ export async function PUT(
     if (error instanceof PlanningConcurrencyError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
-    console.error('Erreur PUT match extras:', error);
+    logError('app.unhandled', 'Erreur PUT match extras:', error);
     return NextResponse.json({ error: 'Erreur lors de la modification des informations' }, { status: 500 });
   }
 }

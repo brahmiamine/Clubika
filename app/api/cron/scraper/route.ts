@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db';
 import { planningFeatureGuard } from '@/lib/planning/feature-guard';
 import { runWithClubId } from '@/lib/auth/club-context';
 import { listActiveClubIds } from '@/lib/db/club-tenants';
+import { isSportCoricoSyncEnabled, SPORTCORICO_SYNC_DISABLED_MESSAGE } from '@/lib/scraper/sync-gate';
 
 function safeSecretEquals(provided: string, expected: string): boolean {
   const providedBuffer = Buffer.from(provided, 'utf8');
@@ -29,6 +30,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (!isSportCoricoSyncEnabled()) {
+      return NextResponse.json({
+        success: true,
+        disabled: true,
+        message: SPORTCORICO_SYNC_DISABLED_MESSAGE,
+        results: [],
+      });
+    }
+
     const db = await getDb();
     const clubIds = await listActiveClubIds(db);
     const results: Array<{ clubId: string; runId?: string; sync?: unknown; disabled?: true; error?: string }> = [];

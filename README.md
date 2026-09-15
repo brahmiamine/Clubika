@@ -14,7 +14,7 @@ chaque release (voir critère d'acceptation de cette issue).
 
 | Fonction | Statut | Détail / parcours |
 |---|---|---|
-| Matchs officiels (scraping), amicaux, entraînements, plateaux | Disponible | `/club`, `/club/planning`, scraper (`ScraperButton`, `pnpm scrape`) |
+| Matchs officiels, amicaux, entraînements, plateaux | Disponible | `/club`, `/club/planning`. La synchro d’un calendrier externe (scraper) est **désactivée par défaut** jusqu’à licence écrite (`SPORTCORICO_SYNC_ENABLED`, issue #4) |
 | Vues carte, liste et calendrier | Disponible | `ViewToggle` sur `/club` et `/club/planning` |
 | Événements récurrents | Disponible | `/club/planning/recurrent`, `app/api/recurring-events` |
 | Duplication d'un événement | Disponible | `EventCardDrag` (action « Dupliquer », copie en `draft`) |
@@ -84,7 +84,7 @@ distincte) crée/active/désactive les clubs et leurs administrateurs — voir
 - plusieurs canaux de groupe créés par un administrateur, avec liste de participants explicite ;
 - messages persistés et ordonnés côté serveur, reprise après reconnexion et déduplication par identifiant client ;
 - interface façon messagerie mobile : séparateurs de date, accusés de lecture (un ✓ envoyé, deux ✓ lu), emoji, envoi d'images/GIF/vidéos/audio ;
-- messages chiffrés au repos (AES-256-GCM, voir `APP_ENCRYPTION_KEY`) ;
+- texte des messages chiffré en AES-256-GCM lorsque `APP_ENCRYPTION_KEY` est défini (obligatoire en production) ; les pièces jointes, sauvegardes et autres champs ne sont **pas** chiffrés par ce mécanisme ;
 - isolation par `clubId`, contrôle d’accès à chaque lecture/envoi, limite de débit et authentification Socket.IO par la session existante.
 
 ⚠️ Les limites de débit du chat (connexions, actions, messages, handshakes) sont des
@@ -132,7 +132,7 @@ Notifications disponibles :
 
 - liens publics temporaires de 1 à 90 jours ;
 - seul le SHA-256 du token de partage est enregistré ;
-- partage public limité aux données de calendrier, sans téléphone, `personId`, commentaires, rapports ni audit ;
+- le DTO public est une liste blanche calendrier (type, horaires, catégorie, compétition, équipes, stade officiel, météo) ; pas de noms, téléphones, `personId`, commentaires, rapports ni audit ;
 - export CSV UTF-8 protégé contre l'injection de formules tableur ;
 - vue imprimable HTML et export PDF ;
 - abonnement iCal personnel et raccourcis `webcal://`, Google Calendar et Outlook.
@@ -210,8 +210,9 @@ DB_PASSWORD=clubika_password
 # pour les tâches sans contexte de requête (migration JSON initiale, etc.).
 APP_CLUB_ID=afp
 
-# Clé de chiffrement (AES-256-GCM) des messages de chat et des mots de passe SMTP par club
-# enregistrés en base. Obligatoire en production — l'application refuse de démarrer sans elle.
+# Clé de chiffrement (AES-256-GCM) du texte des messages de chat et des mots de passe SMTP
+# par club, enregistrés en base. Ne couvre pas les pièces jointes ni les sauvegardes.
+# Obligatoire en production — l'application refuse de démarrer sans elle.
 # En développement uniquement, son absence dégrade en clair avec un avertissement loggé au
 # démarrage. Générez-la par exemple avec `openssl rand -hex 32`.
 APP_ENCRYPTION_KEY=change-me
@@ -219,6 +220,13 @@ APP_ENCRYPTION_KEY=change-me
 BOOTSTRAP_SUPERADMIN_EMAIL=admin@exemple.fr
 BOOTSTRAP_SUPERADMIN_PASSWORD=change-me
 SESSION_TTL_DAYS=30
+SESSION_IDLE_TTL_HOURS=168
+SESSION_ADMIN_IDLE_TTL_HOURS=12
+SESSION_ADMIN_ABSOLUTE_TTL_DAYS=7
+PLATFORM_SESSION_IDLE_TTL_HOURS=4
+PLATFORM_SESSION_ABSOLUTE_TTL_HOURS=12
+# TRUST_PROXY_HEADERS=true et TRUSTED_PROXY_COUNT=1 uniquement derrière Caddy/nginx.
+# Sans TRUST_PROXY_HEADERS=true, X-Forwarded-For et X-Real-IP sont ignorés.
 
 CRON_SECRET=change-me
 APP_BASE_URL=https://planning.exemple.fr
@@ -229,7 +237,15 @@ APP_BASE_URL=https://planning.exemple.fr
 CHAT_INSTANCE_COUNT=1
 ```
 
-Les variables bootstrap servent uniquement à créer le premier administrateur lorsque la base ne contient aucun utilisateur. Retirez-les après la première connexion.
+Les jetons de session (club et plateforme) ne sont plus stockés en clair : le cookie
+porte le secret, la base un HMAC versionné (`SESSION_TOKEN_PEPPER` ou, à défaut,
+`APP_ENCRYPTION_KEY`). Les durées idle et absolue sont distinctes ; les sessions
+administrateur de club et plateforme sont plus courtes. Derrière un reverse-proxy,
+`TRUST_PROXY_HEADERS=true` est obligatoire pour honorer `X-Forwarded-For` — sinon
+l'en-tête est ignoré. Le profil (`Sessions actives`) permet de révoquer une session
+ou toutes les autres.
+
+Les variables bootstrap servent uniquement à créer le premier administrateur lorsque la base ne contient aucun utilisateur. En production, un second secret (`BOOTSTRAP_APPROVAL`, `PLATFORM_BOOTSTRAP_APPROVAL`) est exigé (double contrôle, issue #32). Retirez-les après la première connexion. L'accès plateforme impose ensuite un TOTP ; les codes de récupération sont hashés et affichés une seule fois.
 
 ### Multi-club
 
@@ -262,11 +278,14 @@ PLATFORM_ADMIN_PASSWORD=change-me
 ```
 
 Comme pour le bootstrap administrateur, ces variables ne servent qu'à créer le premier compte
-plateforme lorsque la table est vide ; retirez-les après la première connexion à `/plateforme`.
+plateforme lorsque la table est vide. En production, `PLATFORM_BOOTSTRAP_APPROVAL` est
+obligatoire. Retirez-les après la première connexion à `/plateforme` et l'enrôlement MFA.
+Le MFA club-admin n'est pas imposé ici : périmètre à trancher par analyse de risque.
 
 ### Email SMTP
 
 ```env
+SMTP_ENABLED=true
 SMTP_HOST=smtp.exemple.fr
 SMTP_PORT=587
 SMTP_USER=notifications@exemple.fr
@@ -275,22 +294,33 @@ SMTP_SECURE=false
 SMTP_FROM=notifications@exemple.fr
 ```
 
+`SMTP_ENABLED` doit valoir exactement `true`. Sans ce drapeau, aucun e-mail n’est envoyé.
+Le port 587 impose STARTTLS avec certificat vérifié ; le port 465 (ou `SMTP_SECURE=true`)
+utilise le TLS implicite. Il n’y a pas de repli en clair. Procédure : `docs/external-services.md`.
+
 Ces variables servent de repli global. Chaque club peut définir son propre serveur SMTP dans
 **Configuration → Personnalisation** (réservé aux administrateurs du club) ; le mot de passe est
 chiffré en base avec `APP_ENCRYPTION_KEY`. Sans SMTP (ni global ni par club), l'application
 continue de fonctionner avec les notifications in-app et les autres canaux configurés.
 
 **`APP_ENCRYPTION_KEY` en développement et en production.** Cette clé chiffre en base (AES-256-GCM)
-les messages de chat et les mots de passe SMTP par club. En développement, son absence dégrade
+le **texte** des messages de chat et les mots de passe SMTP par club. Elle ne couvre pas les
+pièces jointes, les dumps de sauvegarde ni les autres colonnes. En développement, son absence dégrade
 silencieusement vers un stockage en clair (pratique pour démarrer sans configuration, avec un
 avertissement dans les logs serveur). **En production (`NODE_ENV=production`), cette dégradation
 n'est plus tolérée : l'application refuse de démarrer sans `APP_ENCRYPTION_KEY`.** Tant qu'elle
 n'est pas définie, un bandeau d'alerte s'affiche aussi dans le tableau de bord plateforme
 (`/plateforme`).
 
-### WhatsApp optionnel
+### WhatsApp optionnel (désactivé par défaut)
 
-Aucun secret WhatsApp n'est présent dans le dépôt. Sans configuration, le canal reste désactivé.
+Aucun secret WhatsApp n'est présent dans le dépôt. **Le canal reste désactivé** tant que
+`WHATSAPP_PROVIDER` n'est pas posé explicitement à `meta` ou `webhook`. La présence des
+identifiants Meta ou d'une URL de webhook **n'active rien**. Chaque utilisateur doit
+encore consentir dans **Notifications**. Voir [`docs/whatsapp-activation.md`](docs/whatsapp-activation.md)
+(revue contractuelle / #12 / #40 avant toute activation réelle).
+
+Désactivation globale immédiate : vider `WHATSAPP_PROVIDER` et redémarrer.
 
 #### Meta WhatsApp Cloud API
 
@@ -308,12 +338,13 @@ WHATSAPP_META_TEMPLATE_LANGUAGE=fr
 
 Le template Meta attendu reçoit deux paramètres de corps : le titre puis le message. Il doit être créé et approuvé dans WhatsApp Business Manager avant activation. Si aucun template n'est configuré, l'adaptateur envoie un message texte, utilisable uniquement lorsque les règles de la fenêtre de conversation Meta le permettent.
 
-#### Webhook générique conservé
+#### Webhook générique
 
 ```env
 WHATSAPP_PROVIDER=webhook
 NOTIFICATION_WHATSAPP_WEBHOOK_URL=https://provider.example/whatsapp
 NOTIFICATION_WHATSAPP_WEBHOOK_TOKEN=change-me
+# WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT=true  # seulement si le prestataire a besoin d'identifiants d'événement
 ```
 
 ### PWA / Web Push
@@ -324,21 +355,29 @@ Générez les clés VAPID avec :
 node scripts/generate-vapid-keys.mjs
 ```
 
-Configurez ensuite les variables VAPID indiquées par le script dans votre `.env`. Ne commitez jamais les clés privées.
+Configurez ensuite les variables VAPID indiquées par le script **et** `WEB_PUSH_ENABLED=true`.
+Ne commitez jamais les clés privées. Sans ce drapeau, aucun push n’est envoyé.
 
 ### Routage et météo
 
-Open-Meteo est le provider météo par défaut. Pour le mode gratuit non commercial, aucune clé API ni compte n'est nécessaire. Les URLs ci-dessous sont optionnelles : elles permettent seulement de remplacer les endpoints par défaut.
+Désactivés par défaut (issue #30). Il n’y a **pas** de fallback vers
+`router.project-osrm.org` ni vers les API publiques Open-Meteo en production.
+Pour activer, après revue juridique :
 
 ```env
-ROUTING_API_BASE_URL=https://router.project-osrm.org
-OPEN_METEO_GEOCODING_URL=https://geocoding-api.open-meteo.com/v1/search
+ROUTING_ENABLED=true
+ROUTING_API_BASE_URL=https://osrm.votre-infra.example
+OPEN_METEO_ENABLED=true
 OPEN_METEO_FORECAST_URL=https://api.open-meteo.com/v1/forecast
+OPEN_METEO_GEOCODING_URL=https://geocoding-api.open-meteo.com/v1/search
 ```
 
-La météo utilise le lieu de l'événement ou les coordonnées de ressource, avec timeout court. Le géocodage et la prévision sont mis en cache en mémoire côté serveur (respectivement 30 et 5 minutes), partagés entre tous les utilisateurs consultant le même lieu ou le même jour — les appels réseau à Open-Meteo eux-mêmes désactivent explicitement le cache HTTP (`cache: 'no-store'`) puisque c'est ce cache applicatif qui fait foi. Une panne du routage ou de la météo ne bloque jamais une écriture du planning ; l'information est simplement signalée comme indisponible.
+Le drapeau club « Trajet et météo » peut en plus être coupé sans perte de données.
+Une panne du routage ou de la météo ne bloque jamais une écriture du planning.
 
-Les données Open-Meteo nécessitent une attribution. L'interface affiche la source. Vérifiez les conditions Open-Meteo si l'application devient commerciale ; leur API publique gratuite est destinée à l'usage non commercial.
+Les données Open-Meteo nécessitent une attribution. Vérifiez les conditions du
+prestataire si l’application devient commerciale. Détail des kill switches :
+[`docs/external-services.md`](docs/external-services.md).
 
 ### Relances automatiques GitHub Actions
 
@@ -367,7 +406,7 @@ dans [`docs/decisions/json-payloads-cartography.md`](docs/decisions/json-payload
 
 Le chemin prévu pour un VPS (OVH, Debian, domaine `clubika.com`) est décrit dans
 [`deploy/README.md`](deploy/README.md) : Docker Compose (une instance de l'app + MariaDB),
-Caddy en HTTPS, cron local (relances, scraper, dumps). Copiez
+Caddy en HTTPS, cron local (relances, scraper no-op tant que la synchro externe n'est pas licenciée, dumps). Copiez
 `deploy/.env.production.example` vers `deploy/.env` et remplissez les secrets
 **avant** le premier `docker compose up`.
 

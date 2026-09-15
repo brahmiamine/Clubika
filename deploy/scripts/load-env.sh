@@ -29,6 +29,7 @@ load_secret() {
 load_secret DB_PASSWORD db_password
 load_secret MARIADB_ROOT_PASSWORD mariadb_root_password
 load_secret APP_ENCRYPTION_KEY app_encryption_key
+load_secret BACKUP_ENCRYPTION_KEY backup_encryption_key
 load_secret CRON_SECRET cron_secret
 load_secret DB_BACKUP_PASSWORD db_backup_password
 load_secret DB_RESTORE_PASSWORD db_restore_password

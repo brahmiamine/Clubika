@@ -59,20 +59,24 @@ openssl rand -base64 24 > secrets/db_password
 openssl rand -base64 24 > secrets/db_backup_password
 openssl rand -base64 24 > secrets/db_restore_password
 openssl rand -hex 32 > secrets/app_encryption_key
+openssl rand -hex 32 > secrets/backup_encryption_key
 openssl rand -hex 32 > secrets/cron_secret
 chmod 600 secrets/*
 ```
 
-Éditer `.env` : `APP_BASE_URL`, e-mails de bootstrap, `HOST_FIREWALL_CONFIRMED=1`.
+Éditer `.env` : `APP_BASE_URL`, e-mails de bootstrap, `BOOTSTRAP_APPROVAL` /
+`PLATFORM_BOOTSTRAP_APPROVAL` (issue #32), `HOST_FIREWALL_CONFIRMED=1`.
 Mots de passe bootstrap (optionnels) : `secrets/bootstrap_superadmin_password`
 et `secrets/platform_admin_password`.
 
 Clés VAPID : `node scripts/generate-vapid-keys.mjs` depuis la racine du dépôt,
-clé publique dans `.env`, clé privée dans `secrets/vapid_private_key`.
+clé publique dans `.env` (`VAPID_PUBLIC_KEY` et `NEXT_PUBLIC_VAPID_PUBLIC_KEY`),
+clé privée dans `secrets/vapid_private_key`. SMTP : `secrets/smtp_password`.
 
-Sauvegardez **tout le répertoire `secrets/`** hors du VPS. La clé de
-chiffrement n’est pas dans MariaDB : la perdre rend les messages de chat
-déjà chiffrés illisibles.
+Sauvegardez **tout le répertoire `secrets/`** hors du VPS, **séparément** des
+dumps. `app_encryption_key` et `backup_encryption_key` doivent être **distinctes**.
+Les perdre rend les messages `enc:v2` (clé app) et les dumps `.sql.gz.enc` (clé
+backup) illisibles. Les pièces jointes ne sont pas chiffrées par la clé app.
 
 ## 4. Lancer
 
@@ -108,12 +112,25 @@ sudo timedatectl set-timezone Europe/Paris
 Cela installe (crontab utilisateur) :
 
 - relances planning chaque heure à :15 (`CRON_SECRET` fichier)
-- scraper 7h / 12h / 18h
+- scraper 7h / 12h / 18h (no-op tant que `SPORTCORICO_SYNC_ENABLED` n’est pas `true` et qu’une licence écrite n’a pas été validée)
 - dump MariaDB quotidien à 3h20 dans `deploy/backups/` (14 jours) avec
-  l’identité SQL `clubika_backup` (SELECT, pas root)
+  l’identité SQL `clubika_backup` (SELECT, pas root), **chiffré** AES-256-GCM
+  (`.sql.gz.enc` + `.sha256`). Sans `secrets/backup_encryption_key` le job refuse
+  d’écrire un dump en clair.
 
-La sauvegarde OVH « 1 jour » ne replace pas ces dumps. Copiez aussi les `.sql.gz`
-**et** `deploy/secrets/` ailleurs.
+La sauvegarde OVH « 1 jour » ne remplace pas ces dumps. Copiez les `.enc` **et**
+`deploy/secrets/` sur des supports **séparés**.
+
+Preuve de restauration (sans importer) :
+
+```bash
+./scripts/restore-mariadb.sh --verify backups/clubika-….sql.gz.enc
+```
+
+Rotation de `APP_ENCRYPTION_KEY` : ajouter la nouvelle clé comme active, l’ancienne
+dans `APP_ENCRYPTION_PREVIOUS_KEYS`, `pnpm exec tsx scripts/rotate-encryption-keys.ts`
+puis `--apply`, ensuite retirer l’ancienne du ring. Compromission : même rotation
+en urgence, révoquer les sessions (#29) et les jetons d’invitation.
 
 Ne pas activer le schedule GitHub Actions des relances si ce cron tourne déjà
 (doublon). Voir `PLANNING_REMINDERS.md`.
@@ -143,12 +160,14 @@ Mise à jour applicative sur le VPS :
 ## 7. Restaurer un dump
 
 ```bash
-./scripts/restore-mariadb.sh backups/clubika-AAAA.MM.JJ-HHMMSS.sql.gz
+./scripts/restore-mariadb.sh --verify backups/clubika-….sql.gz.enc
+# environnement isolé :
+./scripts/restore-mariadb.sh --restore backups/clubika-….sql.gz.enc
 ```
 
 Identité `clubika_restore` (DDL/DML sur la base applicative, pas root). Puis
-redémarrer `app`. Remettre **la même** `secrets/app_encryption_key` qu’au moment
-du dump.
+redémarrer `app`. Remettre **la même** `secrets/app_encryption_key` (et
+`APP_ENCRYPTION_PREVIOUS_KEYS` si une rotation était en cours) qu’au moment du dump.
 
 ## 8. Rollback
 

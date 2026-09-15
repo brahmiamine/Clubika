@@ -37,6 +37,7 @@ required_secrets=(
   db_backup_password
   db_restore_password
   app_encryption_key
+  backup_encryption_key
   cron_secret
 )
 for name in "${required_secrets[@]}"; do
@@ -58,6 +59,7 @@ forbidden_env_keys=(
   DB_PASSWORD
   MARIADB_ROOT_PASSWORD
   APP_ENCRYPTION_KEY
+  BACKUP_ENCRYPTION_KEY
   CRON_SECRET
   DB_BACKUP_PASSWORD
   DB_RESTORE_PASSWORD
@@ -90,6 +92,9 @@ restore_password="$(tr -d '\r\n' < "${SECRETS_DIR}/db_restore_password")"
 [[ "$backup_password" != "$app_password" ]] || fail "db_backup_password doit être distinct du mot de passe applicatif"
 [[ "$restore_password" != "$app_password" ]] || fail "db_restore_password doit être distinct du mot de passe applicatif"
 [[ "$backup_password" != "$restore_password" ]] || fail "backup et restore doivent avoir des secrets distincts"
+app_key="$(tr -d '\r\n' < "${SECRETS_DIR}/app_encryption_key")"
+backup_key="$(tr -d '\r\n' < "${SECRETS_DIR}/backup_encryption_key")"
+[[ "$app_key" != "$backup_key" ]] || fail "backup_encryption_key doit être distincte de app_encryption_key"
 
 for name in "${required_secrets[@]}"; do
   value="$(tr -d '\r\n' < "${SECRETS_DIR}/${name}")"
