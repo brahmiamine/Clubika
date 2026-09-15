@@ -139,6 +139,13 @@ ensuite la colonne en NOT NULL et crée l'index tenant
 absente au passage de `0009` : la migration n'a rien à remplir et `0018`
 crée directement la colonne NOT NULL.
 
+La migration `0027` ([`audit-sportcorico-data.ts`](../app/lib/db/migrations/audit-sportcorico-data.ts),
+issue #5) inventorie les payloads SportCorico déjà stockés. Par défaut elle
+n’écrit rien (dry-run, compteurs uniquement). La quarantaine réelle exige
+`SPORTCORICO_DATA_PURGE=apply` et se lance avec `pnpm run sportcorico:quarantine`
+après une sauvegarde — voir
+[`docs/sportcorico-data-quarantine.md`](./sportcorico-data-quarantine.md).
+
 Restent hors périmètre volontairement : les `ALTER TABLE` défensifs du
 `json-migrator` (migration de données héritées JSON → SQL, bornée par marqueur et
 vérifications `information_schema`). L'évolution courante des colonnes d'entités

@@ -2,6 +2,8 @@ import { buildNotificationClubIconPath, PWA_NOTIFICATION_ICON } from '@/lib/pwa/
 import type { DataSource } from 'typeorm';
 import webPush from 'web-push';
 import { buildVapidAuthorization, getVapidConfig } from './vapid';
+import { isExternalServiceEnabled, guardedFetch } from '@/lib/compliance/external-services';
+import { isTrustedPushEndpoint } from './endpoint';
 import {
   listPushSubscriptionsForUser,
   removePushSubscriptionByEndpoint,
@@ -16,7 +18,7 @@ async function sendWakeUpPush(endpoint: string): Promise<Response> {
     throw new Error('VAPID configuration is missing');
   }
 
-  return fetch(endpoint, {
+  return guardedFetch('web-push', endpoint, {
     method: 'POST',
     headers: {
       Authorization: buildVapidAuthorization(endpoint, config),
@@ -92,7 +94,7 @@ export async function triggerPushForUser(
   userId: number,
   payload: PushNotificationPayload,
 ): Promise<void> {
-  if (!getVapidConfig()) return;
+  if (!isExternalServiceEnabled('web-push') || !getVapidConfig()) return;
 
   try {
     const subscriptions = await listPushSubscriptionsForUser(db, userId);
@@ -100,6 +102,7 @@ export async function triggerPushForUser(
     await Promise.all(
       subscriptions.map(async (subscription) => {
         try {
+          if (!isTrustedPushEndpoint(subscription.endpoint)) return;
           await sendPayloadPush(subscription, payload);
         } catch (error) {
           const status = pushStatusCode(error);
