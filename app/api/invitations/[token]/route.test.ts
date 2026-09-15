@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
-import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { createTestUserAndSession, enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import type { InvitationEntity } from '@/lib/db/schemas';
 import { hashInvitationToken, maskEmail } from '@/lib/auth/invitation-tokens';
 import { hashBucketComponent } from '@/lib/auth/login-rate-limit';
@@ -15,13 +15,21 @@ import { saveAppSettings } from '@/lib/settings-store';
 
 const dbAvailable = await isDbAvailable();
 
-function getRequest(token: string, ip = randomBytes(8).toString('hex')) {
+let restoreProxy: (() => void) | undefined;
+beforeEach(() => {
+  restoreProxy = enableTrustedProxyHeaders();
+});
+afterEach(() => {
+  restoreProxy?.();
+});
+
+function getRequest(token: string, ip = uniqueTestIp()) {
   return new NextRequest(`http://localhost/api/invitations/${token}`, {
     headers: { 'x-forwarded-for': ip },
   });
 }
 
-function contextRequest(contextToken: string, ip = randomBytes(8).toString('hex')) {
+function contextRequest(contextToken: string, ip = uniqueTestIp()) {
   return new NextRequest('http://localhost/api/invitations/context', {
     headers: {
       'x-forwarded-for': ip,
@@ -74,7 +82,7 @@ async function cleanupRateLimit(ip: string, token: string) {
 describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)', () => {
   it('reports an unknown token as invalid without authentication', async () => {
     const token = 'unknown-token';
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     try {
       const response = await GET(getRequest(token, ip), { params: { token } });
       expect(response.status).toBe(404);
@@ -94,7 +102,7 @@ describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)',
     const live = await makeInvitation(clubId, admin.user.id);
     const used = await makeInvitation(clubId, admin.user.id, { usedAt: new Date() });
     const expired = await makeInvitation(clubId, admin.user.id, { expiresAt: new Date(Date.now() - 1000) });
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
 
     try {
       const liveResponse = await GET(getRequest(live.rawToken, ip), { params: { token: live.rawToken } });
@@ -146,7 +154,7 @@ describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)',
     const admin = await createTestUserAndSession('admin', { clubId });
     const live = await makeInvitation(clubId, admin.user.id);
     const db = await getDb();
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
 
     try {
       await saveAppSettings(db, clubId, {
@@ -180,7 +188,7 @@ describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)',
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const admin = await createTestUserAndSession('admin', { clubId });
     const live = await makeInvitation(clubId, admin.user.id);
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
 
     try {
       const exchange = await GET(getRequest(live.rawToken, ip), { params: { token: live.rawToken } });
@@ -209,7 +217,7 @@ describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)',
     const adminA = await createTestUserAndSession('admin', { clubId: clubA });
     const adminB = await createTestUserAndSession('admin', { clubId: clubB });
     const otherExpired = await makeInvitation(clubB, adminB.user.id, { expiresAt: new Date(Date.now() - 1000) });
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
 
     try {
       const response = await GET(getRequest(otherExpired.rawToken, ip), { params: { token: otherExpired.rawToken } });
@@ -230,7 +238,7 @@ describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)',
   });
 
   it('renvoie 429 après 5 sondes GET sur un jeton invalide depuis la même IP', async () => {
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     const token = `invalid-probe-${randomBytes(8).toString('hex')}`;
     try {
       for (let i = 0; i < 5; i += 1) {

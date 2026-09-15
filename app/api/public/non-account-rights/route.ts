@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isClubTenantActive } from '@/lib/db/club-tenants';
+import { logError } from '@/lib/observability/log';
 import {
   checkCapabilityIpRateLimit,
   recordCapabilityIpAttempt,
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const lifecycle = contactLifecycleResponse(error);
     if (lifecycle) return lifecycle;
-    console.error('Error recording public non-account rights request:', error);
+    logError('app.unhandled', 'Error recording public non-account rights request:', error);
     return NextResponse.json({ error: 'Demande impossible pour le moment.' }, { status: 500 });
   }
 }

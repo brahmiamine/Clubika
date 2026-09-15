@@ -1,4 +1,5 @@
 import type { DataSource } from 'typeorm';
+import { logError } from '@/lib/observability/log';
 import {
   RETENTION_CATEGORIES,
   retentionBatchSize,
@@ -426,7 +427,7 @@ export async function runRetentionPurge(
           deleted: 0,
           error: 'category_failed',
         });
-        console.error('[retention-purge] category failed', category.id, error instanceof Error ? error.name : 'error');
+        logError('app.unhandled', '[retention-purge] category failed', category.id, error instanceof Error ? error.name : 'error');
       }
       continue;
     }
@@ -445,7 +446,7 @@ export async function runRetentionPurge(
           deleted: 0,
           error: 'category_failed',
         });
-        console.error('[retention-purge] category failed', category.id, error instanceof Error ? error.name : 'error');
+        logError('app.unhandled', '[retention-purge] category failed', category.id, error instanceof Error ? error.name : 'error');
       }
     }
     if (category.id === 'sessions') {
@@ -461,7 +462,7 @@ export async function runRetentionPurge(
           deleted: 0,
           error: 'category_failed',
         });
-        console.error('[retention-purge] category failed', category.id, error instanceof Error ? error.name : 'error');
+        logError('app.unhandled', '[retention-purge] category failed', category.id, error instanceof Error ? error.name : 'error');
       }
     }
   }
@@ -486,7 +487,7 @@ export async function runRetentionPurge(
   try {
     await recordPurgeRun(db, report);
   } catch (error) {
-    console.error('[retention-purge] run journal failed', error instanceof Error ? error.name : 'error');
+    logError('app.unhandled', '[retention-purge] run journal failed', error instanceof Error ? error.name : 'error');
   }
   return report;
 }

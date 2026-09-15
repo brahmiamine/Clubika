@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth/require';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { importContactCsv } from '@/lib/non-account-contacts/csv';
 import { contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
+import { logError } from '@/lib/observability/log';
 
 export async function POST(request: NextRequest) {
   const auth = await requireRole(request, ['admin']);
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const lifecycle = contactLifecycleResponse(error);
     if (lifecycle) return lifecycle;
-    console.error('Error importing non-account contacts:', error);
+    logError('app.unhandled', 'Error importing non-account contacts:', error);
     return NextResponse.json({ error: 'Import impossible' }, { status: 500 });
   }
 }

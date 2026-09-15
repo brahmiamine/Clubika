@@ -6,6 +6,7 @@ import { setCurrentClubId } from '@/lib/auth/club-context';
 import { PRIVACY_NO_LEGAL_PROMISE } from '@/lib/privacy/catalog';
 import { createPrivacyRequest } from '@/lib/privacy/requests';
 import { issueExportToken } from '@/lib/privacy/download';
+import { logError } from '@/lib/observability/log';
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
       formats: ['json', 'html'],
     });
   } catch (error) {
-    console.error('Privacy export issue failed:', error);
+    logError('app.unhandled', 'Privacy export issue failed:', error);
     return NextResponse.json({ error: 'Impossible de préparer l’export' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { cronMayPurge, PRIVACY_NO_LEGAL_PROMISE } from '@/lib/tenant-offboarding/constants';
 import { listFrozenClubsDue, purgeClub } from '@/lib/tenant-offboarding/purge';
+import { logError } from '@/lib/observability/log';
 
 function safeSecretEquals(provided: string, expected: string): boolean {
   const providedBuffer = Buffer.from(provided, 'utf8');
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
       reports,
     });
   } catch (error) {
-    console.error('tenant offboarding cron error:', error);
+    logError('app.unhandled', 'tenant offboarding cron error:', error);
     return NextResponse.json({ error: 'Offboarding cron failed' }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { getDb } from '@/lib/db';
 import { requirePlatformAuth } from '@/lib/auth/platform-require';
 import { OffboardingError } from '@/lib/tenant-offboarding/errors';
 import { consumeExport } from '@/lib/tenant-offboarding/export';
+import { logError } from '@/lib/observability/log';
 
 export async function GET(
   request: NextRequest,
@@ -31,7 +32,7 @@ export async function GET(
     if (error instanceof OffboardingError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error('tenant export download error:', error);
+    logError('app.unhandled', 'tenant export download error:', error);
     return NextResponse.json({ error: 'Impossible de télécharger l’export' }, { status: 500 });
   }
 }

@@ -190,7 +190,7 @@ export async function PUT(request: NextRequest) {
       expiresAt,
     );
   } catch (error) {
-    console.error('Error during platform MFA verify:', error);
+    logError('app.unhandled', 'Error during platform MFA verify:', error);
     return NextResponse.json({ error: 'Une erreur est survenue' }, { status: 500 });
   }
 }

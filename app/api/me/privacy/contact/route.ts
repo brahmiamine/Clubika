@@ -6,6 +6,7 @@ import { setCurrentClubId } from '@/lib/auth/club-context';
 import { PRIVACY_NO_LEGAL_PROMISE } from '@/lib/privacy/catalog';
 import { createPrivacyRequest } from '@/lib/privacy/requests';
 import { requestEmailChange, updateSubjectPhone } from '@/lib/privacy/rectify';
+import { logError } from '@/lib/observability/log';
 
 export async function PATCH(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -60,7 +61,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ error: 'Aucun champ à rectifier' }, { status: 400 });
   } catch (error) {
-    console.error('Privacy contact update failed:', error);
+    logError('app.unhandled', 'Privacy contact update failed:', error);
     return NextResponse.json({ error: 'Impossible de rectifier le contact' }, { status: 500 });
   }
 }

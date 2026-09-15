@@ -6,6 +6,7 @@ import { setCurrentClubId } from '@/lib/auth/club-context';
 import { applyRightsAction, serializeRightsRequest } from '@/lib/non-account-contacts/rights';
 import { contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
 import { ContactLifecycleError } from '@/lib/non-account-contacts/constants';
+import { logError } from '@/lib/observability/log';
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole(request, ['admin']);
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ requests: rows.map(serializeRightsRequest) });
   } catch (error) {
-    console.error('Error listing non-account rights requests:', error);
+    logError('app.unhandled', 'Error listing non-account rights requests:', error);
     return NextResponse.json({ error: 'Impossible de charger les demandes' }, { status: 500 });
   }
 }
@@ -60,7 +61,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     const lifecycle = contactLifecycleResponse(error);
     if (lifecycle) return lifecycle;
-    console.error('Error processing non-account rights request:', error);
+    logError('app.unhandled', 'Error processing non-account rights request:', error);
     return NextResponse.json({ error: 'Traitement impossible' }, { status: 500 });
   }
 }

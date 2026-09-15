@@ -8,6 +8,7 @@ import { loadContactMeta, loadNoticeConfig, serializeMeta, upsertNoticeConfig } 
 import { maskTelephone } from '@/lib/non-account-contacts/format';
 import { PRIVACY_NO_LEGAL_PROMISE } from '@/lib/non-account-contacts/constants';
 import { contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
+import { logError } from '@/lib/observability/log';
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole(request, ['admin']);
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Error listing non-account contacts:', error);
+    logError('app.unhandled', 'Error listing non-account contacts:', error);
     return NextResponse.json({ error: 'Impossible de charger les fiches sans compte' }, { status: 500 });
   }
 }
@@ -68,7 +69,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     const lifecycle = contactLifecycleResponse(error);
     if (lifecycle) return lifecycle;
-    console.error('Error updating notice config:', error);
+    logError('app.unhandled', 'Error updating notice config:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer la notice' }, { status: 500 });
   }
 }
