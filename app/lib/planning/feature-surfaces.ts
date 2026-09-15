@@ -106,6 +106,7 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
     routes: [
       'app/api/planning/events/[eventType]/[eventId]/collaboration/route.ts',
       'app/api/planning/events/[eventType]/[eventId]/reports/route.ts',
+      'app/api/planning/events/[eventType]/[eventId]/reports/[reportId]/route.ts',
       'app/api/planning/events/[eventType]/[eventId]/attachments/route.ts',
       'app/api/planning/attachments/[id]/route.ts',
     ],

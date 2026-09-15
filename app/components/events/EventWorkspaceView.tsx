@@ -42,7 +42,14 @@ type PlanningStatus = 'draft' | 'published' | 'modified' | 'cancelled';
 interface RecordItem<T> { id: string; payload: T; }
 interface CommentPayload { text: string; authorName: string; createdAt: string; authorUserId: number; }
 interface TaskPayload { label: string; description: string | null; dueAt: string | null; completedAt: string | null; assigneeUserId: number | null; }
-interface ReportPayload { category: string; text: string; authorName: string; authorRole: string; createdAt: string; }
+interface VisibleReport {
+  id: string;
+  category: string;
+  createdAt: string;
+  text: string;
+  canUpdate: boolean;
+  canDelete: boolean;
+}
 interface Attachment { id: string; fileName: string; mimeType: string; sizeBytes: number; createdAt: string; }
 interface EventSnapshot extends PlanningEventSnapshot {
   myRoles?: PlanningRole[];
@@ -135,7 +142,7 @@ export function EventWorkspaceView({
   const [eventDetails, setEventDetails] = useState<EventSnapshot | null>(null);
   const [comments, setComments] = useState<Array<RecordItem<CommentPayload>>>([]);
   const [tasks, setTasks] = useState<Array<RecordItem<TaskPayload>>>([]);
-  const [reports, setReports] = useState<Array<RecordItem<ReportPayload>>>([]);
+  const [reports, setReports] = useState<VisibleReport[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [weather, setWeather] = useState<WeatherResult | null>(null);
   const [canManage, setCanManage] = useState(false);
@@ -144,6 +151,8 @@ export function EventWorkspaceView({
   const [task, setTask] = useState('');
   const [report, setReport] = useState('');
   const [reportCategory, setReportCategory] = useState('organisation');
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [editingReportText, setEditingReportText] = useState('');
   const [loading, setLoading] = useState(true);
   const [editingDetails, setEditingDetails] = useState(false);
   const [editingAssignments, setEditingAssignments] = useState(false);
@@ -163,7 +172,7 @@ export function EventWorkspaceView({
       } = await loadEventWorkspaceModules<
         EventSnapshot,
         { comments: Array<RecordItem<CommentPayload>>; tasks: Array<RecordItem<TaskPayload>>; canManage: boolean },
-        { reports: Array<RecordItem<ReportPayload>>; canSubmit: boolean },
+        { reports: VisibleReport[]; canSubmit: boolean },
         { attachments: Attachment[]; canManage: boolean },
         WeatherResult
       >({
@@ -214,6 +223,24 @@ export function EventWorkspaceView({
       toast.success('Rapport envoyé');
       await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : 'Rapport impossible'); }
+  };
+
+  const saveReportEdit = async (id: string) => {
+    try {
+      await apiPatch(withScope(`${base}/reports/${encodeURIComponent(id)}`), { text: editingReportText });
+      setEditingReportId(null);
+      setEditingReportText('');
+      toast.success('Rapport mis à jour');
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Modification impossible'); }
+  };
+
+  const removeReport = async (id: string) => {
+    try {
+      await apiDelete(withScope(`${base}/reports/${encodeURIComponent(id)}`));
+      toast.success('Rapport supprimé');
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : 'Suppression impossible'); }
   };
 
   const setAttendance = async (
@@ -539,7 +566,35 @@ export function EventWorkspaceView({
               <CardHeader><CardTitle className="text-base">Rapports post-événement</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {canSubmitReport && <div className="space-y-2"><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}><option value="organisation">Organisation</option><option value="incident">Incident</option><option value="sportif">Sportif</option><option value="other">Autre</option></select><p className="text-xs text-muted-foreground">{NO_SENSITIVE_PERSONAL_DATA_WARNING}</p><textarea className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm" value={report} onChange={(event) => setReport(event.target.value)} placeholder="Compte rendu / incident / remarque..." /><Button onClick={addReport} disabled={!report.trim()}>Envoyer le rapport</Button></div>}
-                {reports.length ? reports.map((item) => <div key={item.id} className="rounded-md border p-3"><div className="mb-1 flex items-center gap-2"><Badge variant="outline">{item.payload.category}</Badge><span className="text-xs text-muted-foreground">{item.payload.authorName}</span></div><p className="whitespace-pre-wrap text-sm">{item.payload.text}</p></div>) : <p className="text-sm text-muted-foreground">Aucun rapport.</p>}
+                {reports.length ? reports.map((item) => (
+                  <div key={item.id} className="rounded-md border p-3 space-y-2">
+                    <div className="mb-1 flex items-center gap-2">
+                      <Badge variant="outline">{item.category}</Badge>
+                      <span className="text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString('fr-FR')}</span>
+                    </div>
+                    {editingReportId === item.id ? (
+                      <div className="space-y-2">
+                        <textarea className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm" value={editingReportText} onChange={(event) => setEditingReportText(event.target.value)} />
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => void saveReportEdit(item.id)} disabled={!editingReportText.trim()}>Enregistrer</Button>
+                          <Button size="sm" variant="outline" onClick={() => { setEditingReportId(null); setEditingReportText(''); }}>Annuler</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap text-sm">{item.text}</p>
+                    )}
+                    {!readOnly && (item.canUpdate || item.canDelete) && editingReportId !== item.id && (
+                      <div className="flex gap-2">
+                        {item.canUpdate && (
+                          <Button size="sm" variant="outline" onClick={() => { setEditingReportId(item.id); setEditingReportText(item.text); }}>Corriger</Button>
+                        )}
+                        {item.canDelete && (
+                          <Button size="sm" variant="destructive" onClick={() => void removeReport(item.id)}>Supprimer</Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )) : <p className="text-sm text-muted-foreground">Aucun rapport.</p>}
               </CardContent>
             </Card>
           </section>
