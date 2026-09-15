@@ -20,6 +20,7 @@ describe('canOfferPwaInstall', () => {
     expect(canOfferPwaInstall('/partage/token', 'dirigeant')).toBe(false);
     expect(canOfferPwaInstall('/mot-de-passe-oublie', 'admin')).toBe(false);
     expect(canOfferPwaInstall('/inscription/abc', 'dirigeant')).toBe(false);
+    expect(canOfferPwaInstall('/inscription', 'dirigeant')).toBe(false);
   });
 
   it('refuse l’installation sur l’espace plateforme', () => {

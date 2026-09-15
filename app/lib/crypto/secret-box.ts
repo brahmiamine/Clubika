@@ -1,3 +1,4 @@
+import { logError, logWarn } from '@/lib/observability/log';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -42,7 +43,8 @@ function loadKeyRing(): KeyRing | null {
   const secret = process.env.APP_ENCRYPTION_KEY?.trim();
   if (!secret) {
     cachedRing = null;
-    console.warn(
+    logWarn(
+      'app.unhandled',
       '[crypto] APP_ENCRYPTION_KEY non défini — les messages de chat et les mots de passe SMTP sont enregistrés en clair. Définissez cette variable avant la mise en production.',
     );
     return null;
@@ -50,7 +52,7 @@ function loadKeyRing(): KeyRing | null {
   const activeId = (process.env.APP_ENCRYPTION_KEY_ID?.trim() || 'k1');
   if (!KEY_ID_PATTERN.test(activeId)) {
     cachedRing = null;
-    console.error('[crypto] APP_ENCRYPTION_KEY_ID invalide.');
+    logError('app.unhandled', '[crypto] APP_ENCRYPTION_KEY_ID invalide.');
     return null;
   }
   const keys = parsePreviousKeys(process.env.APP_ENCRYPTION_PREVIOUS_KEYS);
@@ -150,14 +152,13 @@ export function decryptSecret(stored: string): string | null {
 
   const ring = loadKeyRing();
   if (!ring) {
-    console.error(
-      '[crypto] Déchiffrement impossible : APP_ENCRYPTION_KEY non défini alors qu\'une valeur chiffrée existe.',
-    );
+    logError('crypto.decrypt_failed');
     return null;
   }
   const plain = isV2 ? decryptV2(stored, ring) : decryptV1(stored, ring);
   if (plain === null) {
-    console.error('[crypto] Déchiffrement impossible : clé invalide, key-id inconnu ou donnée corrompue.');
+    logError('crypto.decrypt_failed');
+    return null;
   }
   return plain;
 }

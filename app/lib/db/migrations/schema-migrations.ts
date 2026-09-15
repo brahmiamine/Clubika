@@ -9,6 +9,10 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { disableScraperSyncOnAllClubs } from './disable-sportcorico-sync';
+import { migrateHealthDataFields } from './remove-health-data';
+import { runSportCoricoDataAudit } from './audit-sportcorico-data';
+import { purgeOutboxLastError } from './purge-outbox-last-error';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -57,6 +61,13 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  * `chat_messages`.
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
+ *
+ * La migration 0030 (issue #35) stocke les rapports CSP sanitizés (hôtes + directive,
+ * jamais d'URI complète). Rétention 7 jours, purge à l'écriture.
+ *
+ * La migration 0031 (issue #23) ajoute `scan_status` aux pièces jointes chat/planning :
+ * seuls les fichiers `clean` sont téléchargeables. Les lignes existantes sont marquées
+ * `clean` (DEFAULT) ; les nouveaux uploads passent par l’inspection avant INSERT.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -446,6 +457,78 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         PRIMARY KEY (messageId, userId, emoji),
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0025',
+    name: 'desactiver_scraper_sync_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('disable-sportcorico-sync.ts'),
+    up: async (db) => {
+      await disableScraperSyncOnAllClubs(db);
+    },
+  },
+  {
+    version: '0026',
+    name: 'retirer_donnees_sante_structurees',
+    statements: [],
+    logic: readMigrationLogicFile('remove-health-data.ts'),
+    up: async (db) => {
+      await migrateHealthDataFields(db);
+    },
+  },
+  {
+    version: '0027',
+    name: 'audit_quarantaine_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('audit-sportcorico-data.ts'),
+    up: async (db) => {
+      await runSportCoricoDataAudit(db);
+    },
+  },
+  {
+    version: '0028',
+    name: 'purge_outbox_last_error_messages',
+    statements: [],
+    logic: readMigrationLogicFile('purge-outbox-last-error.ts'),
+    up: async (db) => {
+      await purgeOutboxLastError(db);
+    },
+  },
+  {
+    version: '0029',
+    name: 'invitation_validation_context',
+    // Contexte d'échange court (cookie httpOnly) pour retirer le jeton d'URL
+    // de l'historique après validation publique (issue #34). Colonnes nullables :
+    // les invitations déjà émises n'ont pas encore de contexte.
+    statements: [
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextHash VARCHAR(64) NULL AFTER createdAt',
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextExpiresAt DATETIME(6) NULL AFTER validationContextHash',
+      'CREATE INDEX IF NOT EXISTS idx_invitations_validation_context ON invitations (validationContextHash)',
+    ],
+  },
+  {
+    version: '0030',
+    name: 'csp_reports_sanitized',
+    statements: [
+      `CREATE TABLE IF NOT EXISTS csp_reports (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        document_host VARCHAR(255) NOT NULL,
+        blocked_host VARCHAR(255) NULL,
+        violated_directive VARCHAR(64) NOT NULL,
+        disposition VARCHAR(16) NOT NULL,
+        PRIMARY KEY (id),
+        INDEX idx_csp_reports_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0031',
+    name: 'attachment_scan_status',
+    statements: [
+      "ALTER TABLE chat_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
+      "ALTER TABLE planning_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
     ],
   },
 ];

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, sent, roles });
   } catch (error) {
-    console.error('Manual planning reminder failed:', error);
+    logError('app.unhandled', 'Manual planning reminder failed:', error);
     return NextResponse.json({ error: 'Impossible d’envoyer la relance' }, { status: 500 });
   }
 }

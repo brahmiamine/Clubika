@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { planningFeatureGuard } from '@/lib/planning/feature-guard';
@@ -143,7 +144,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Erreur GET ical feed:', error);
+    logError('app.unhandled', 'Erreur GET ical feed:', error);
     return NextResponse.json({ error: 'Une erreur est survenue' }, { status: 500 });
   }
 }

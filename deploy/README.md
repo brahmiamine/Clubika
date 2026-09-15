@@ -34,7 +34,9 @@ Remplir `.env` :
 - SMTP si vous voulez les e-mails
 
 Sauvegardez `.env` **hors du VPS**, séparément des dumps. Les clés de chiffrement
-ne sont pas dans MariaDB : les perdre rend les messages `enc:v2` illisibles.
+ne sont pas dans MariaDB : les perdre rend les messages `enc:v2` illisibles. Les
+pièces jointes et les dumps SQL ne sont pas chiffrés par `APP_ENCRYPTION_KEY`
+(les dumps le sont par `BACKUP_ENCRYPTION_KEY`).
 
 ## 4. Lancer
 
@@ -60,7 +62,7 @@ sudo timedatectl set-timezone Europe/Paris
 Cela installe (crontab utilisateur) :
 
 - relances planning chaque heure à :15
-- scraper 7h / 12h / 18h
+- scraper 7h / 12h / 18h (no-op tant que `SPORTCORICO_SYNC_ENABLED` n’est pas `true` et qu’une licence écrite n’a pas été validée)
 - dump MariaDB quotidien à 3h20 dans `deploy/backups/` (14 jours), **chiffré**
   AES-256-GCM (`.sql.gz.enc` + `.sha256`). Sans `BACKUP_ENCRYPTION_KEY` le job refuse
   d’écrire un dump en clair.

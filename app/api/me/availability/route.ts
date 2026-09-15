@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -48,7 +49,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true, indisponibilites });
   } catch (error) {
-    console.error('Error updating personal availability:', error);
+    logError('app.unhandled', 'Error updating personal availability:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour vos indisponibilités' }, { status: 500 });
   }
 }

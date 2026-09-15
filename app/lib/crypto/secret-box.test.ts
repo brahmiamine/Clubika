@@ -118,7 +118,7 @@ describe('encryptSecret / decryptSecret (issue #24)', () => {
 
     process.env.APP_ENCRYPTION_KEY = '';
     const withoutKey = await freshSecretBox();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       const result = withoutKey.decryptSecret(stored);
       expect(result).toBeNull();
@@ -136,7 +136,7 @@ describe('encryptSecret / decryptSecret (issue #24)', () => {
 
     process.env.APP_ENCRYPTION_KEY = 'a-completely-different-key';
     const withRotatedKey = await freshSecretBox();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       const result = withRotatedKey.decryptSecret(stored);
       expect(result).toBeNull();

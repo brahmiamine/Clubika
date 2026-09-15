@@ -68,6 +68,8 @@ describe('EventsPanel — signaux de contrôle', () => {
     );
 
     expect(html).toContain('Événements');
+    expect(html).toContain('Match amical');
+    expect(html).toContain('Match officiel');
     expect(html).toContain('1 événement à traiter avant publication.');
     expect(html).toContain('Afficher uniquement à traiter');
     expect(html).toContain('1 refus');

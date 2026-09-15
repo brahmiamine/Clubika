@@ -12,6 +12,7 @@ import { apiGet, apiPut } from '@/lib/utils/api';
 import { formatIsoDate } from '@/lib/utils/date';
 import type { OfficielIndisponibilite } from '@/lib/utils/officiel-availability';
 import { INDISPO_REVIEW_LABELS, reviewStatusOf } from '@/lib/indisponibilites/review';
+import { publicIndispoReviewLabel } from '@/lib/privacy/health-data';
 import { toast } from 'sonner';
 
 export default function MesIndisponibilitesPage() {
@@ -129,8 +130,8 @@ export default function MesIndisponibilitesPage() {
                         <StatusPill tone={reviewStatusOf(item) === 'rejected' ? 'danger' : reviewStatusOf(item) === 'pending' ? 'pending' : 'success'}>
                           {INDISPO_REVIEW_LABELS[reviewStatusOf(item)]}
                         </StatusPill>
-                        {item.reviewComment && reviewStatusOf(item) === 'rejected' && (
-                          <p className="text-xs text-muted-foreground">Motif : {item.reviewComment}</p>
+                        {publicIndispoReviewLabel(item) && reviewStatusOf(item) === 'rejected' && (
+                          <p className="text-xs text-muted-foreground">Motif : {publicIndispoReviewLabel(item)}</p>
                         )}
                       </div>
                     </div>
