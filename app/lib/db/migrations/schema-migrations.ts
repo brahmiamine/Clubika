@@ -79,6 +79,9 @@ import { purgeOutboxLastError } from './purge-outbox-last-error';
  * La migration 0029 (issue #34) ajoute le contexte d'échange court des invitations
  * publiques (cookie httpOnly).
  *
+ * La migration 0030 (issue #35) stocke les rapports CSP sanitizés (hôtes + directive,
+ * jamais d'URI complète). Rétention 7 jours, purge à l'écriture.
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -515,6 +518,22 @@ export const schemaMigrations: readonly SchemaMigration[] = [
       'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextHash VARCHAR(64) NULL AFTER createdAt',
       'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextExpiresAt DATETIME(6) NULL AFTER validationContextHash',
       'CREATE INDEX IF NOT EXISTS idx_invitations_validation_context ON invitations (validationContextHash)',
+    ],
+  },
+  {
+    version: '0030',
+    name: 'csp_reports_sanitized',
+    statements: [
+      `CREATE TABLE IF NOT EXISTS csp_reports (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        document_host VARCHAR(255) NOT NULL,
+        blocked_host VARCHAR(255) NULL,
+        violated_directive VARCHAR(64) NOT NULL,
+        disposition VARCHAR(16) NOT NULL,
+        PRIMARY KEY (id),
+        INDEX idx_csp_reports_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
   },
 ];
