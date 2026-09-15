@@ -25,8 +25,11 @@ obligatoires avant merge** : `pnpm lint` (socle `--max-warnings`), `pnpm type-ch
 `pnpm build`, `pnpm run db:migrate` suivi de `pnpm test` contre un service MariaDB
 (`REQUIRE_DB_TESTS=1` : une base injoignable échoue au lieu de sauter la suite
 d'intégration), `pnpm run routes:coverage -- --check` (socle des routes critiques,
-issue #286), et `pnpm run e2e` (Playwright, contre son propre service MariaDB). Un
-échec de n'importe lequel de ces jobs bloque le merge.
+issue #286), `pnpm run e2e` (Playwright, contre son propre service MariaDB), et
+un job `runtime-harden` qui construit l'image production et échoue si elle n'est
+pas non-root / lecture seule / sans capability (issue #36). Le service MariaDB
+de CI est pinné par digest (pas `mariadb:latest`). Un échec de n'importe lequel
+de ces jobs bloque le merge.
 
 ## Tests d'intégration (vraie base, pas de mock)
 

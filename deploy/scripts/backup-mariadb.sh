@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Dump quotidien MariaDB chiffré (AES-256-GCM, issue #24).
-# BACKUP_ENCRYPTION_KEY doit être distincte de APP_ENCRYPTION_KEY et hors dump.
+# Dump quotidien MariaDB chiffré (AES-256-GCM, issue #24) avec l'identité
+# de sauvegarde (issue #36). Conservez deploy/secrets/ hors VPS : la clé
+# applicative et BACKUP_ENCRYPTION_KEY ne sont pas dans le dump.
 
 set -euo pipefail
 
@@ -15,6 +16,7 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 OUT="${BACKUP_DIR}/clubika-${STAMP}.sql.gz.enc"
 SHA="${OUT}.sha256"
 PLAIN_TMP="$(mktemp)"
+BACKUP_USER="${DB_BACKUP_USER:-clubika_backup}"
 
 cleanup() {
   rm -f "$PLAIN_TMP"
@@ -22,9 +24,10 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$BACKUP_DIR"
+chmod 700 "$BACKUP_DIR"
 
-if [[ -z "${DB_USER:-}" || -z "${DB_PASSWORD:-}" || -z "${DB_NAME:-}" ]]; then
-  echo "DB_USER / DB_PASSWORD / DB_NAME manquants dans deploy/.env" >&2
+if [[ -z "${DB_BACKUP_PASSWORD:-}" || -z "${DB_NAME:-}" ]]; then
+  echo "DB_BACKUP_PASSWORD / DB_NAME manquants (secrets/ + .env)" >&2
   exit 1
 fi
 
@@ -34,10 +37,10 @@ if [[ -z "${BACKUP_ENCRYPTION_KEY:-}" ]]; then
 fi
 
 docker compose -f "$COMPOSE_FILE" --env-file "${DEPLOY_DIR}/.env" exec -T \
-  -e MYSQL_PWD="$DB_PASSWORD" \
+  -e MYSQL_PWD="$DB_BACKUP_PASSWORD" \
   mariadb \
   mariadb-dump \
-    --user="$DB_USER" \
+    --user="$BACKUP_USER" \
     --single-transaction \
     --routines \
     --databases "$DB_NAME" \
@@ -59,6 +62,8 @@ docker compose -f "$COMPOSE_FILE" --env-file "${DEPLOY_DIR}/.env" exec -T \
 FINGERPRINT="$(tr -d '[:space:]' < "$FINGERPRINT_FILE")"
 rm -f "$FINGERPRINT_FILE"
 
+chmod 600 "$OUT"
+
 if [[ ! -s "$OUT" ]]; then
   echo "Chiffrement vide : $OUT" >&2
   rm -f "$OUT"
@@ -71,4 +76,4 @@ find "$BACKUP_DIR" -type f \( -name 'clubika-*.sql.gz.enc' -o -name 'clubika-*.s
 
 echo "Sauvegarde chiffrée : $OUT"
 echo "Empreinte SHA-256 : $SHA"
-echo "Rappel : BACKUP_ENCRYPTION_KEY et APP_ENCRYPTION_KEY restent hors de ce fichier (deploy/.env hors VPS)."
+echo "Rappel : copiez aussi deploy/secrets/ (app_encryption_key et backup_encryption_key) hors de ce VPS."

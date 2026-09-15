@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Restauration / preuve de restauration d’un dump AEAD (issue #24).
+# Restauration / preuve de restauration d’un dump AEAD (issue #24)
+# avec l'identité SQL de restauration (pas root, issue #36).
 #   ./restore-mariadb.sh --verify backups/clubika-….sql.gz.enc
 #   ./restore-mariadb.sh --restore backups/clubika-….sql.gz.enc
 #
@@ -15,6 +16,7 @@ source "${SCRIPT_DIR}/load-env.sh"
 COMPOSE_FILE="${DEPLOY_DIR}/docker-compose.yml"
 MODE="${1:-}"
 ENC_FILE="${2:-}"
+RESTORE_USER="${DB_RESTORE_USER:-clubika_restore}"
 
 if [[ "$MODE" != "--verify" && "$MODE" != "--restore" ]]; then
   echo "Usage : $0 --verify|--restore <fichier.sql.gz.enc>" >&2
@@ -27,7 +29,7 @@ if [[ -z "$ENC_FILE" || ! -f "$ENC_FILE" ]]; then
 fi
 
 if [[ -z "${BACKUP_ENCRYPTION_KEY:-}" ]]; then
-  echo "BACKUP_ENCRYPTION_KEY manquant" >&2
+  echo "BACKUP_ENCRYPTION_KEY manquant (secrets/backup_encryption_key)" >&2
   exit 1
 fi
 
@@ -65,14 +67,16 @@ if [[ "$MODE" == "--verify" ]]; then
   exit 0
 fi
 
-if [[ -z "${MARIADB_ROOT_PASSWORD:-}" ]]; then
-  echo "MARIADB_ROOT_PASSWORD manquant pour --restore" >&2
+if [[ -z "${DB_RESTORE_PASSWORD:-}" ]]; then
+  echo "DB_RESTORE_PASSWORD manquant (secrets/db_restore_password)" >&2
   exit 1
 fi
 
+echo "Restauration de $ENC_FILE avec ${RESTORE_USER}…"
 gzip -dc "$PLAIN_TMP" | docker compose -f "$COMPOSE_FILE" --env-file "${DEPLOY_DIR}/.env" exec -T \
-  -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" \
+  -e MYSQL_PWD="$DB_RESTORE_PASSWORD" \
   mariadb \
-  mariadb -uroot
+  mariadb --user="$RESTORE_USER"
 
-echo "Import terminé. Redémarrer app et conserver APP_ENCRYPTION_KEY de l’époque du dump (plus PREVIOUS_KEYS si rotation)."
+echo "Import terminé. Redémarrer app : docker compose up -d --force-recreate app"
+echo "Remettre la même secrets/app_encryption_key (et APP_ENCRYPTION_PREVIOUS_KEYS si rotation) qu’au moment du dump."

@@ -189,7 +189,7 @@ Accès une fois lancé :
 - phpMyAdmin : http://localhost:8080 (utilisateur/mot de passe = `DB_USER`/`DB_PASSWORD` ci-dessous)
 - MariaDB : `127.0.0.1:3306`
 
-Variables surchargeables (toutes optionnelles, valeurs par défaut ci-dessous) : `DB_CONTAINER`, `PMA_CONTAINER`, `DOCKER_NETWORK`, `DB_NAME=clubika`, `DB_USER=clubika_user`, `DB_PASSWORD=clubika_password`, `DB_ROOT_PASSWORD`, `DB_PORT=3306`, `PMA_PORT=8080`, `MARIADB_IMAGE=mariadb:latest`, `PHPMYADMIN_IMAGE=phpmyadmin:latest`. Placez-les dans un fichier `.env` à la racine, il est chargé automatiquement par `start.sh`.
+Variables surchargeables (toutes optionnelles, valeurs par défaut pinnées dans `deploy/runtime-images.lock`) : `DB_CONTAINER`, `PMA_CONTAINER`, `DOCKER_NETWORK`, `DB_NAME=clubika`, `DB_USER=clubika_user`, `DB_PASSWORD=clubika_password`, `DB_ROOT_PASSWORD`, `DB_PORT=3306`, `PMA_PORT=8080`, `MARIADB_IMAGE`, `PHPMYADMIN_IMAGE`. Placez-les dans un fichier `.env` à la racine, il est chargé automatiquement par `start.sh`. Ne pas utiliser `:latest`.
 
 ## Configuration
 
