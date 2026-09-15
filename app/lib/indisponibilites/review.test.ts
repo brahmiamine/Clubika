@@ -36,11 +36,12 @@ describe('applyIndispoReview (issue #322)', () => {
     if (!accepted.ok) return;
     expect(accepted.reviewed.status).toBe('accepted');
     expect(applyIndispoReview(accepted.items, 'r1', 'accepted', 7, null, now)).toMatchObject({ ok: true, idempotent: true });
-    expect(applyIndispoReview(accepted.items, 'r1', 'rejected', 7, 'trop tard', now)).toMatchObject({ ok: false, status: 409 });
+    expect(applyIndispoReview(accepted.items, 'r1', 'rejected', 7, 'other', now)).toMatchObject({ ok: false, status: 409 });
 
-    const rejected = applyIndispoReview(pending, 'r1', 'rejected', 7, 'indisponible trop large', now);
+    const rejected = applyIndispoReview(pending, 'r1', 'rejected', 7, 'schedule_too_broad', now);
     expect(rejected.ok).toBe(true);
     if (!rejected.ok) return;
-    expect(rejected.reviewed).toMatchObject({ status: 'rejected', reviewComment: 'indisponible trop large' });
+    expect(rejected.reviewed).toMatchObject({ status: 'rejected', reviewCode: 'schedule_too_broad' });
+    expect(rejected.reviewed.reviewComment).toBeUndefined();
   });
 });

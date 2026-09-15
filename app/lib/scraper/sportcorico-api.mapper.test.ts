@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { SportCoricoMatchApi } from './sportcorico-api.types';
 import {
   assertClubSlugMatchesKey,
@@ -13,6 +13,16 @@ import {
 
 const FETCHED_AT = '2026-09-12T11:00:00.000Z';
 const CLUB_NAME = 'Academie Football Paris 18';
+const PREVIOUS_SYNC = process.env.SPORTCORICO_SYNC_ENABLED;
+
+beforeAll(() => {
+  process.env.SPORTCORICO_SYNC_ENABLED = 'true';
+});
+
+afterAll(() => {
+  if (PREVIOUS_SYNC === undefined) delete process.env.SPORTCORICO_SYNC_ENABLED;
+  else process.env.SPORTCORICO_SYNC_ENABLED = PREVIOUS_SYNC;
+});
 
 function apiMatch(overrides: Partial<SportCoricoMatchApi> = {}): SportCoricoMatchApi {
   return {

@@ -29,6 +29,7 @@ import {
 } from './p0-rules';
 import { zonedDayStart } from './planning-time';
 import type { EventWeatherDisplay } from './weather-condition';
+import { normalizeStoredDeclineReason } from '@/lib/privacy/health-data';
 
 export type PersonalEventType = 'officiel' | 'amical' | 'entrainement' | 'plateau';
 export type PersonalAssignmentRole = 'arbitre' | 'encadrant' | 'accompagnateur';
@@ -43,9 +44,9 @@ export interface PersonalAssignment {
   status: AssignmentStatus;
   attendanceStatus: AttendanceStatus;
   respondedAt: string | null;
-  /** Motif et commentaire de refus enregistrés avec la réponse, réexposés après rechargement (issue #44). */
+  /** Motif de refus (issue #44). Le commentaire libre n’est plus exposé (issue #7). */
   declineReason: DeclineReason | null;
-  declineComment: string | null;
+  declineComment: null;
   date: string;
   time: string;
   durationMinutes: number;
@@ -229,8 +230,8 @@ function buildMatchAssignments(
       status: assignmentStatus(contact),
       attendanceStatus: attendanceStatus(contact),
       respondedAt: contact.respondedAt ?? null,
-      declineReason: contact.declineReason ?? null,
-      declineComment: contact.declineComment ?? null,
+      declineReason: normalizeStoredDeclineReason(contact.declineReason) ?? null,
+      declineComment: null,
       date: match.date,
       time: match.time,
       durationMinutes: match.durationMinutes ?? 90,
@@ -274,8 +275,8 @@ function buildSimpleAssignment(
     status: assignmentStatus(contact),
     attendanceStatus: attendanceStatus(contact),
     respondedAt: contact.respondedAt ?? null,
-    declineReason: contact.declineReason ?? null,
-    declineComment: contact.declineComment ?? null,
+    declineReason: normalizeStoredDeclineReason(contact.declineReason) ?? null,
+    declineComment: null,
     date: event.date,
     time: event.time,
     durationMinutes: event.durationMinutes ?? 90,
