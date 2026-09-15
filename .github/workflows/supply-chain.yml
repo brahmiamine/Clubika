@@ -1,0 +1,85 @@
+name: Supply chain
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Audit production dependencies (high/critical)
+        run: node scripts/audit-dependencies.mjs
+      - name: Check expiring exceptions
+        run: node scripts/check-exceptions.mjs
+      - name: Check GitHub Action pins
+        run: node scripts/check-action-pins.mjs
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+      - name: Install pinned gitleaks
+        run: sudo bash scripts/install-pinned-tool.sh gitleaks
+      - name: Scan git history and working tree
+        run: gitleaks detect --source . --redact --exit-code 1 --config .gitleaks.toml
+
+  image-and-sbom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Install pinned trivy
+        run: sudo bash scripts/install-pinned-tool.sh trivy
+      - name: Scan lockfile (HIGH/CRITICAL)
+        run: |
+          set -euo pipefail
+          trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+            --ignore-unfixed --format table .
+      - name: Scan base image OS/packages (HIGH/CRITICAL)
+        run: |
+          set -euo pipefail
+          base="$(awk '/^FROM /{print $2; exit}' Dockerfile)"
+          if [[ -z "$base" ]]; then
+            echo "FROM introuvable dans Dockerfile" >&2
+            exit 2
+          fi
+          echo "Scan de l'image de base : $base"
+          docker pull "$base"
+          trivy image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 \
+            --ignore-unfixed --format table "$base"
+      - name: Generate CycloneDX SBOM
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          trivy fs --format cyclonedx --output artifacts/sbom.cdx.json .
+          python3 - <<'PY'
+          import json
+          sbom = json.load(open("artifacts/sbom.cdx.json"))
+          blob = json.dumps(sbom).lower()
+          for needle in ("password", "private_key", "begin rsa", "vapid"):
+              if needle in blob:
+                  raise SystemExit(f"SBOM contains forbidden token {needle}")
+          print("SBOM CycloneDX écrit, sans secret évident.")
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cyclonedx-sbom
+          path: artifacts/sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 30

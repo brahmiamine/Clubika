@@ -1,0 +1,10 @@
+{
+  "blockSeverities": ["high", "critical"],
+  "slaDays": {
+    "critical": 7,
+    "high": 14,
+    "moderate": 60,
+    "low": 120
+  },
+  "exceptions": []
+}
