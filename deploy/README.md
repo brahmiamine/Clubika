@@ -26,15 +26,17 @@ cp .env.production.example .env
 Remplir `.env` :
 
 - `DB_PASSWORD` et `MARIADB_ROOT_PASSWORD` (longs, distincts)
-- `APP_ENCRYPTION_KEY` et `CRON_SECRET` : `openssl rand -hex 32`
+- `APP_ENCRYPTION_KEY`, `BACKUP_ENCRYPTION_KEY` et `CRON_SECRET` : `openssl rand -hex 32`
+  (`BACKUP_ENCRYPTION_KEY` **distincte** de la clé applicative)
 - mots de passe bootstrap admin club et `/plateforme`
 - clés VAPID : `node scripts/generate-vapid-keys.mjs` depuis la racine du dépôt,
   puis coller `NEXT_PUBLIC_VAPID_PUBLIC_KEY` aussi dans `VAPID_PUBLIC_KEY`
 - SMTP si vous voulez les e-mails
 
-Sauvegardez `.env` **hors du VPS**. La clé de chiffrement n’est pas dans MariaDB :
-la perdre rend le texte des messages de chat déjà chiffrés illisible. Les pièces
-jointes et les dumps SQL ne sont pas chiffrés par cette clé.
+Sauvegardez `.env` **hors du VPS**, séparément des dumps. Les clés de chiffrement
+ne sont pas dans MariaDB : les perdre rend les messages `enc:v2` illisibles. Les
+pièces jointes et les dumps SQL ne sont pas chiffrés par `APP_ENCRYPTION_KEY`
+(les dumps le sont par `BACKUP_ENCRYPTION_KEY`).
 
 ## 4. Lancer
 
@@ -61,10 +63,23 @@ Cela installe (crontab utilisateur) :
 
 - relances planning chaque heure à :15
 - scraper 7h / 12h / 18h (no-op tant que `SPORTCORICO_SYNC_ENABLED` n’est pas `true` et qu’une licence écrite n’a pas été validée)
-- dump MariaDB quotidien à 3h20 dans `deploy/backups/` (14 jours)
+- dump MariaDB quotidien à 3h20 dans `deploy/backups/` (14 jours), **chiffré**
+  AES-256-GCM (`.sql.gz.enc` + `.sha256`). Sans `BACKUP_ENCRYPTION_KEY` le job refuse
+  d’écrire un dump en clair.
 
-La sauvegarde OVH « 1 jour » ne remplace pas ces dumps. Copiez aussi les `.sql.gz`
-et `.env` ailleurs.
+La sauvegarde OVH « 1 jour » ne remplace pas ces dumps. Copiez les `.enc` **et**
+`.env` (clés) sur des supports **séparés**.
+
+Preuve de restauration (sans importer) :
+
+```bash
+./scripts/restore-mariadb.sh --verify backups/clubika-….sql.gz.enc
+```
+
+Rotation de `APP_ENCRYPTION_KEY` : ajouter la nouvelle clé comme active, l’ancienne
+dans `APP_ENCRYPTION_PREVIOUS_KEYS`, `pnpm exec tsx scripts/rotate-encryption-keys.ts`
+puis `--apply`, ensuite retirer l’ancienne du ring. Compromission : même rotation
+en urgence, révoquer les sessions (#29) et les jetons d’invitation.
 
 Ne pas activer le schedule GitHub Actions des relances si ce cron tourne déjà
 (doublon). Voir `PLANNING_REMINDERS.md`.
@@ -82,13 +97,13 @@ instance `app`.
 ## 7. Restaurer un dump
 
 ```bash
-gunzip -c backups/clubika-AAAA.MM.JJ-HHMMSS.sql.gz \
-  | docker compose exec -T -e MYSQL_PWD="$MARIADB_ROOT_PASSWORD" mariadb \
-    mariadb -uroot
+./scripts/restore-mariadb.sh --verify backups/clubika-….sql.gz.enc
+# environnement isolé :
+./scripts/restore-mariadb.sh --restore backups/clubika-….sql.gz.enc
 ```
 
-Puis redémarrer `app`. Remettre **la même** `APP_ENCRYPTION_KEY` qu’au moment
-du dump.
+Puis redémarrer `app`. Remettre **la même** `APP_ENCRYPTION_KEY` (et
+`APP_ENCRYPTION_PREVIOUS_KEYS` si une rotation était en cours) qu’au moment du dump.
 
 ## 8. Déploiement automatique (GitHub → VPS)
 
