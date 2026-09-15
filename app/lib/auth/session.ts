@@ -179,7 +179,7 @@ export async function resolveClubSession(token: string | undefined | null): Prom
 
   const db = await getDb();
   const user = await db.getRepository<UserEntity>('User').findOneBy({ id: session.userId });
-  if (!user || !user.active) {
+  if (!user || !user.active || user.closedAt) {
     return null;
   }
 

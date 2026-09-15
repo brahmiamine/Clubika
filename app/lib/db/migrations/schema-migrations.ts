@@ -84,6 +84,9 @@ import { redactHistoricalReportAudits } from './redact-report-audit';
  * La migration 0035 (issue #9) journalise les exécutions de purge de rétention
  * (compteurs agrégés uniquement, aucun contenu personnel).
  *
+ * La migration 0036 (issue #11) ajoute les colonnes de fermeture de compte sur
+ * `users` et la table d'agrégats `account_closures` (preuve sans identité).
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -636,6 +639,27 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         finished_at DATETIME(6) NOT NULL,
         summary LONGTEXT NOT NULL,
         INDEX idx_retention_purge_runs_started (started_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0036',
+    name: 'fermeture_compte_utilisateur',
+    statements: [
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS closedAt DATETIME NULL AFTER claimedAt',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS closureRequestedAt DATETIME NULL AFTER closedAt',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS closedByUserId INT NULL AFTER closureRequestedAt',
+      `CREATE TABLE IF NOT EXISTS account_closures (
+        id CHAR(36) NOT NULL PRIMARY KEY,
+        club_id VARCHAR(64) NOT NULL,
+        user_id INT NOT NULL,
+        requested_at DATETIME(6) NULL,
+        closed_at DATETIME(6) NOT NULL,
+        requested_by_role VARCHAR(16) NOT NULL,
+        processed_by_role VARCHAR(16) NOT NULL,
+        retained LONGTEXT NOT NULL,
+        UNIQUE INDEX uq_account_closures_user (user_id),
+        INDEX idx_account_closures_club_closed (club_id, closed_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
   },

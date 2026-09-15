@@ -112,6 +112,7 @@ Les migrations sont à sens unique et sans `down` automatisé. Stratégie :
 | `scraper_sync_runs` | `app/lib/scraper/runs.ts` | `0006` |
 | `planning_assignment_state` | `app/lib/planning/assignment-state-store.ts` | `0007` |
 | tables d'entités TypeORM (`users`, `clubs`, chat, …) | `DataSource.synchronize()` au boot | `0018` |
+| `account_closures` + colonnes `users.closedAt` / `closureRequestedAt` / `closedByUserId` | fermeture de compte (issue #11) | `0036` |
 
 ## Conversions de schéma encadrées
 

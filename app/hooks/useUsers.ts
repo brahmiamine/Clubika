@@ -17,6 +17,8 @@ export interface ManagedUser {
   claimedAt: string | null;
   /** Vrai si le profil a été activé et peut se connecter. */
   hasAccess: boolean;
+  closedAt: string | null;
+  closureRequestedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

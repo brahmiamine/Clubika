@@ -6,20 +6,24 @@ import { UserEntity } from '@/lib/db/schemas';
 import { requireRole } from '@/lib/auth/require';
 import { UNUSABLE_PASSWORD_HASH } from '@/lib/auth/password';
 import { normalizeAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
+import { isClosedAccount } from '@/lib/account-closure/constants';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 
 function serializeUser(user: UserEntity) {
+  const closed = isClosedAccount(user);
   return {
     id: user.id,
-    email: user.email,
+    email: closed ? '' : user.email,
     nom: user.nom,
     accessRole: user.accessRole,
     planningFunctions: user.planningFunctions,
     active: user.active,
-    telephone: user.telephone,
+    telephone: closed ? null : user.telephone,
     // Issue #204 : un profil sans accès (jamais activé) n'est pas un compte actif.
     claimedAt: user.claimedAt,
-    hasAccess: user.claimedAt != null,
+    hasAccess: user.claimedAt != null && !closed,
+    closedAt: user.closedAt,
+    closureRequestedAt: user.closureRequestedAt,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };
