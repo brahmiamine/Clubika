@@ -28,6 +28,7 @@ import { applyPlanningEventUpdate } from '@/lib/planning/event-update';
 import { createTeamLogoResolver } from '@/lib/planning/team-logos';
 import { BodyValidator, parseJsonBody, RequestValidationError } from '@/lib/validation/request';
 import type { Entrainement, Match, Plateau } from '@/types/match';
+import { isClubAuthoredOfficialMatch } from '@/lib/privacy/sportcorico-data';
 import { personIdentityMatches } from '@/lib/planning/person-link';
 
 const VENUE_VALUES = ['domicile', 'extérieur'] as const;
@@ -360,12 +361,6 @@ export async function DELETE(
   if (!validEventType(resolved.eventType) || !resolved.eventId) {
     return NextResponse.json({ error: 'Événement invalide' }, { status: 400 });
   }
-  if (resolved.eventType === 'officiel') {
-    return NextResponse.json(
-      { error: 'Un match officiel issu de la source fédérale ne peut pas être supprimé manuellement.' },
-      { status: 405 },
-    );
-  }
   const eventType = resolved.eventType;
   const eventId = resolved.eventId;
 
@@ -374,6 +369,12 @@ export async function DELETE(
     const snapshot = await getPlanningEventSnapshot(db, eventType, eventId);
     if (!snapshot) {
       return NextResponse.json({ error: 'Événement introuvable' }, { status: 404 });
+    }
+    if (eventType === 'officiel' && !isClubAuthoredOfficialMatch(snapshot.event as Match)) {
+      return NextResponse.json(
+        { error: 'Un match officiel issu d’une source tierce ne peut pas être supprimé manuellement.' },
+        { status: 405 },
+      );
     }
 
     const alreadyPublished = await isPlanningEventCurrentlyPublished(
@@ -397,6 +398,9 @@ export async function DELETE(
       await archivePlanningEvent(manager, eventType, eventId, auth.user.id, auth.user.clubId);
       if (eventType === 'amical') {
         await manager.getRepository('MatchAmical').delete({ id: eventId, clubId: auth.user.clubId });
+      } else if (eventType === 'officiel') {
+        await manager.getRepository('MatchOfficial').delete({ id: eventId, clubId: auth.user.clubId });
+        await manager.getRepository('MatchExtra').delete({ matchId: eventId, clubId: auth.user.clubId });
       } else if (eventType === 'entrainement') {
         await manager.getRepository('Entrainement').delete({ id: eventId, clubId: auth.user.clubId });
       } else {
@@ -404,7 +408,11 @@ export async function DELETE(
       }
       await logAuditEntry(manager, {
         user: auth.user,
-        entityType: eventType === 'amical' ? 'MatchAmical' : eventType === 'entrainement' ? 'Entrainement' : 'Plateau',
+        entityType: eventType === 'amical'
+          ? 'MatchAmical'
+          : eventType === 'officiel'
+            ? 'MatchOfficial'
+            : eventType === 'entrainement' ? 'Entrainement' : 'Plateau',
         entityId: eventId,
         action: 'delete',
         before: snapshot.event as unknown as Record<string, unknown>,

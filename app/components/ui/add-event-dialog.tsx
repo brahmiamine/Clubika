@@ -28,7 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { roleLabelWithClub } from '@/lib/settings';
 
-export type EventType = 'amical' | 'entrainement' | 'plateau';
+export type EventType = 'officiel' | 'amical' | 'entrainement' | 'plateau';
 
 interface AddEventDialogProps {
   open: boolean;
@@ -65,6 +65,7 @@ export const AddEventDialog = memo(function AddEventDialog({
   const [venue, setVenue] = useState<'domicile' | 'extérieur'>('domicile');
   // Competition est automatiquement "match amical" pour les matchs amicaux
   const competition = eventType === 'amical' ? 'Match amical' : '';
+  const [competitionOfficiel, setCompetitionOfficiel] = useState('Championnat');
   const [horaireRendezVous, setHoraireRendezVous] = useState('');
   const [selectedStade, setSelectedStade] = useState<Stade | null>(null);
   const [stadium, setStadium] = useState('');
@@ -86,6 +87,8 @@ export const AddEventDialog = memo(function AddEventDialog({
   
   // Catégorie pour match amical
   const [categorieMatchAmical, setCategorieMatchAmical] = useState('');
+  const [rightsAttested, setRightsAttested] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
 
   // Quand un club local est sélectionné, mettre à jour localTeam
   useEffect(() => {
@@ -149,6 +152,9 @@ export const AddEventDialog = memo(function AddEventDialog({
     setCategorieEntrainement('');
     setCategoriesPlateau([]);
     setCategorieMatchAmical('');
+    setCompetitionOfficiel('Championnat');
+    setRightsAttested(false);
+    setCsvFile(null);
     setEncadrantsEntrainement([]);
     setEncadrantsPlateau([]);
     setConfirmed(false);
@@ -167,44 +173,66 @@ export const AddEventDialog = memo(function AddEventDialog({
     
     try {
       let endpoint = '';
-      let payload: any = { date, time };
+      let payload: Record<string, unknown> = { date, time };
 
-      if (eventType === 'amical') {
-        // Validation match amical
+      if (eventType === 'officiel' && csvFile) {
+        if (!rightsAttested) {
+          toast.error('Attestez que le club est autorisé à utiliser ces informations');
+          setIsLoading(false);
+          return;
+        }
+        const csvText = await csvFile.text();
+        await apiPost('/api/planning/official-import', { csvText, rightsAttested: true });
+        toast.success('Calendrier officiel importé');
+        resetForm();
+        onSuccess();
+        handleClose();
+        return;
+      }
+
+      if (eventType === 'amical' || eventType === 'officiel') {
         if (!localTeam || !awayTeam) {
           toast.error('Veuillez remplir tous les champs obligatoires');
           setIsLoading(false);
           return;
         }
+        if (eventType === 'officiel' && !rightsAttested) {
+          toast.error('Attestez que le club est autorisé à utiliser ces informations');
+          setIsLoading(false);
+          return;
+        }
 
-        endpoint = '/api/matches-amicaux';
+        const matchCompetition = eventType === 'amical' ? competition : competitionOfficiel.trim();
+        if (eventType === 'officiel' && !matchCompetition) {
+          toast.error('Indiquez la compétition');
+          setIsLoading(false);
+          return;
+        }
+
+        endpoint = eventType === 'amical' ? '/api/matches-amicaux' : '/api/planning/events/officiel';
         payload = {
           ...payload,
-          type: 'amical',
+          type: eventType,
           localTeam,
           awayTeam,
           venue,
-          competition,
+          competition: matchCompetition,
           categorie: categorieMatchAmical || undefined,
           horaireRendezVous: horaireRendezVous || time,
           details: stadium || address ? {
             stadium: stadium || '',
             address: address || '',
             dateTime: `${date} - ${time}`,
-            competition,
+            competition: matchCompetition,
             terrainType: '',
             itineraryLink: '',
             rawText: '',
           } : null,
-          // Les contacts sont déjà persistés dans leur référentiel de fonction par le
-          // sélecteur : le match et ses extras (arbitres, encadrants, accompagnateurs,
-          // confirmed) s'enregistrent en une seule requête atomique côté serveur, plutôt
-          // qu'en deux requêtes séparées dont la seconde pouvait échouer après coup et
-          // laisser un match sans extras (issue #208).
           confirmed,
           arbitreTouche: arbitreTouche.length > 0 ? arbitreTouche : undefined,
           contactEncadrants: contactEncadrants.length > 0 ? contactEncadrants : undefined,
           contactAccompagnateur: contactAccompagnateur.length > 0 ? contactAccompagnateur : undefined,
+          ...(eventType === 'officiel' ? { rightsAttested: true } : {}),
         };
 
         await apiPost(endpoint, payload);
@@ -247,6 +275,8 @@ export const AddEventDialog = memo(function AddEventDialog({
       toast.success(
         eventType === 'amical' 
           ? 'Match amical ajouté avec succès'
+          : eventType === 'officiel'
+          ? 'Match officiel ajouté avec succès'
           : eventType === 'entrainement'
           ? 'Entraînement ajouté avec succès'
           : 'Plateau ajouté avec succès'
@@ -267,6 +297,8 @@ export const AddEventDialog = memo(function AddEventDialog({
     switch (eventType) {
       case 'amical':
         return 'Ajouter un match amical';
+      case 'officiel':
+        return 'Ajouter un match officiel';
       case 'entrainement':
         return 'Ajouter un entraînement';
       case 'plateau':
@@ -308,9 +340,35 @@ export const AddEventDialog = memo(function AddEventDialog({
             </div>
           </div>
 
-          {/* Champs spécifiques au match amical */}
-          {eventType === 'amical' && (
+          {/* Champs spécifiques au match amical / officiel */}
+          {(eventType === 'amical' || eventType === 'officiel') && (
             <>
+              {eventType === 'officiel' && (
+                <div className="space-y-3 rounded-md border p-3">
+                  <Label htmlFor="official-csv">Importer un calendrier CSV (optionnel)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Colonnes : date, time, localTeam, awayTeam, venue, competition, categorie, stadium, address.
+                    Le club atteste la provenance. Les URL SportCorico sont refusées.
+                  </p>
+                  <Input
+                    id="official-csv"
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={(e) => setCsvFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+              )}
+              {eventType === 'officiel' && (
+                <div className="space-y-2">
+                  <Label htmlFor="competition-officiel">Compétition *</Label>
+                  <Input
+                    id="competition-officiel"
+                    value={competitionOfficiel}
+                    onChange={(e) => setCompetitionOfficiel(e.target.value)}
+                    placeholder="Championnat"
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="localTeam">Équipe locale *</Label>
@@ -421,6 +479,23 @@ export const AddEventDialog = memo(function AddEventDialog({
 
               {/* Extras : Arbitres AFP, Encadrants, Accompagnateurs */}
               <div className="pt-4 border-t space-y-4">
+                {eventType === 'officiel' && (
+                  <div className="flex items-start gap-3 rounded-md border p-3">
+                    <Checkbox
+                      id="rightsAttested"
+                      checked={rightsAttested}
+                      onCheckedChange={(value) => setRightsAttested(value === true)}
+                    />
+                    <div className="space-y-1">
+                      <Label htmlFor="rightsAttested" className="text-sm font-medium leading-none">
+                        J’atteste que le club est autorisé à utiliser ces informations *
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Saisie manuelle ou CSV fourni par le club — pas d’import depuis une source tierce non licenciée.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5 flex-1 min-w-0">
                     <Label htmlFor="confirmed" className="text-sm sm:text-base">Match complété et bien rempli</Label>

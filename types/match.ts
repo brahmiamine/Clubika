@@ -67,6 +67,18 @@ export interface OfficialMatchAdminOverride {
   staff?: Partial<Pick<MatchStaff, 'referee' | 'assistant1' | 'assistant2'>> | null;
 }
 
+export type LicensedImportProvider = 'manual' | 'csv' | 'licensed-api';
+
+export interface ImportProvenance {
+  provider: LicensedImportProvider | 'sportcorico-api' | 'unknown-external';
+  providerId?: string;
+  licenseRef?: string;
+  importedAt?: string;
+  importedByUserId?: number;
+  rightsAttested?: boolean;
+  quarantined?: boolean;
+}
+
 export interface Match extends PlanningPublicationMeta {
   id?: string;
   type?: MatchType;
@@ -98,6 +110,8 @@ export interface Match extends PlanningPublicationMeta {
   sourceIdentityReconciledAt?: string;
   /** Score (0-100) de la dernière réconciliation automatique d'identité source. */
   sourceIdentityConfidence?: number;
+  /** Provenance d'import (issue #5). Absent sur l'historique SportCorico non encore quarantiné. */
+  importProvenance?: ImportProvenance;
 }
 
 export interface ClubInfo {

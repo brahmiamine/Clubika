@@ -131,6 +131,11 @@ describe('mapSportCoricoMatch', () => {
       url: 'https://www.sportcorico.com/match/afp-18-seniors-1-ca-de-paris-14-seniors-1-eeelb',
       sourceStatus: 'active',
       sourceLastSeenAt: FETCHED_AT,
+      importProvenance: {
+        provider: 'sportcorico-api',
+        providerId: '5710278',
+        importedAt: FETCHED_AT,
+      },
     });
     expect(mapped.details).toMatchObject({
       stadium: 'Stade Poissonniers N° 2 - PARIS',
