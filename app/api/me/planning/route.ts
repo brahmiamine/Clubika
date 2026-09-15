@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       stats: buildPersonalPlanningStats(assignments, settings.timeZone),
     });
   } catch (error) {
-    console.error('Error loading personal planning:', error);
+    logError('app.unhandled', 'Error loading personal planning:', error);
     return NextResponse.json({ error: 'Impossible de charger votre planning' }, { status: 500 });
   }
 }

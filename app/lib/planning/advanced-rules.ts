@@ -2,7 +2,7 @@ import type { PlanningEventSnapshot } from './event-store';
 import { eventStartTimestamp } from './p0-rules';
 import { zonedWeekday } from './planning-time';
 
-export type DeclineReason = 'work' | 'injury' | 'travel' | 'other_assignment' | 'personal' | 'other';
+export type DeclineReason = 'work' | 'travel' | 'other_assignment' | 'personal' | 'other';
 export type AvailabilityResponseStatus = 'available' | 'unavailable' | 'partial';
 
 export interface TimeRangePreference {
@@ -30,7 +30,6 @@ export const DEFAULT_PLANNING_PREFERENCES: PersonPlanningPreferences = {
 
 export const DECLINE_REASONS: DeclineReason[] = [
   'work',
-  'injury',
   'travel',
   'other_assignment',
   'personal',

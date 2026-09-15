@@ -1,9 +1,15 @@
+import { logError } from '@/lib/observability/log';
 import { promises as dns } from 'node:dns';
 import * as http from 'node:http';
 import * as https from 'node:https';
 import net from 'node:net';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
+import {
+  ExternalServiceBlockedError,
+  assertExternalUrlAllowed,
+  isExternalServiceEnabled,
+} from '@/lib/compliance/external-services';
 
 /**
  * Proxy d'images même-origine, utilisé pour la carte de partage d'un match : les
@@ -185,6 +191,10 @@ export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if ('error' in auth) return auth.error;
 
+  if (!isExternalServiceEnabled('logo-proxy')) {
+    return NextResponse.json({ error: 'Cette intégration est désactivée.', service: 'logo-proxy' }, { status: 409 });
+  }
+
   const raw = request.nextUrl.searchParams.get('url');
   if (!raw) return NextResponse.json({ error: 'Paramètre url manquant' }, { status: 400 });
 
@@ -196,6 +206,14 @@ export async function GET(request: NextRequest) {
   }
   if (target.protocol !== 'https:' && target.protocol !== 'http:') {
     return NextResponse.json({ error: 'Protocole non autorisé' }, { status: 400 });
+  }
+  try {
+    assertExternalUrlAllowed('logo-proxy', target.toString());
+  } catch (error) {
+    if (error instanceof ExternalServiceBlockedError) {
+      return NextResponse.json({ error: 'Hôte non autorisé' }, { status: 400 });
+    }
+    throw error;
   }
 
   try {
@@ -221,7 +239,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof UpstreamStatusError) {
       return NextResponse.json({ error: `Amont ${error.status}` }, { status: 502 });
     }
-    console.error('logo-proxy failed:', error);
+    logError('app.unhandled', 'logo-proxy failed:', error);
     return NextResponse.json({ error: 'Récupération de l’image impossible' }, { status: 502 });
   }
 }

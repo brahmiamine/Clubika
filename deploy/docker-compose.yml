@@ -1,19 +1,43 @@
 name: clubika
 
+# Durcissement runtime (issue #36) : non-root app, read-only, cap_drop,
+# no-new-privileges, réseaux séparés, images pinnées par digest.
+# MariaDB n'est pas publiée. L'app l'est seulement sur loopback (cron hôte).
+
 services:
   mariadb:
-    image: mariadb:11.4
+    image: mariadb:11.4.13@sha256:80494b9810694179889f7281ec44ca928241df577159c0356a1070e2e94616a1
     restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - FOWNER
+      - DAC_OVERRIDE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 1536m
+    cpus: 2.0
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run/mysqld:size=32m,mode=0770,uid=999,gid=999
     environment:
-      MARIADB_DATABASE: ${DB_NAME}
-      MARIADB_USER: ${DB_USER}
-      MARIADB_PASSWORD: ${DB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME:-clubika}
+      MARIADB_USER: ${DB_USER:-clubika}
+      MARIADB_PASSWORD_FILE: /run/secrets/db_password
+      MARIADB_ROOT_PASSWORD_FILE: /run/secrets/mariadb_root_password
       TZ: Europe/Paris
+    secrets:
+      - db_password
+      - mariadb_root_password
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
-      - --innodb-buffer-pool-size=1G
+      - --innodb-buffer-pool-size=512M
     volumes:
       - mariadb_data:/var/lib/mysql
     healthcheck:
@@ -23,7 +47,7 @@ services:
       retries: 30
       start_period: 20s
     networks:
-      - internal
+      - backend
     logging:
       driver: json-file
       options:
@@ -35,26 +59,57 @@ services:
       context: ..
       dockerfile: Dockerfile
     restart: unless-stopped
+    user: "10001:10001"
+    read_only: true
     init: true
-    shm_size: "1gb"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 1024m
+    cpus: 2.0
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+      - /app/.next/cache:size=128m,mode=1777,uid=10001,gid=10001
     env_file: .env
     environment:
       NODE_ENV: production
       DB_HOST: mariadb
       DB_PORT: "3306"
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      APP_ENCRYPTION_KEY_FILE: /run/secrets/app_encryption_key
+      CRON_SECRET_FILE: /run/secrets/cron_secret
       HOSTNAME: 0.0.0.0
       PORT: "3000"
       TZ: Europe/Paris
       TRUST_PROXY_HEADERS: "true"
       TRUSTED_PROXY_COUNT: "1"
       CHAT_INSTANCE_COUNT: "1"
+    secrets:
+      - db_password
+      - app_encryption_key
+      - cron_secret
     depends_on:
       mariadb:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 90s
     ports:
       - "127.0.0.1:3000:3000"
     networks:
-      - internal
+      - frontend
+      - backend
     logging:
       driver: json-file
       options:
@@ -62,10 +117,23 @@ services:
         max-file: "5"
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     restart: unless-stopped
+    read_only: true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 1.0
+    tmpfs:
+      - /tmp:size=16m,mode=1777
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -75,12 +143,22 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     networks:
-      - internal
+      - frontend
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "5"
+
+secrets:
+  mariadb_root_password:
+    file: ./secrets/mariadb_root_password
+  db_password:
+    file: ./secrets/db_password
+  app_encryption_key:
+    file: ./secrets/app_encryption_key
+  cron_secret:
+    file: ./secrets/cron_secret
 
 volumes:
   mariadb_data:
@@ -88,5 +166,8 @@ volumes:
   caddy_config:
 
 networks:
-  internal:
+  frontend:
     driver: bridge
+  backend:
+    driver: bridge
+    internal: true

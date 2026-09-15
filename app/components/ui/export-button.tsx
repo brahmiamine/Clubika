@@ -12,12 +12,15 @@ import { Download, FileText, Image, FileSpreadsheet, CalendarDays } from 'lucide
 import { ExportPdfModal } from './export-pdf-modal';
 import { ExportCsvModal } from './export-csv-modal';
 import { ExportIcalModal } from './export-ical-modal';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { TOOLBAR_ACTION_BUTTON_CLASS, TOOLBAR_ACTION_BUTTON_STYLE, TOOLBAR_ACTION_WRAP_CLASS } from './toolbar-action-button-styles';
 
 export function ExportButton() {
+  const { settings } = useAppSettings();
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isIcalModalOpen, setIsIcalModalOpen] = useState(false);
+  const massExport = settings.features.massExport;
 
   return (
     <div className={TOOLBAR_ACTION_WRAP_CLASS}>
@@ -29,27 +32,31 @@ export function ExportButton() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setIsPdfModalOpen(true)}>
-            <FileText className="h-4 w-4 mr-2" />
-            Export PDF
-          </DropdownMenuItem>
+          {massExport ? (
+            <DropdownMenuItem onClick={() => setIsPdfModalOpen(true)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem disabled>
             <Image className="h-4 w-4 mr-2" />
             Export Image
             <span className="ml-auto text-xs text-muted-foreground">Bientôt</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setIsCsvModalOpen(true)}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
-            Export CSV
-          </DropdownMenuItem>
+          {massExport ? (
+            <DropdownMenuItem onClick={() => setIsCsvModalOpen(true)}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Export CSV
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuItem onClick={() => setIsIcalModalOpen(true)}>
             <CalendarDays className="h-4 w-4 mr-2" />
             Export iCal
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ExportPdfModal open={isPdfModalOpen} onOpenChange={setIsPdfModalOpen} />
-      <ExportCsvModal open={isCsvModalOpen} onOpenChange={setIsCsvModalOpen} />
+      {massExport ? <ExportPdfModal open={isPdfModalOpen} onOpenChange={setIsPdfModalOpen} /> : null}
+      {massExport ? <ExportCsvModal open={isCsvModalOpen} onOpenChange={setIsCsvModalOpen} /> : null}
       <ExportIcalModal open={isIcalModalOpen} onOpenChange={setIsIcalModalOpen} />
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { CalendarDays, Clock, Flag, MapPin, Users } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { LoadingSpinner } from '@/app/components/ui/loading-spinner';
@@ -12,7 +12,6 @@ import { EventCardWeather } from '@/app/components/events/EventCardWeather';
 import { apiGet } from '@/lib/utils/api';
 import { parseDateString } from '@/lib/utils/date';
 import { applyBrowserTabIdentity } from '@/lib/pwa/document-head';
-import { buildPwaIconUrl } from '@/lib/pwa/icons';
 import {
   applyDefaultThemeVariables,
   applyThemeVariables,
@@ -21,11 +20,6 @@ import {
   type ThemeMode,
 } from '@/lib/settings';
 
-interface PublicOfficial {
-  role: 'arbitre' | 'encadrant' | 'accompagnateur';
-  nom: string;
-}
-
 interface PublicItem {
   eventType: 'officiel' | 'amical' | 'entrainement' | 'plateau';
   title: string;
@@ -33,9 +27,7 @@ interface PublicItem {
   time: string;
   endTime: string | null;
   durationMinutes: number;
-  location: string | null;
   category: string | null;
-  meetingTime: string | null;
   competition: string | null;
   homeTeam: string | null;
   awayTeam: string | null;
@@ -44,9 +36,6 @@ interface PublicItem {
   venue: 'domicile' | 'extérieur' | null;
   stadium: string | null;
   address: string | null;
-  referee: string | null;
-  assistants: string[];
-  officials: PublicOfficial[];
   weather?: {
     weatherCode: number;
     temperatureC: number | null;
@@ -59,7 +48,6 @@ interface PublicPlanning {
   generatedAt?: string;
   scope?: { eventTypes: string[]; fromDate: string | null; toDate: string | null };
   club?: {
-    id?: string;
     name: string | null;
     logo: string | null;
     primaryColor?: string;
@@ -74,12 +62,6 @@ const EVENT_TYPE_LABELS: Record<PublicItem['eventType'], string> = {
   amical: 'Match amical',
   entrainement: 'Entraînement',
   plateau: 'Plateau',
-};
-
-const ROLE_LABELS: Record<PublicOfficial['role'], string> = {
-  arbitre: 'Arbitres',
-  encadrant: 'Encadrants',
-  accompagnateur: 'Accompagnateurs',
 };
 
 function longFrenchDate(ddmmyyyy: string): string {
@@ -97,25 +79,6 @@ function longFrenchDate(ddmmyyyy: string): string {
 function timeRange(item: PublicItem): string {
   if (!item.time) return `${item.durationMinutes} min`;
   return item.endTime ? `${item.time} – ${item.endTime}` : item.time;
-}
-
-function OfficialsBlock({ officials }: { officials: PublicOfficial[] }) {
-  if (!officials.length) return null;
-  const grouped = (['arbitre', 'encadrant', 'accompagnateur'] as const)
-    .map((role) => ({ role, noms: officials.filter((o) => o.role === role).map((o) => o.nom) }))
-    .filter((group) => group.noms.length > 0);
-  if (!grouped.length) return null;
-
-  return (
-    <div className="space-y-1 border-t pt-2">
-      {grouped.map((group) => (
-        <p key={group.role} className="flex flex-wrap gap-x-2 gap-y-1 text-sm">
-          <span className="font-medium text-muted-foreground">{ROLE_LABELS[group.role]} :</span>
-          <span>{group.noms.join(', ')}</span>
-        </p>
-      ))}
-    </div>
-  );
 }
 
 function MatchHeader({ item }: { item: PublicItem }) {
@@ -145,7 +108,7 @@ function EventCard({ item }: { item: PublicItem }) {
       <CardHeader className="space-y-3 px-4 pb-2 sm:px-6 sm:pb-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
           <CardTitle className="text-base text-pretty">
-            {isMatch ? item.competition || EVENT_TYPE_LABELS[item.eventType] : item.title}
+            {item.title}
           </CardTitle>
           <div className="flex flex-wrap gap-1 sm:shrink-0 sm:justify-end">
             <Badge variant="outline">{EVENT_TYPE_LABELS[item.eventType]}</Badge>
@@ -162,9 +125,6 @@ function EventCard({ item }: { item: PublicItem }) {
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Clock className="h-4 w-4 shrink-0 text-primary" />
           <span>{timeRange(item)}</span>
-          {item.meetingTime && (
-            <span className="text-muted-foreground">· Convocation {item.meetingTime}</span>
-          )}
         </p>
         <EventCardWeather weather={item.weather} variant="inline" className="text-sm" />
         {item.category && (
@@ -173,11 +133,11 @@ function EventCard({ item }: { item: PublicItem }) {
             <span className="min-w-0 break-words text-pretty">{item.category}</span>
           </p>
         )}
-        {(item.stadium || item.location) && (
+        {item.stadium && (
           <p className="flex items-start gap-2">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <span className="min-w-0 break-words text-pretty">
-              {item.stadium || item.location}
+              {item.stadium}
               {item.address && (
                 <>
                   <br />
@@ -195,21 +155,6 @@ function EventCard({ item }: { item: PublicItem }) {
             </span>
           </p>
         )}
-        {(item.referee || item.assistants.length > 0) && (
-          <p className="flex flex-wrap items-start gap-x-2 gap-y-1">
-            <Flag className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <span className="min-w-0 flex-1 break-words text-pretty">
-              {item.referee && <span>Arbitre&nbsp;: {item.referee}</span>}
-              {item.assistants.length > 0 && (
-                <span className="text-muted-foreground">
-                  {item.referee ? ' · ' : ''}
-                  Assistants&nbsp;: {item.assistants.join(', ')}
-                </span>
-              )}
-            </span>
-          </p>
-        )}
-        <OfficialsBlock officials={item.officials} />
       </CardContent>
     </Card>
   );
@@ -246,12 +191,9 @@ export default function PublicPlanningSharePage() {
 
     const clubName = club.name?.trim();
     if (clubName) {
-      const iconHref = club.id
-        ? buildPwaIconUrl({ clubId: club.id, size: 32, variant: 'plain' })
-        : club.logo || '/favicon.png';
       applyBrowserTabIdentity({
         title: clubName,
-        iconHref,
+        iconHref: club.logo || '/favicon.png',
         themeColor: club.primaryColor,
       });
     }
@@ -309,7 +251,7 @@ export default function PublicPlanningSharePage() {
           </div>
         )}
         <p className="text-xs text-muted-foreground">
-          Les coordonnées (téléphone, e-mail) des personnes affectées ne sont pas affichées.
+          Vue calendrier uniquement : aucune identité, coordonnée ni affectation n’est affichée.
         </p>
       </header>
 

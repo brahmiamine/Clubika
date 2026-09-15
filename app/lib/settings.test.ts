@@ -13,6 +13,7 @@ describe('normalizeAppSettings planning features', () => {
     expect(settings.features).toEqual(DEFAULT_APP_SETTINGS.features);
     expect(settings.timeZone).toBe(DEFAULT_APP_SETTINGS.timeZone);
     expect(settings.features.publicationReadiness).toBe(false);
+    expect(settings.features.scraperSync).toBe(false);
     expect(settings.features.officialMatchesCurrentWeekendOnly).toBe(true);
   });
 
@@ -49,6 +50,17 @@ describe('normalizeAppSettings clubAbbreviation', () => {
 
   it('keeps an explicit empty string so the UI can flag it as required', () => {
     expect(normalizeAppSettings({ clubAbbreviation: '   ' }).clubAbbreviation).toBe('');
+  });
+});
+
+describe('normalizeAppSettings smtp.passwordSet', () => {
+  it('preserves a boolean passwordSet flag from stored settings', () => {
+    expect(normalizeAppSettings({
+      smtp: { host: 'smtp.example.test', passwordSet: true },
+    }).smtp.passwordSet).toBe(true);
+    expect(normalizeAppSettings({
+      smtp: { host: 'smtp.example.test' },
+    }).smtp.passwordSet).toBe(false);
   });
 });
 
