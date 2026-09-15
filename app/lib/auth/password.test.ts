@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  currentScryptN,
   hashPassword,
   passwordNeedsRehash,
   UNUSABLE_PASSWORD_HASH,
@@ -50,5 +51,19 @@ describe('password hashing', () => {
     const result = await verifyPasswordAndMaybeRehash('legacy-passphrase', legacy);
     expect(result.ok).toBe(true);
     expect(result.newHash?.startsWith('v1:scrypt:')).toBe(true);
+  });
+
+  it('hashes with N=32768 without hitting OpenSSL maxmem', async () => {
+    const previous = process.env.PASSWORD_SCRYPT_N;
+    process.env.PASSWORD_SCRYPT_N = '32768';
+    try {
+      expect(currentScryptN()).toBe(32768);
+      const hash = await hashPassword('production-cost-passphrase');
+      expect(hash.startsWith('v1:scrypt:32768:')).toBe(true);
+      expect(await verifyPassword('production-cost-passphrase', hash)).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.PASSWORD_SCRYPT_N;
+      else process.env.PASSWORD_SCRYPT_N = previous;
+    }
   });
 });

@@ -5,8 +5,17 @@ const scryptAsync = promisify(scrypt) as (
   password: string,
   salt: Buffer,
   keylen: number,
-  options: { N: number; r: number; p: number },
+  options: { N: number; r: number; p: number; maxmem?: number },
 ) => Promise<Buffer>;
+
+/**
+ * OpenSSL scrypt rejects parameters when `128 * N * r * p` equals the default
+ * 32 MiB `maxmem`. Production N=32768, r=8, p=1 is exactly 32 MiB, so we pass
+ * an explicit ceiling (Playwright uses NODE_ENV=production and would otherwise fail).
+ */
+function scryptMaxmem(N: number, r: number, p: number): number {
+  return Math.max(64 * 1024 * 1024, 128 * N * r * p * 2);
+}
 
 /**
  * Format versionné (issue #32) : `v1:scrypt:N:r:p:saltHex:hashHex`.
@@ -86,6 +95,7 @@ export async function hashPassword(password: string): Promise<string> {
     N,
     r: SCRYPT_R,
     p: SCRYPT_P,
+    maxmem: scryptMaxmem(N, SCRYPT_R, SCRYPT_P),
   });
   return `v${PASSWORD_HASH_VERSION}:scrypt:${N}:${SCRYPT_R}:${SCRYPT_P}:${salt.toString('hex')}:${derived.toString('hex')}`;
 }
@@ -97,6 +107,7 @@ export async function verifyPassword(password: string, stored: string): Promise<
     N: parsed.N,
     r: parsed.r,
     p: parsed.p,
+    maxmem: scryptMaxmem(parsed.N, parsed.r, parsed.p),
   });
   return derived.length === parsed.expected.length && timingSafeEqual(derived, parsed.expected);
 }
