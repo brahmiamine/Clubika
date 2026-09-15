@@ -76,6 +76,9 @@ import { purgeOutboxLastError } from './purge-outbox-last-error';
  * des anciens `error.message` fournisseur ; les nouvelles valeurs sont
  * `{"code","retryable"}`. Dry-run : `MIGRATION_DRY_RUN=1`.
  *
+ * La migration 0029 (issue #34) ajoute le contexte d'échange court des invitations
+ * publiques (cookie httpOnly).
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -501,5 +504,17 @@ export const schemaMigrations: readonly SchemaMigration[] = [
     up: async (db) => {
       await purgeOutboxLastError(db);
     },
+  },
+  {
+    version: '0029',
+    name: 'invitation_validation_context',
+    // Contexte d'échange court (cookie httpOnly) pour retirer le jeton d'URL
+    // de l'historique après validation publique (issue #34). Colonnes nullables :
+    // les invitations déjà émises n'ont pas encore de contexte.
+    statements: [
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextHash VARCHAR(64) NULL AFTER createdAt',
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextExpiresAt DATETIME(6) NULL AFTER validationContextHash',
+      'CREATE INDEX IF NOT EXISTS idx_invitations_validation_context ON invitations (validationContextHash)',
+    ],
   },
 ];
