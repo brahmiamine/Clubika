@@ -21,9 +21,15 @@ visés : critical 7 j, high 14 j, moderate 60 j, low 120 j.
 
 ## Exceptions
 
-Fichier `security/exceptions.json`. Chaque entrée est **nommée** (id GHSA),
-justifiée, compensée et **datée**. Pas de `continue-on-error` global, pas de
-`--audit-level none`. Une exception expirée échoue la CI.
+Fichier `security/exceptions.json`. Chaque entrée est **nommée** (id GHSA ou
+CVE), justifiée, compensée et **datée**. Champ `scanner` : `pnpm-audit` ou
+`trivy-image-os`. Pas de `continue-on-error` global, pas de `--audit-level none`,
+pas de `.trivyignore` commité. Une exception expirée échoue la CI.
+
+Le scan **image** (`trivy image`) ignore uniquement les CVE listées avec
+`scanner: trivy-image-os` (socle vendor `node:20-bookworm-slim`, p.ex.
+`libgnutls30` alors que Node utilise OpenSSL). Toute autre CVE OS CRITICAL
+reste bloquante.
 
 ```json
 {
