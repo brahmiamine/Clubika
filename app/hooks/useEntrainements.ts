@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { EntrainementsData } from '@/types/match';
 import { apiGet } from '@/lib/utils/api';
@@ -20,7 +21,7 @@ export function useEntrainements() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des entraînements';
       setError(errorMessage);
-      console.error('Error loading entrainements:', err);
+      logError('app.unhandled', 'Error loading entrainements:', err);
     } finally {
       setIsLoading(false);
     }

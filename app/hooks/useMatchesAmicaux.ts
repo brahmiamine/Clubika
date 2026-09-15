@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { MatchesAmicauxData } from '@/types/match';
 import { apiGet } from '@/lib/utils/api';
@@ -20,7 +21,7 @@ export function useMatchesAmicaux() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des matchs amicaux';
       setError(errorMessage);
-      console.error('Error loading matches amicaux:', err);
+      logError('app.unhandled', 'Error loading matches amicaux:', err);
     } finally {
       setIsLoading(false);
     }

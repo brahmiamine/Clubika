@@ -47,7 +47,7 @@ describe('encryptSecret / decryptSecret', () => {
 
     process.env.APP_ENCRYPTION_KEY = '';
     const withoutKey = await freshSecretBox();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       const result = withoutKey.decryptSecret(stored);
       // Ne renvoie jamais le texte chiffré tel quel : soit le texte en clair déchiffré,
@@ -67,7 +67,7 @@ describe('encryptSecret / decryptSecret', () => {
 
     process.env.APP_ENCRYPTION_KEY = 'a-completely-different-key';
     const withRotatedKey = await freshSecretBox();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     try {
       const result = withRotatedKey.decryptSecret(stored);
       expect(result).toBeNull();

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import type { PlateauxData } from '@/types/match';
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     const data: PlateauxData = { plateaux: groupMatchesByDate(plateaux) };
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error reading plateaux from DB:', error);
+    logError('app.unhandled', 'Error reading plateaux from DB:', error);
     return NextResponse.json({ error: 'Failed to load plateaux' }, { status: 500 });
   }
 }

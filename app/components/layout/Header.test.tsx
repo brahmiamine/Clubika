@@ -56,6 +56,7 @@ function baseFeatures(overrides: Partial<Record<string, boolean>> = {}) {
     requireArbitreForPublication: true,
     requireEncadrantForPublication: true,
     requireAccompagnateurForPublication: true,
+    massExport: true,
     ...overrides,
   };
 }

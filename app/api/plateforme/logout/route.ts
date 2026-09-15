@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { revokePlatformSession, PLATFORM_SESSION_COOKIE_NAME } from '@/lib/auth/platform-session';
@@ -11,7 +12,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error during platform logout:', error);
+    logError('app.unhandled', 'Error during platform logout:', error);
     return NextResponse.json(
       { error: 'Une erreur est survenue' },
       { status: 500 },

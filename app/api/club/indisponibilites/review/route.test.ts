@@ -80,7 +80,7 @@ describe.skipIf(!dbAvailable)('POST /api/club/indisponibilites/review (issue #32
       userId: dirigeant.user.id,
       indisponibiliteId: 'pending-1',
       decision: 'rejected',
-      comment: 'trop tard',
+      reviewCode: 'other',
     }));
     expect(conflict.status).toBe(409);
 
@@ -88,7 +88,7 @@ describe.skipIf(!dbAvailable)('POST /api/club/indisponibilites/review (issue #32
       userId: dirigeant.user.id,
       indisponibiliteId: 'pending-2',
       decision: 'rejected',
-      comment: 'Créneau trop large',
+      reviewCode: 'schedule_too_broad',
     }));
     expect(rejected.status).toBe(200);
 
@@ -105,6 +105,8 @@ describe.skipIf(!dbAvailable)('POST /api/club/indisponibilites/review (issue #32
     const db = await getDb();
     const notifications = await db.getRepository<NotificationEntity>('Notification').find({ where: { userId: dirigeant.user.id } });
     expect(notifications.some((item) => item.type === 'availability-reviewed')).toBe(true);
+    expect(notifications.every((item) => !String(item.message ?? '').includes('Créneau trop large'))).toBe(true);
+    expect(notifications.every((item) => !String(item.message ?? '').includes('trop tard'))).toBe(true);
     await db.getRepository('Notification').delete({ userId: dirigeant.user.id });
     await db.getRepository('MatchAuditLog').delete({ entityId: `${dirigeant.user.id}:pending-1` });
     await db.getRepository('MatchAuditLog').delete({ entityId: `${dirigeant.user.id}:pending-2` });

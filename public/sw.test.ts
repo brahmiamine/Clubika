@@ -39,6 +39,8 @@ describe('service worker installability', () => {
     expect(source).toContain('event.respondWith');
     expect(source).toContain("const OFFLINE_URL = '/offline'");
     expect(source).toContain("if (event.request.method !== 'GET') return");
+    expect(source).toContain("url.pathname.startsWith('/inscription/')");
+    expect(source).toContain("url.pathname.startsWith('/api/invitations/')");
   });
 });
 

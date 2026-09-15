@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -7,6 +8,7 @@ import {
   checkCapabilityIpRateLimit,
   recordCapabilityIpAttempt,
 } from '@/lib/auth/capability-rate-limit';
+import { deliverPasswordResetLink } from '@/lib/auth/password-reset-delivery';
 
 const RATE_LIMIT_ROUTE_KEY = 'password-reset-request';
 
@@ -14,39 +16,10 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-async function deliverResetLink(email: string, resetUrl: string): Promise<boolean> {
-  const url = process.env.PASSWORD_RESET_WEBHOOK_URL?.trim()
-    || process.env.NOTIFICATION_EMAIL_WEBHOOK_URL?.trim();
-  if (!url) return false;
-
-  const token = process.env.PASSWORD_RESET_WEBHOOK_TOKEN?.trim()
-    || process.env.NOTIFICATION_EMAIL_WEBHOOK_TOKEN?.trim();
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        to: email,
-        subject: 'Réinitialisation de votre mot de passe Clubika',
-        text: `Utilisez ce lien pour choisir un nouveau mot de passe : ${resetUrl}`,
-        resetUrl,
-      }),
-    });
-    return response.ok;
-  } catch (error) {
-    console.error('Password reset delivery failed:', error);
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
   // Réponse volontairement peu informative (ne révèle ni l'existence ni le nombre
   // de comptes) ; `resetUrl`/`resetUrls` n'apparaissent qu'en développement, comme
-  // repli quand l'envoi réel (webhook SMTP) n'est pas configuré.
+  // repli quand l'envoi SMTP n'est pas configuré.
   const genericResponse = (resetUrls: string[] = []) => NextResponse.json({
     success: true,
     message: 'Si ce compte existe, les instructions de réinitialisation ont été préparées.',
@@ -99,13 +72,13 @@ export async function POST(request: NextRequest) {
       });
 
       const resetUrl = `${baseUrl}/reinitialiser/${rawToken}`;
-      const delivered = await deliverResetLink(user.email, resetUrl);
+      const delivered = await deliverPasswordResetLink(user.email, resetUrl, user.clubId);
       if (!delivered) pendingUrls.push(resetUrl);
     }
 
     return genericResponse(pendingUrls);
   } catch (error) {
-    console.error('Password reset request failed:', error);
+    logError('app.unhandled', 'Password reset request failed:', error);
     return genericResponse();
   }
 }

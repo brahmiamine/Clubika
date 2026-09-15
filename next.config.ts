@@ -33,9 +33,7 @@ const nextConfig: NextConfig = {
   // Optimisations de compilation
   compiler: {
     // Supprimer les console.log en production
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+    removeConsole: process.env.NODE_ENV === 'production',
   },
 
   // Compression (activée par défaut en production)
@@ -69,6 +67,22 @@ const nextConfig: NextConfig = {
             // n'affiche jamais la boîte « Autoriser le microphone ».
             value: 'camera=(), microphone=(self), geolocation=()',
           },
+        ],
+      },
+      {
+        source: '/inscription',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+      {
+        source: '/inscription/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
       {

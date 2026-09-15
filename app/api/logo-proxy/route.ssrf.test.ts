@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Isolé de route.test.ts (qui vérifie l'authentification réelle contre la base) :
@@ -63,6 +63,12 @@ describe('GET /api/logo-proxy — garde-fous SSRF (issue #272, sans réseau rée
   afterEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  beforeEach(() => {
+    vi.stubEnv('LOGO_PROXY_ENABLED', 'true');
+    vi.stubEnv('LOGO_PROXY_ALLOWED_HOSTS', 'logos.example.com,cdn.example.com');
   });
 
   const blockedTargets = [

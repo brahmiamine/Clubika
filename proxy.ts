@@ -14,12 +14,12 @@ const LOGIN_PAGE = '/login';
 // de savoir dans quel espace la session atterrira.
 // /sw.js doit rester accessible sans session : un navigateur refuse d'enregistrer un
 // service worker dont le script est servi derrière une redirection (ici, vers /login).
-const PUBLIC_PAGE_PATHS = ['/login', '/mot-de-passe-oublie', '/manifest.webmanifest', '/offline', '/sw.js'];
+const PUBLIC_PAGE_PATHS = ['/login', '/mot-de-passe-oublie', '/manifest.webmanifest', '/offline', '/sw.js', '/inscription'];
 // /partage/{token} affiche le planning public : un visiteur anonyme doit pouvoir l'ouvrir
 // sans session, le token lui-même (SHA-256, expiration) protégeant l'accès (issue #211).
 const PUBLIC_PAGE_PREFIXES = ['/inscription/', '/reinitialiser/', '/partage/'];
-// /api/settings expose en lecture les réglages publics d'un club (thème, logo) pour que
-// la page de connexion non authentifiée puisse s'afficher personnalisée ; l'écriture (PUT)
+// /api/settings GET public ne sert qu'un DTO de marque (nom, couleurs, logo autorisé) ;
+// SMTP, flags et champs internes restent derrière une session. L'écriture (PUT)
 // reste protégée par requireRole dans le handler lui-même.
 // /api/public sert le JSON consommé par /partage/{token} (issue #211) : la validation du
 // token (SHA-256, timingSafeEqual, expiration) reste entièrement dans le handler lui-même.

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     await removePushSubscription(db, auth.user.id, body.endpoint);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Unable to remove push subscription:', error);
+    logError('app.unhandled', 'Unable to remove push subscription:', error);
     return NextResponse.json({ error: 'Impossible de désactiver les notifications push' }, { status: 500 });
   }
 }
