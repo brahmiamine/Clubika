@@ -97,6 +97,10 @@ import { applyAuditLogMinimizeMigration } from './audit-log-minimize';
  * La migration 0039 (issue #25) ajoute l’état d’offboarding sur `club_tenants`
  * et les tables d’export, d’instructions sous-traitants, d’événements et de certificats.
  *
+ * La migration 0040 (issue #26) crée le cycle de vie des fiches sans compte :
+ * métadonnées de provenance/notice, configuration de notice club, et file
+ * d'attente publique des droits (empreintes uniquement, aucun plaintext).
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -778,6 +782,49 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         payloadJson TEXT NOT NULL,
         createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         INDEX idx_tenant_deletion_certificates_club (clubId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0040',
+    name: 'fiches_sans_compte',
+    statements: [
+      `CREATE TABLE IF NOT EXISTS non_account_contact_meta (
+        id VARCHAR(36) NOT NULL PRIMARY KEY,
+        userId INT NOT NULL,
+        clubId VARCHAR(64) NOT NULL,
+        category VARCHAR(32) NOT NULL,
+        provenance VARCHAR(64) NULL,
+        purpose VARCHAR(64) NOT NULL,
+        collectedAt DATETIME(6) NOT NULL,
+        recordedByUserId INT NOT NULL,
+        noticeVersion VARCHAR(64) NULL,
+        noticeChannel VARCHAR(32) NOT NULL DEFAULT 'not_sent',
+        noticeAt DATETIME(6) NULL,
+        noticeResult VARCHAR(32) NOT NULL DEFAULT 'pending',
+        opposedAt DATETIME(6) NULL,
+        status VARCHAR(32) NOT NULL DEFAULT 'active',
+        UNIQUE INDEX uq_non_account_contact_meta_user (userId),
+        INDEX idx_non_account_contact_meta_club (clubId),
+        CONSTRAINT fk_non_account_contact_meta_user FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS club_notice_config (
+        clubId VARCHAR(64) NOT NULL PRIMARY KEY,
+        noticeVersion VARCHAR(64) NOT NULL DEFAULT '',
+        noticeText TEXT NOT NULL,
+        updatedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS non_account_rights_requests (
+        id VARCHAR(36) NOT NULL PRIMARY KEY,
+        clubId VARCHAR(64) NOT NULL,
+        type VARCHAR(32) NOT NULL,
+        subjectEmailHash CHAR(64) NULL,
+        subjectPhoneHash CHAR(64) NULL,
+        status VARCHAR(32) NOT NULL DEFAULT 'received',
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        processedAt DATETIME(6) NULL,
+        INDEX idx_non_account_rights_club (clubId, createdAt),
+        INDEX idx_non_account_rights_hashes (clubId, subjectEmailHash, subjectPhoneHash)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
   },

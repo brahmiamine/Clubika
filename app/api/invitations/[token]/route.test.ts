@@ -104,6 +104,7 @@ describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)',
         valid: true,
         emailMasked: maskEmail(live.email),
         clubName: expect.any(String),
+        notice: null,
       });
       expect(liveBody.email).toBeUndefined();
       expect(liveBody.accessRole).toBeUndefined();
@@ -163,6 +164,7 @@ describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)',
         valid: true,
         emailMasked: maskEmail(live.email),
         clubName: 'Club Public Test',
+        notice: null,
       });
       expect(JSON.stringify(body)).not.toContain('cdn.example');
       expect(JSON.stringify(body)).not.toContain('#c8102e');

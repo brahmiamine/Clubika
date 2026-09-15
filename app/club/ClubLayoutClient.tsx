@@ -18,6 +18,7 @@ import {
   Shield,
   UserRound,
   Users,
+  Contact,
 } from 'lucide-react';
 import { apiPost } from '@/lib/utils/api';
 import { toast } from 'sonner';
@@ -80,6 +81,7 @@ export default function ClubLayoutClient({ children }: { children: React.ReactNo
       title: 'Utilisateurs',
       items: [
         { href: '/club/utilisateurs', label: 'Utilisateurs', icon: Users, exact: true },
+        { href: '/club/fiches-sans-compte', label: 'Fiches sans compte', icon: Contact },
         { href: '/club/invitations', label: 'Invitations', icon: Mail },
         { href: '/club/droits', label: 'Droits RGPD', icon: Shield },
       ],

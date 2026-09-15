@@ -6,27 +6,11 @@ import { UserEntity } from '@/lib/db/schemas';
 import { requireRole } from '@/lib/auth/require';
 import { UNUSABLE_PASSWORD_HASH } from '@/lib/auth/password';
 import { normalizeAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
-import { isClosedAccount } from '@/lib/account-closure/constants';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { serializeManagedUser, wantsRevealedPhone } from '@/lib/non-account-contacts/serialize-user';
 
-function serializeUser(user: UserEntity) {
-  const closed = isClosedAccount(user);
-  return {
-    id: user.id,
-    email: closed ? '' : user.email,
-    nom: user.nom,
-    accessRole: user.accessRole,
-    planningFunctions: user.planningFunctions,
-    active: user.active,
-    telephone: closed ? null : user.telephone,
-    // Issue #204 : un profil sans accès (jamais activé) n'est pas un compte actif.
-    claimedAt: user.claimedAt,
-    hasAccess: user.claimedAt != null && !closed,
-    closedAt: user.closedAt,
-    closureRequestedAt: user.closureRequestedAt,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
+function serializeUser(user: UserEntity, revealPhone = false) {
+  return serializeManagedUser(user, { revealPhone });
 }
 
 export async function GET(request: NextRequest) {
@@ -38,11 +22,10 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const repo = db.getRepository<UserEntity>('User');
     const users = await repo.find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
-    // ?sansAcces=1 : ne retourne que les profils de dirigeants non réclamés,
-    // pour permettre à une invitation de cibler un profil existant (issue #204).
+    const revealPhone = wantsRevealedPhone(request.url);
     const unclaimedOnly = new URL(request.url).searchParams.get('sansAcces') === '1';
     const visible = unclaimedOnly ? users.filter((user) => user.claimedAt == null) : users;
-    return NextResponse.json({ users: visible.map(serializeUser) });
+    return NextResponse.json({ users: visible.map((user) => serializeUser(user, revealPhone)) });
   } catch (error) {
     logError('app.unhandled', 'Error reading users from DB:', error);
     return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
@@ -97,7 +80,7 @@ export async function POST(request: NextRequest) {
     });
 
     const users = await repo.find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
-    return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
+    return NextResponse.json({ success: true, data: { users: users.map((user) => serializeUser(user)) } });
   } catch (error) {
     logError('app.unhandled', 'Error creating user in DB:', error);
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });

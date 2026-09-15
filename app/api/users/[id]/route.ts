@@ -18,6 +18,9 @@ import {
   lockTargetAndActiveAdmins,
 } from '@/lib/account-closure/close-account';
 import { isClosedAccount } from '@/lib/account-closure/constants';
+import { serializeManagedUser } from '@/lib/non-account-contacts/serialize-user';
+import { applyTelephoneGateAndMeta, contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
+import { inferCategoryFromPlanningFunctions } from '@/lib/non-account-contacts/meta';
 
 function isMysqlDeadlock(error: unknown): boolean {
   for (let current = error, depth = 0; current && typeof current === 'object' && depth < 5; depth += 1) {
@@ -42,20 +45,7 @@ async function retryOnMysqlDeadlock<T>(work: () => Promise<T>, attempts = 3): Pr
 }
 
 function serializeUser(user: UserEntity) {
-  const closed = isClosedAccount(user);
-  return {
-    id: user.id,
-    email: closed ? '' : user.email,
-    nom: user.nom,
-    accessRole: user.accessRole,
-    planningFunctions: user.planningFunctions,
-    active: user.active,
-    telephone: closed ? null : user.telephone,
-    closedAt: user.closedAt,
-    closureRequestedAt: user.closureRequestedAt,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
+  return serializeManagedUser(user);
 }
 
 function getRepo(db: Awaited<ReturnType<typeof getDb>>) {
@@ -128,7 +118,19 @@ export async function PUT(
       user.accessRole = nextAccessRole;
       user.planningFunctions = nextFunctions;
       user.active = nextActive;
-      if (typeof telephone === 'string') user.telephone = telephone.trim() || null;
+      if (typeof telephone === 'string') {
+        if (user.claimedAt == null) {
+          user.telephone = await applyTelephoneGateAndMeta(manager, {
+            user,
+            clubId: auth.user.clubId,
+            category: inferCategoryFromPlanningFunctions(user.planningFunctions),
+            recordedByUserId: auth.user.id,
+            body,
+          });
+        } else {
+          user.telephone = telephone.trim() || null;
+        }
+      }
       await userRepo.save(user);
 
       return {
@@ -200,8 +202,10 @@ export async function PUT(
     }
 
     const users = await getRepo(db).find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
-    return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
+    return NextResponse.json({ success: true, data: { users: users.map((user) => serializeUser(user)) } });
   } catch (error) {
+    const lifecycle = contactLifecycleResponse(error);
+    if (lifecycle) return lifecycle;
     logError('app.unhandled', 'Error updating user in DB:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }

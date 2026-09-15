@@ -16,7 +16,7 @@ const LOGIN_PAGE = '/login';
 // de savoir dans quel espace la session atterrira.
 // /sw.js doit rester accessible sans session : un navigateur refuse d'enregistrer un
 // service worker dont le script est servi derrière une redirection (ici, vers /login).
-const PUBLIC_PAGE_PATHS = ['/login', '/mot-de-passe-oublie', '/exercice-des-droits', '/manifest.webmanifest', '/offline', '/sw.js', '/inscription'];
+const PUBLIC_PAGE_PATHS = ['/login', '/mot-de-passe-oublie', '/droits-sans-compte', '/exercice-des-droits', '/manifest.webmanifest', '/offline', '/sw.js', '/inscription'];
 // /partage/{token} affiche le planning public : un visiteur anonyme doit pouvoir l'ouvrir
 // sans session, le token lui-même (SHA-256, expiration) protégeant l'accès (issue #211).
 const PUBLIC_PAGE_PREFIXES = ['/inscription/', '/reinitialiser/', '/partage/', '/confirmer-email/'];
