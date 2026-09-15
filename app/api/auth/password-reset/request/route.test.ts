@@ -102,7 +102,7 @@ describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request (issue #286
         'Content-Type': 'application/json',
         host: 'evil.example',
         'x-forwarded-host': 'evil.example',
-        'x-forwarded-for': randomBytes(8).toString('hex'),
+        'x-forwarded-for': uniqueTestIp(),
       },
     }));
     expect(response.status).toBe(200);

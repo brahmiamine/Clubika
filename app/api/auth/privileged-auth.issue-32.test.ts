@@ -17,6 +17,7 @@ function hashToken(token: string): string {
 describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et replay (issue #32)', () => {
   const previousBase = process.env.APP_BASE_URL;
   const previousWebhook = process.env.PASSWORD_RESET_WEBHOOK_URL;
+  const previousNodeEnv = process.env.NODE_ENV;
   const cleanups: Array<() => Promise<void>> = [];
   let restoreProxy: (() => void) | undefined;
 
@@ -26,6 +27,7 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
 
   afterEach(async () => {
     restoreProxy?.();
+    process.env.NODE_ENV = previousNodeEnv;
     if (previousBase === undefined) delete process.env.APP_BASE_URL;
     else process.env.APP_BASE_URL = previousBase;
     if (previousWebhook === undefined) delete process.env.PASSWORD_RESET_WEBHOOK_URL;
@@ -37,7 +39,16 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
   });
 
   it('ne met jamais le jeton brut dans un webhook, un log structuré ou une réponse générique', async () => {
-    process.env.APP_BASE_URL = 'http://localhost:3000';
+    const account = await createTestUserAndSession('dirigeant');
+    cleanups.push(account.cleanup, async () => {
+      const db = await getDb();
+      await db.getRepository('PasswordResetToken').delete({ userId: account.user.id });
+    });
+
+    // SMTP off + NODE_ENV=test exposerait `resetUrl` en repli local. La garantie
+    // issue #32/#30 porte sur la prod : pas de webhook, pas de secret dans le JSON.
+    process.env.NODE_ENV = 'production';
+    process.env.APP_BASE_URL = 'https://app.example.com';
     const payloads: unknown[] = [];
     process.env.PASSWORD_RESET_WEBHOOK_URL = 'http://127.0.0.1:9/never-used';
     const originalFetch = globalThis.fetch;
@@ -45,12 +56,6 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
       payloads.push(JSON.parse(String(init?.body ?? '{}')));
       return new Response('ok', { status: 200 });
     }) as typeof fetch;
-
-    const account = await createTestUserAndSession('dirigeant');
-    cleanups.push(account.cleanup, async () => {
-      const db = await getDb();
-      await db.getRepository('PasswordResetToken').delete({ userId: account.user.id });
-    });
 
     try {
       const unknown = await requestReset(new NextRequest('http://localhost/api/auth/password-reset/request', {
@@ -71,12 +76,10 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
       const knownBody = await known.json() as { resetUrl?: string };
       expect(knownBody.resetUrl).toBeUndefined();
 
-      expect(payloads.length).toBeGreaterThan(0);
-      const serialized = JSON.stringify(payloads);
-      expect(serialized).not.toMatch(/reinitialiser\/[a-f0-9]{64}/);
-      expect(serialized).not.toContain('resetUrl');
+      expect(payloads).toEqual([]);
     } finally {
       globalThis.fetch = originalFetch;
+      process.env.NODE_ENV = previousNodeEnv;
     }
   });
 
