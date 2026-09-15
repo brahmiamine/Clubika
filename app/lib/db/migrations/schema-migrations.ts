@@ -58,6 +58,9 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
+ * La migration 0025 (issue #22) ajoute les tables d’exercice des droits et les
+ * drapeaux de restriction/opposition sur `users`.
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -445,6 +448,52 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         PRIMARY KEY (messageId, userId, emoji),
         INDEX idx_chat_message_reactions_message (messageId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0025',
+    name: 'exercice_droits_rgpd',
+    statements: [
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS processingRestrictedAt DATETIME(6) NULL AFTER notifyChannel',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS processingOpposedAt DATETIME(6) NULL AFTER processingRestrictedAt',
+      `CREATE TABLE IF NOT EXISTS privacy_requests (
+        id VARCHAR(64) NOT NULL PRIMARY KEY,
+        clubId VARCHAR(64) NOT NULL,
+        type VARCHAR(32) NOT NULL,
+        status VARCHAR(32) NOT NULL,
+        subjectUserId INT NULL,
+        subjectEmailHash CHAR(64) NULL,
+        identityVerifiedAt DATETIME(6) NULL,
+        dueAt DATETIME(6) NULL,
+        assigneeUserId INT NULL,
+        decisionCode VARCHAR(64) NULL,
+        responseProof VARCHAR(191) NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        updatedAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+        completedAt DATETIME(6) NULL,
+        INDEX idx_privacy_requests_club (clubId, createdAt),
+        INDEX idx_privacy_requests_subject (clubId, subjectUserId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS privacy_export_tokens (
+        id CHAR(64) NOT NULL PRIMARY KEY,
+        clubId VARCHAR(64) NOT NULL,
+        userId INT NOT NULL,
+        requestId VARCHAR(64) NOT NULL,
+        expiresAt DATETIME(6) NOT NULL,
+        revokedAt DATETIME(6) NULL,
+        downloadedAt DATETIME(6) NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        INDEX idx_privacy_export_tokens_user (clubId, userId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS privacy_contact_changes (
+        id CHAR(64) NOT NULL PRIMARY KEY,
+        clubId VARCHAR(64) NOT NULL,
+        userId INT NOT NULL,
+        newEmail VARCHAR(320) NOT NULL,
+        expiresAt DATETIME(6) NOT NULL,
+        usedAt DATETIME(6) NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
   },

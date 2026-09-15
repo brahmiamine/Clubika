@@ -27,6 +27,7 @@ import {
   type NotificationOutboxItem,
   type OutboxChannel,
 } from './outbox';
+import { isOutboundProcessingBlocked, isPrivacyOperationalNotice } from '@/lib/privacy/catalog';
 
 type Queryable = DataSource | EntityManager;
 
@@ -108,6 +109,12 @@ async function enqueueChannelsForUser(
   input: NotificationInput,
   idempotencyKeyBase?: string,
 ): Promise<NotificationOutboxItem[]> {
+  const restricted = isOutboundProcessingBlocked(user);
+  const operationalNotice = isPrivacyOperationalNotice(input.type);
+  if (restricted && !operationalNotice) {
+    return [];
+  }
+
   const preferenceRecord = await getPlanningRecord(db, `notification-preferences:${user.id}`);
   const preferences = normalizeNotificationPreferences(preferenceRecord?.payload);
   const selected = selectedNotificationChannels(preferences, { urgency: input.urgency, eventType: input.eventType });

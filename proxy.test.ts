@@ -27,8 +27,14 @@ describe('proxy — exceptions publiques (issue #211)', () => {
     expect(response.status).toBe(200);
   });
 
-  it('laisse passer un visiteur anonyme sur /api/public/planning/<token>', async () => {
-    const response = await proxy(anonymousRequest('/api/public/planning/un-token-quelconque'));
+  it('laisse passer un visiteur anonyme sur /exercice-des-droits (issue #22)', async () => {
+    const response = await proxy(anonymousRequest('/exercice-des-droits'));
+    expect(response.headers.get('location')).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  it('laisse passer un visiteur anonyme sur /api/privacy/exports/<token> (issue #22)', async () => {
+    const response = await proxy(anonymousRequest('/api/privacy/exports/un-jeton'));
     expect(response.headers.get('location')).toBeNull();
     expect(response.status).toBe(200);
   });
