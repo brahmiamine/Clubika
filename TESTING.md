@@ -31,6 +31,11 @@ pas non-root / lecture seule / sans capability (issue #36). Le service MariaDB
 de CI est pinné par digest (pas `mariadb:latest`). Un échec de n'importe lequel
 de ces jobs bloque le merge.
 
+La chaîne logicielle (issue #37) ajoute les workflows `Supply chain` (audit
+`pnpm` high/critical, Gitleaks, Trivy lockfile + image de base, SBOM CycloneDX)
+et `CodeQL` (SAST JS/TS). Un scanner ou une base d’advisories injoignable **échoue**
+le job. Les Actions GitHub sont épinglées à un SHA. Voir `security/README.md`.
+
 ## Tests d'intégration (vraie base, pas de mock)
 
 Les fichiers `*.test.ts` qui appellent `getDb()` sont des tests d'intégration contre une

@@ -1,0 +1,23 @@
+# Gitleaks (issue #37) — scan local, rapport rédigé (--redact).
+# Les valeurs d'exemple du dépôt ne sont pas des secrets réels.
+
+title = "Clubika"
+
+[allowlist]
+description = "Fichiers d'exemple et identifiants de test documentés"
+paths = [
+  '''^\.env\.example$''',
+  '''^deploy/\.env\.production\.example$''',
+  '''^security/exceptions\.json$''',
+  '''^security/tool-pins\.lock$''',
+]
+
+regexes = [
+  '''change-me''',
+  '''test-password-123''',
+  '''test-admin@example\.com''',
+  '''admin@exemple\.fr''',
+  '''plateforme@exemple\.fr''',
+  '''root_password''',
+  '''clubika_password''',
+]

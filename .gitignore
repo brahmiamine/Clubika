@@ -47,6 +47,9 @@ next-env.d.ts
 .parcel-cache
 .turbo
 
+# généré en CI depuis security/exceptions.json — ne pas committer
+.trivyignore.generated
+
 # IDE
 .vscode/
 .idea/
