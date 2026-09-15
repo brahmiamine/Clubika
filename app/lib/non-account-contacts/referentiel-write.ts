@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import type { DataSource } from 'typeorm';
+import type { DataSource, EntityManager } from 'typeorm';
 import type { UserEntity } from '@/lib/db/schemas';
 import { ContactLifecycleError, type ContactCategory } from './constants';
 import {
@@ -11,6 +11,8 @@ import {
   upsertContactMeta,
 } from './meta';
 
+type Queryable = DataSource | EntityManager;
+
 export function contactLifecycleResponse(error: unknown): NextResponse | null {
   if (error instanceof ContactLifecycleError) {
     return NextResponse.json({ error: error.message }, { status: error.status });
@@ -19,7 +21,7 @@ export function contactLifecycleResponse(error: unknown): NextResponse | null {
 }
 
 export async function applyTelephoneGateAndMeta(
-  db: DataSource,
+  db: Queryable,
   input: {
     user: Pick<UserEntity, 'id' | 'telephone'>;
     clubId: string;

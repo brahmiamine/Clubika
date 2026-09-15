@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { DataSource } from 'typeorm';
+import type { DataSource, EntityManager } from 'typeorm';
 import type { NonAccountContactMetaEntity, ClubNoticeConfigEntity } from '@/lib/db/schemas';
 import { normalizePlanningFunctions } from '@/lib/auth/roles';
 import {
@@ -16,12 +16,14 @@ import {
 } from './constants';
 import { isKnown } from './format';
 
-export async function loadNoticeConfig(db: DataSource, clubId: string): Promise<ClubNoticeConfigEntity | null> {
+type Queryable = DataSource | EntityManager;
+
+export async function loadNoticeConfig(db: Queryable, clubId: string): Promise<ClubNoticeConfigEntity | null> {
   return db.getRepository<ClubNoticeConfigEntity>('ClubNoticeConfig').findOneBy({ clubId });
 }
 
 export async function upsertNoticeConfig(
-  db: DataSource,
+  db: Queryable,
   clubId: string,
   input: { noticeVersion?: string; noticeText?: string },
 ): Promise<ClubNoticeConfigEntity> {
@@ -44,7 +46,7 @@ export async function upsertNoticeConfig(
   return repo.save(row);
 }
 
-export async function loadContactMeta(db: DataSource, userId: number) {
+export async function loadContactMeta(db: Queryable, userId: number) {
   return db.getRepository<NonAccountContactMetaEntity>('NonAccountContactMeta').findOneBy({ userId });
 }
 
@@ -117,7 +119,7 @@ export function assertTelephoneAllowed(options: {
 }
 
 export async function upsertContactMeta(
-  db: DataSource,
+  db: Queryable,
   input: {
     userId: number;
     clubId: string;
@@ -158,7 +160,7 @@ export async function upsertContactMeta(
 }
 
 export async function recordNoticeProof(
-  db: DataSource,
+  db: Queryable,
   userId: number,
   clubId: string,
   channel: NoticeChannel,
@@ -180,7 +182,7 @@ export async function recordNoticeProof(
   await repo.save(row);
 }
 
-export async function markOpposition(db: DataSource, userId: number): Promise<void> {
+export async function markOpposition(db: Queryable, userId: number): Promise<void> {
   const repo = db.getRepository<NonAccountContactMetaEntity>('NonAccountContactMeta');
   const row = await repo.findOneBy({ userId });
   if (!row) return;

@@ -44,6 +44,6 @@ export async function POST(request: NextRequest) {
     const lifecycle = contactLifecycleResponse(error);
     if (lifecycle) return lifecycle;
     console.error('Error recording public non-account rights request:', error);
-    return NextResponse.json(GENERIC, { status: 202 });
+    return NextResponse.json({ error: 'Demande impossible pour le moment.' }, { status: 500 });
   }
 }

@@ -119,28 +119,31 @@ export async function importContactCsv(
 
       const email = await generatePlaceholderEmail(db, nom, category);
       const passwordHash = await hashPassword(randomBytes(24).toString('hex'));
-      const saved = await repo.save({
-        clubId,
-        email,
-        passwordHash,
-        nom,
-        accessRole: 'dirigeant',
-        planningFunctions: [planningFunction],
-        active: true,
-        claimedAt: null,
-        telephone,
-        indisponibilites: null,
-        icalToken: randomBytes(24).toString('hex'),
+      const saved = await db.transaction(async (manager) => {
+        const created = await manager.getRepository<UserEntity>('User').save({
+          clubId,
+          email,
+          passwordHash,
+          nom,
+          accessRole: 'dirigeant',
+          planningFunctions: [planningFunction],
+          active: true,
+          claimedAt: null,
+          telephone,
+          indisponibilites: null,
+          icalToken: randomBytes(24).toString('hex'),
+        });
+        await upsertContactMeta(manager, {
+          userId: created.id,
+          clubId,
+          category,
+          provenance,
+          purpose,
+          recordedByUserId,
+        });
+        return created;
       });
       clubUsers.push(saved);
-      await upsertContactMeta(db, {
-        userId: saved.id,
-        clubId,
-        category,
-        provenance,
-        purpose,
-        recordedByUserId,
-      });
       accepted += 1;
     } catch (error) {
       refused.push({ line: record.line, error: csvError(error) });

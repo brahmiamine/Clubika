@@ -138,7 +138,6 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDb();
-    const repo = db.getRepository<UserEntity>('User');
     const clubId = auth.user.clubId;
     const officiels = await findAllOfficiels(db, clubId);
     const existing = officiels.find((item) => normalize(item.nom) === normalize(nom));
@@ -152,28 +151,30 @@ export async function POST(request: NextRequest) {
     const normalized = normalizeIndisponibilites(indisponibilites);
     const email = await generatePlaceholderEmail(db, nom, TAG);
     const passwordHash = await hashPassword(randomBytes(24).toString('hex'));
-    const saved = await repo.save({
-      clubId,
-      email,
-      passwordHash,
-      nom: nom.trim(),
-      accessRole: 'dirigeant',
-      planningFunctions: [FUNCTION],
-      active: true,
-      // Profil sans accès (issue #204) : pas d'identifiants connus, activation
-      // uniquement via une invitation ciblant ce profil.
-      claimedAt: null,
-      telephone: resolvedTelephone,
-      indisponibilites: normalized.length > 0 ? normalized : null,
-      icalToken: randomBytes(24).toString('hex'),
-    });
-    await upsertContactMeta(db, {
-      userId: saved.id,
-      clubId,
-      category: 'officiel',
-      provenance,
-      purpose,
-      recordedByUserId: auth.user.id,
+    await db.transaction(async (manager) => {
+      const saved = await manager.getRepository<UserEntity>('User').save({
+        clubId,
+        email,
+        passwordHash,
+        nom: nom.trim(),
+        accessRole: 'dirigeant',
+        planningFunctions: [FUNCTION],
+        active: true,
+        // Profil sans accès (issue #204) : pas d'identifiants connus, activation
+        // uniquement via une invitation ciblant ce profil.
+        claimedAt: null,
+        telephone: resolvedTelephone,
+        indisponibilites: normalized.length > 0 ? normalized : null,
+        icalToken: randomBytes(24).toString('hex'),
+      });
+      await upsertContactMeta(manager, {
+        userId: saved.id,
+        clubId,
+        category: 'officiel',
+        provenance,
+        purpose,
+        recordedByUserId: auth.user.id,
+      });
     });
 
     const all = await findAllOfficiels(db, clubId);
