@@ -5,15 +5,16 @@ import { apiGet } from '@/lib/utils/api';
 
 export interface MatchAuditLogEntry {
   id: number;
+  clubId: string;
   entityType: string;
   entityId: string;
-  action: 'create' | 'update' | 'delete';
+  action: string;
   userId: number | null;
-  userEmail: string | null;
-  userNom: string | null;
+  actorLabel: string;
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
   createdAt: string;
+  schemaVersion: number;
 }
 
 interface AuditLogData {

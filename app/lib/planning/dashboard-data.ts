@@ -30,6 +30,7 @@ import { requiredRolesForEvent, type PublicationRoleRequirements } from './valid
 import { createTeamLogoResolver } from './team-logos';
 import { vacateDeclinedAssignmentsFromWorkingDraft } from './declined-assignment-draft';
 import { filterOfficialEventsForDisplay } from './official-match-visibility';
+import { auditActorLabel } from '@/lib/audit/catalog';
 
 export interface DashboardDeclinedContact {
   nom: string;
@@ -478,8 +479,7 @@ export async function buildClubDashboardData(
       entityType: item.entityType,
       entityId: item.entityId,
       action: item.action,
-      userNom: item.userNom,
-      userEmail: item.userEmail,
+      actorLabel: auditActorLabel(item.userId),
       createdAt: item.createdAt,
     })),
   };

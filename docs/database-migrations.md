@@ -72,6 +72,11 @@ comme un no-op des `CREATE TABLE IF NOT EXISTS` plus les durcissements
 idempotents (retrait des colonnes héritées `roles` / `role`, `clubId` NOT NULL sur
 `match_audit_log`).
 
+La migration `0025` (issue #20) n'ajoute pas de colonne : elle inventorie puis
+assainit les lignes de `match_audit_log` (voir [`docs/audit-log.md`](audit-log.md)).
+Prendre une sauvegarde SQL avant `db:migrate` sur une instance qui contient déjà
+de l'audit ; le retour arrière est la restauration de cette sauvegarde.
+
 ### CI
 
 Le job `test` de `.github/workflows/ci.yml` exécute `pnpm run db:migrate` contre une
