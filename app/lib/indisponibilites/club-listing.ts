@@ -15,6 +15,7 @@ import {
   type OfficielIndisponibiliteType,
 } from '@/lib/utils/officiel-availability';
 import { INDISPO_REVIEW_LABELS, reviewStatusOf } from '@/lib/indisponibilites/review';
+import { publicIndispoReviewLabel } from '@/lib/privacy/health-data';
 
 export const INDISPO_TYPE_LABELS: Record<OfficielIndisponibiliteType, string> = {
   'day-range': 'Journée / période',
@@ -100,7 +101,7 @@ function rowFromRule(
     label: formatIndisponibiliteLabel(rule),
     reviewStatus: reviewStatusOf(rule),
     reviewLabel: INDISPO_REVIEW_LABELS[reviewStatusOf(rule)],
-    reviewComment: rule.reviewComment ?? null,
+    reviewComment: publicIndispoReviewLabel(rule),
   };
 }
 

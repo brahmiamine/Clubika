@@ -33,7 +33,8 @@ Remplir `.env` :
 - SMTP si vous voulez les e-mails
 
 Sauvegardez `.env` **hors du VPS**. La clé de chiffrement n’est pas dans MariaDB :
-la perdre rend les messages de chat déjà chiffrés illisibles.
+la perdre rend le texte des messages de chat déjà chiffrés illisible. Les pièces
+jointes et les dumps SQL ne sont pas chiffrés par cette clé.
 
 ## 4. Lancer
 
@@ -59,7 +60,7 @@ sudo timedatectl set-timezone Europe/Paris
 Cela installe (crontab utilisateur) :
 
 - relances planning chaque heure à :15
-- scraper 7h / 12h / 18h
+- scraper 7h / 12h / 18h (no-op tant que `SPORTCORICO_SYNC_ENABLED` n’est pas `true` et qu’une licence écrite n’a pas été validée)
 - dump MariaDB quotidien à 3h20 dans `deploy/backups/` (14 jours)
 
 La sauvegarde OVH « 1 jour » ne remplace pas ces dumps. Copiez aussi les `.sql.gz`

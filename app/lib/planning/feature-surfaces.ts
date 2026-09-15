@@ -71,7 +71,7 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
   },
   scraperSync: {
     label: 'Synchronisation du scraper',
-    description: 'Autorise l’import des matchs officiels vers MariaDB.',
+    description: 'Import des matchs officiels depuis une source externe. Désactivé par défaut jusqu’à validation d’une autorisation écrite. SPORTCORICO_SYNC_ENABLED=true est aussi requis (issues #4 et #30).',
     pages: [],
     routes: ['app/api/scraper/route.ts', 'app/api/cron/scraper/route.ts'],
   },
@@ -89,7 +89,7 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
   },
   travelAndWeather: {
     label: 'Trajet et météo',
-    description: 'Active les estimations de trajet et la météo événementielle.',
+    description: 'Active les estimations de trajet et la météo événementielle. En production, ROUTING_ENABLED / OPEN_METEO_ENABLED et une URL explicite sont aussi requis (issue #30).',
     pages: ['Espace événement · météo'],
     routes: ['app/api/planning/travel/route.ts', 'app/api/planning/weather/route.ts'],
   },

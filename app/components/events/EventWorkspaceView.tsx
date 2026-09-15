@@ -28,6 +28,7 @@ import { useAppSettings } from '@/app/hooks/useAppSettings';
 import { loadEventWorkspaceModules } from '@/app/components/events/event-workspace-loader';
 import { WeatherConditionIcon } from '@/app/components/events/WeatherConditionIcon';
 import { getWeatherPresentation } from '@/lib/planning/weather-condition';
+import { NO_SENSITIVE_PERSONAL_DATA_WARNING } from '@/lib/privacy/sensitive-copy';
 import { roleLabelWithClub } from '@/lib/settings';
 import type {
   PlanningEventSnapshot,
@@ -564,7 +565,7 @@ export function EventWorkspaceView({
             <Card>
               <CardHeader><CardTitle className="text-base">Rapports post-événement</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                {canSubmitReport && <div className="space-y-2"><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}><option value="organisation">Organisation</option><option value="incident">Incident</option><option value="sportif">Sportif</option><option value="other">Autre</option></select><textarea className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm" value={report} onChange={(event) => setReport(event.target.value)} placeholder="Compte rendu / incident / remarque..." /><Button onClick={addReport} disabled={!report.trim()}>Envoyer le rapport</Button></div>}
+                {canSubmitReport && <div className="space-y-2"><select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}><option value="organisation">Organisation</option><option value="incident">Incident</option><option value="sportif">Sportif</option><option value="other">Autre</option></select><p className="text-xs text-muted-foreground">{NO_SENSITIVE_PERSONAL_DATA_WARNING}</p><textarea className="min-h-24 w-full rounded-md border bg-background px-3 py-2 text-sm" value={report} onChange={(event) => setReport(event.target.value)} placeholder="Compte rendu / incident / remarque..." /><Button onClick={addReport} disabled={!report.trim()}>Envoyer le rapport</Button></div>}
                 {reports.length ? reports.map((item) => (
                   <div key={item.id} className="rounded-md border p-3 space-y-2">
                     <div className="mb-1 flex items-center gap-2">
