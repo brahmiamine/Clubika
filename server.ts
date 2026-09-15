@@ -1,14 +1,20 @@
 import { createServer } from 'node:http';
 import next from 'next';
+import { loadSecretFilesFromEnv } from './app/lib/ops/load-secret-files';
 import { attachChatSocketServer } from './app/lib/chat/socket-server';
 import { assertEncryptionConfiguredForProduction } from './app/lib/crypto/secret-box';
+import { assertCanonicalPublicOriginForProduction } from './app/lib/auth/canonical-public-origin';
+import { logError, logInfo } from './app/lib/observability/log';
+
+loadSecretFilesFromEnv();
 
 // Refuse un démarrage en production sans APP_ENCRYPTION_KEY plutôt que de dégrader
 // silencieusement le chiffrement des messages de chat et des mots de passe SMTP (issue #212).
 try {
   assertEncryptionConfiguredForProduction();
+  assertCanonicalPublicOriginForProduction();
 } catch (error) {
-  console.error(error instanceof Error ? error.message : error);
+  logError('crypto.decrypt_failed', error);
   process.exit(1);
 }
 
@@ -29,7 +35,7 @@ const httpServer = createServer((request, response) => handle(request, response)
 const { io, stopSessionRevocationListener } = attachChatSocketServer(httpServer);
 
 httpServer.listen(port, listenHost, () => {
-  console.log(`Clubika listening on http://${listenHost}:${port}`);
+  logInfo('app.unhandled');
 });
 
 function shutdown() {

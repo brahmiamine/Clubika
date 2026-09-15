@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./dialog";
 import { Button } from "./button";
 import { Checkbox } from "./checkbox";
 import { Label } from "./label";
-import { Match, Entrainement, Plateau } from "@/types/match";
-import { generatePdf } from "@/lib/utils/pdf-export";
-import { fetchPlanningExportData } from "@/lib/utils/planning-export-data";
+import { toast } from "sonner";
+import { generateProjectedPdf } from "@/lib/utils/pdf-export";
+import { fetchPlanningExportJson } from "@/lib/utils/planning-export-data";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { mergeClubWithSettings, roleLabelWithClub } from "@/lib/settings";
+import { roleLabelWithClub } from "@/lib/settings";
+import {
+  DEFAULT_EXPORT_COLUMN_IDS,
+  EXPORT_COLUMNS,
+  type ExportColumnId,
+} from "@/lib/planning/export";
 import {
   EXPORT_MODAL_BODY_CLASS,
   EXPORT_MODAL_CONTENT_CLASS,
@@ -25,36 +30,7 @@ interface ExportPdfModalProps {
 
 type MatchType = "officiel" | "amical" | "entrainement" | "plateau";
 
-interface FieldConfig {
-  label: string;
-  key: string;
-  enabled: boolean;
-}
-
-const defaultFields: FieldConfig[] = [
-  { label: "Date", key: "date", enabled: true },
-  { label: "Heure", key: "time", enabled: true },
-  { label: "Type", key: "type", enabled: true },
-  { label: "Équipe locale", key: "localTeam", enabled: true },
-  { label: "Équipe visiteuse", key: "awayTeam", enabled: true },
-  { label: "Lieu", key: "venue", enabled: true },
-  { label: "Compétition", key: "competition", enabled: true },
-  { label: "Horaire de rendez-vous", key: "horaireRendezVous", enabled: true },
-  { label: "Stade", key: "stadium", enabled: true },
-  { label: "Adresse", key: "address", enabled: true },
-  { label: "Type de terrain", key: "terrainType", enabled: true },
-  { label: "Arbitre", key: "referee", enabled: true },
-  { label: "Assistant 1", key: "assistant1", enabled: true },
-  { label: "Assistant 2", key: "assistant2", enabled: true },
-  { label: "Arbitre", key: "arbitreTouche", enabled: true },
-  { label: "Encadrants", key: "encadrants", enabled: true },
-  { label: "Contact encadrants", key: "contactEncadrants", enabled: true },
-  { label: "Accompagnateur", key: "contactAccompagnateur", enabled: true },
-  { label: "Statut confirmé", key: "confirmed", enabled: true },
-];
-
-/** Colonnes dont le libellé doit être suffixé de l'abréviation du club. */
-const ROLE_LABEL_BASES: Record<string, string> = {
+const ROLE_LABEL_BASES: Partial<Record<ExportColumnId, string>> = {
   arbitreTouche: "Arbitre",
   encadrants: "Encadrants",
   contactAccompagnateur: "Accompagnateur",
@@ -62,106 +38,81 @@ const ROLE_LABEL_BASES: Record<string, string> = {
 
 export function ExportPdfModal({ open, onOpenChange }: ExportPdfModalProps) {
   const { settings } = useAppSettings();
-  const withClubLabels = (fields: FieldConfig[]): FieldConfig[] =>
-    fields.map((field) => {
-      const base = ROLE_LABEL_BASES[field.key];
-      return base ? { ...field, label: roleLabelWithClub(base, settings.clubAbbreviation) } : field;
-    });
   const [selectedTypes, setSelectedTypes] = useState<Record<MatchType, boolean>>({
     officiel: true,
     amical: true,
     entrainement: true,
     plateau: true,
   });
-
-  const [selectedFields, setSelectedFields] = useState<FieldConfig[]>(defaultFields);
+  const [selectedOperational, setSelectedOperational] = useState<ExportColumnId[]>([...DEFAULT_EXPORT_COLUMN_IDS]);
+  const [selectedIdentities, setSelectedIdentities] = useState<ExportColumnId[]>([]);
   const [includeDrafts, setIncludeDrafts] = useState(false);
+  const [includeIdentities, setIncludeIdentities] = useState(false);
+  const [includePhones, setIncludePhones] = useState(false);
+  const [purpose, setPurpose] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleTypeToggle = (type: MatchType) => {
-    setSelectedTypes((prev) => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
+  const operational = useMemo(() => EXPORT_COLUMNS.filter((column) => column.kind === "operational"), []);
+  const identities = useMemo(() => EXPORT_COLUMNS.filter((column) => column.kind === "identity"), []);
+
+  const labelFor = (id: ExportColumnId, fallback: string) => {
+    const base = ROLE_LABEL_BASES[id];
+    return base ? roleLabelWithClub(base, settings.clubAbbreviation) : fallback;
   };
 
-  const handleFieldToggle = (key: string) => {
-    setSelectedFields((prev) => prev.map((field) => (field.key === key ? { ...field, enabled: !field.enabled } : field)));
-  };
-
-  const handleSelectAllFields = () => {
-    setSelectedFields((prev) => prev.map((field) => ({ ...field, enabled: true })));
-  };
-
-  const handleDeselectAllFields = () => {
-    setSelectedFields((prev) => prev.map((field) => ({ ...field, enabled: false })));
+  const toggle = (id: ExportColumnId, identity: boolean) => {
+    const setter = identity ? setSelectedIdentities : setSelectedOperational;
+    setter((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
 
   const handleExport = async () => {
-    // Issue #214 : même source que le CSV/HTML — le planning publié par défaut, le
-    // brouillon de travail seulement si explicitement demandé ; un événement annulé est
-    // déjà exclu côté serveur, jamais affiché comme actif.
-    const { club, events, extras } = await fetchPlanningExportData(includeDrafts);
-
-    // Trier par date puis par heure
-    const sortedEvents = [...events].sort((a, b) => {
-      const dateCompare = a.date.localeCompare(b.date);
-      if (dateCompare !== 0) return dateCompare;
-      const timeA = "time" in a ? a.time : "";
-      const timeB = "time" in b ? b.time : "";
-      return timeA.localeCompare(timeB);
-    });
-
-    // Filtrer les événements selon les types sélectionnés
-    const filteredEvents = sortedEvents.filter((event) => {
-      let eventType: MatchType;
-      if ("type" in event && event.type) {
-        eventType = event.type;
-      } else if ("localTeam" in event || "competition" in event) {
-        const match = event as Match;
-        eventType = match.type === "amical" ? "amical" : "officiel";
-      } else if ("lieu" in event) {
-        const simpleEvent = event as Entrainement | Plateau;
-        eventType = simpleEvent.type;
-      } else {
-        return false;
-      }
-      return selectedTypes[eventType];
-    });
-
-    // Générer le PDF avec les données fraîchement chargées
-    const exportClub = mergeClubWithSettings(club, settings);
-    await generatePdf(
-      filteredEvents,
-      withClubLabels(selectedFields),
-      extras || {},
-      exportClub,
-      settings.clubAbbreviation,
-      { primaryColor: settings.primaryColor, secondaryColor: settings.accentColor },
-    );
-
-    // Fermer le modal
-    onOpenChange(false);
+    const eventTypes = (Object.keys(selectedTypes) as MatchType[]).filter((type) => selectedTypes[type]);
+    const columns = includeIdentities ? [...selectedOperational, ...selectedIdentities] : selectedOperational;
+    try {
+      setBusy(true);
+      const data = await fetchPlanningExportJson({
+        columns,
+        eventTypes,
+        includeDrafts,
+        includeIdentities,
+        includePhones: includeIdentities && includePhones,
+        purpose: includeIdentities ? purpose : undefined,
+      });
+      await generateProjectedPdf({
+        clubName: data.clubName,
+        columns: data.columns,
+        rows: data.rows,
+        branding: { primaryColor: settings.primaryColor, secondaryColor: settings.accentColor },
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Export PDF impossible");
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const hasSelectedTypes = Object.values(selectedTypes).some((v) => v);
-  const hasSelectedFields = selectedFields.some((f) => f.enabled);
+  const hasSelectedTypes = Object.values(selectedTypes).some(Boolean);
+  const hasSelectedFields = selectedOperational.length > 0 || (includeIdentities && selectedIdentities.length > 0);
+  const identityReady = !includeIdentities || purpose.trim().length >= 8;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={EXPORT_MODAL_CONTENT_CLASS}>
         <DialogHeader className="shrink-0 pr-8">
           <DialogTitle>Export PDF</DialogTitle>
-          <DialogDescription>Sélectionnez les types de matches et les champs à exporter</DialogDescription>
+          <DialogDescription>
+            Export opérationnel minimal. Les identités et téléphones restent désactivés tant que vous ne les demandez pas explicitement.
+          </DialogDescription>
         </DialogHeader>
 
         <div className={EXPORT_MODAL_BODY_CLASS}>
-          {/* Sélection des types */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Types de matches</Label>
             <div className={EXPORT_MODAL_GRID_CLASS}>
               {(["officiel", "amical", "entrainement", "plateau"] as MatchType[]).map((type) => (
                 <div key={type} className={EXPORT_MODAL_OPTION_CLASS}>
-                  <Checkbox id={`type-${type}`} checked={selectedTypes[type]} onCheckedChange={() => handleTypeToggle(type)} />
+                  <Checkbox id={`type-${type}`} checked={selectedTypes[type]} onCheckedChange={() => setSelectedTypes((prev) => ({ ...prev, [type]: !prev[type] }))} />
                   <Label htmlFor={`type-${type}`} className="text-sm font-normal cursor-pointer capitalize">
                     {type === "officiel"
                       ? "Matchs officiels"
@@ -176,7 +127,6 @@ export function ExportPdfModal({ open, onOpenChange }: ExportPdfModalProps) {
             </div>
           </div>
 
-          {/* Statut de publication */}
           <div className={EXPORT_MODAL_OPTION_CLASS}>
             <Checkbox id="pdf-include-drafts" checked={includeDrafts} onCheckedChange={() => setIncludeDrafts((prev) => !prev)} />
             <Label htmlFor="pdf-include-drafts" className="text-sm font-normal cursor-pointer">
@@ -184,29 +134,83 @@ export function ExportPdfModal({ open, onOpenChange }: ExportPdfModalProps) {
             </Label>
           </div>
 
-          {/* Sélection des champs */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Label className="text-base font-semibold">Champs à exporter</Label>
+              <Label className="text-base font-semibold">Champs opérationnels</Label>
               <div className="flex gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={handleSelectAllFields}>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedOperational(operational.map((column) => column.id))}>
                   Tout sélectionner
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={handleDeselectAllFields}>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedOperational([])}>
                   Tout désélectionner
                 </Button>
               </div>
             </div>
             <div className={EXPORT_MODAL_FIELDS_CLASS}>
-              {withClubLabels(selectedFields).map((field) => (
-                <div key={field.key} className={EXPORT_MODAL_OPTION_CLASS}>
-                  <Checkbox id={`field-${field.key}`} checked={field.enabled} onCheckedChange={() => handleFieldToggle(field.key)} />
-                  <Label htmlFor={`field-${field.key}`} className="text-sm font-normal cursor-pointer">
-                    {field.label}
+              {operational.map((column) => (
+                <div key={column.id} className={EXPORT_MODAL_OPTION_CLASS}>
+                  <Checkbox
+                    id={`pdf-field-${column.id}`}
+                    checked={selectedOperational.includes(column.id)}
+                    onCheckedChange={() => toggle(column.id, false)}
+                  />
+                  <Label htmlFor={`pdf-field-${column.id}`} className="text-sm font-normal cursor-pointer">
+                    {labelFor(column.id, column.label)}
                   </Label>
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-3 rounded-md border p-3">
+            <div className={EXPORT_MODAL_OPTION_CLASS}>
+              <Checkbox
+                id="pdf-include-identities"
+                checked={includeIdentities}
+                onCheckedChange={(checked) => {
+                  setIncludeIdentities(Boolean(checked));
+                  if (!checked) {
+                    setIncludePhones(false);
+                    setSelectedIdentities([]);
+                  }
+                }}
+              />
+              <Label htmlFor="pdf-include-identities" className="text-sm font-normal cursor-pointer">
+                Inclure des identités pour une finalité déclarée
+              </Label>
+            </div>
+            {includeIdentities ? (
+              <>
+                <Label htmlFor="pdf-purpose" className="text-sm">Finalité (obligatoire)</Label>
+                <textarea
+                  id="pdf-purpose"
+                  className="w-full min-h-16 rounded-md border bg-background px-3 py-2 text-sm"
+                  value={purpose}
+                  onChange={(event) => setPurpose(event.target.value)}
+                  placeholder="Ex. convocation du week-end pour les encadrants"
+                />
+                <div className={EXPORT_MODAL_OPTION_CLASS}>
+                  <Checkbox id="pdf-include-phones" checked={includePhones} onCheckedChange={(checked) => setIncludePhones(Boolean(checked))} />
+                  <Label htmlFor="pdf-include-phones" className="text-sm font-normal cursor-pointer">
+                    Inclure les numéros de téléphone
+                  </Label>
+                </div>
+                <div className={EXPORT_MODAL_FIELDS_CLASS}>
+                  {identities.map((column) => (
+                    <div key={column.id} className={EXPORT_MODAL_OPTION_CLASS}>
+                      <Checkbox
+                        id={`pdf-id-${column.id}`}
+                        checked={selectedIdentities.includes(column.id)}
+                        onCheckedChange={() => toggle(column.id, true)}
+                      />
+                      <Label htmlFor={`pdf-id-${column.id}`} className="text-sm font-normal cursor-pointer">
+                        {labelFor(column.id, column.label)}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
 
@@ -214,7 +218,7 @@ export function ExportPdfModal({ open, onOpenChange }: ExportPdfModalProps) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
-          <Button onClick={handleExport} disabled={!hasSelectedTypes || !hasSelectedFields}>
+          <Button onClick={() => void handleExport()} disabled={!hasSelectedTypes || !hasSelectedFields || !identityReady || busy}>
             Exporter PDF
           </Button>
         </DialogFooter>

@@ -13,8 +13,8 @@ if [[ -f "$ENV_FILE" ]]; then
   set +a
 fi
 
-MARIADB_IMAGE="${MARIADB_IMAGE:-mariadb:latest}"
-PHPMYADMIN_IMAGE="${PHPMYADMIN_IMAGE:-phpmyadmin:latest}"
+MARIADB_IMAGE="${MARIADB_IMAGE:-mariadb:11.4.13@sha256:80494b9810694179889f7281ec44ca928241df577159c0356a1070e2e94616a1}"
+PHPMYADMIN_IMAGE="${PHPMYADMIN_IMAGE:-phpmyadmin:5.2.2@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd}"
 
 DB_CONTAINER="${DB_CONTAINER:-clubika_mariadb}"
 PMA_CONTAINER="${PMA_CONTAINER:-clubika_phpmyadmin}"
@@ -90,7 +90,7 @@ ensure_docker_running() {
 
 ensure_image() {
   local image_name="$1"
-  log "Mise à jour de l'image (latest): $image_name"
+  log "Vérification de l'image pinnée: $image_name"
   docker pull "$image_name" >/dev/null
 }
 

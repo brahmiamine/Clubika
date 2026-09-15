@@ -15,6 +15,7 @@ import {
   Mail,
   MessageCircle,
   Settings,
+  Shield,
   UserRound,
   Users,
   Contact,
@@ -82,6 +83,7 @@ export default function ClubLayoutClient({ children }: { children: React.ReactNo
         { href: '/club/utilisateurs', label: 'Utilisateurs', icon: Users, exact: true },
         { href: '/club/fiches-sans-compte', label: 'Fiches sans compte', icon: Contact },
         { href: '/club/invitations', label: 'Invitations', icon: Mail },
+        { href: '/club/droits', label: 'Droits RGPD', icon: Shield },
       ],
     },
     {

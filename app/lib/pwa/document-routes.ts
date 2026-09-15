@@ -1,5 +1,5 @@
-const PRODUCT_PREFIXES = ['/login', '/mot-de-passe-oublie', '/reinitialiser', '/plateforme'];
-const TOKEN_CLUB_PREFIXES = ['/partage', '/inscription'];
+const PRODUCT_PREFIXES = ['/login', '/mot-de-passe-oublie', '/reinitialiser', '/plateforme', '/inscription', '/droits-sans-compte', '/exercice-des-droits', '/confirmer-email'];
+const TOKEN_CLUB_PREFIXES = ['/partage'];
 
 /** Landing, login et back-office : onglet Clubika, jamais le blason d’un club. */
 export function usesAppProductDocumentHead(pathname: string): boolean {

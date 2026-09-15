@@ -1,9 +1,11 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity } from '@/lib/db/schemas';
 import { requirePlatformAuth } from '@/lib/auth/platform-require';
 import { readAppSettings } from '@/lib/settings-store';
 import { revokeAllSessionsForClub } from '@/lib/auth/session';
+import { platformClubWriteBlocked, serializeOffboarding } from '@/lib/tenant-offboarding/writable';
 
 const MATCHES_URL_KEY_PATTERN = /^[a-z0-9-]*$/;
 const MAX_SCRAPING_FIELD_LENGTH = 255;
@@ -31,11 +33,12 @@ export async function GET(
         active: club.active,
         createdAt: club.createdAt,
         updatedAt: club.updatedAt,
+        offboarding: serializeOffboarding(club),
         settings,
       },
     });
   } catch (error) {
-    console.error('Error reading club tenant:', error);
+    logError('app.unhandled', 'Error reading club tenant:', error);
     return NextResponse.json({ error: 'Impossible de charger le club' }, { status: 500 });
   }
 }
@@ -59,6 +62,14 @@ export async function PATCH(
     const body = await request.json();
     const { name, active, matchesUrlKey, scraperClubName } = body;
     const wasActive = club.active;
+
+    const writeBlock = platformClubWriteBlocked(club);
+    if (writeBlock && (name !== undefined || matchesUrlKey !== undefined || scraperClubName !== undefined || active === true)) {
+      return NextResponse.json({ error: writeBlock }, { status: 409 });
+    }
+    if (writeBlock && active === false) {
+      // Un club déjà gelé peut rester inactif ; on n'accepte pas d'autre mutation.
+    }
 
     if (name !== undefined) {
       if (typeof name !== 'string' || name.trim() === '') {
@@ -130,7 +141,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error('Error updating club tenant:', error);
+    logError('app.unhandled', 'Error updating club tenant:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour le club' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { execFile } from 'child_process';
 import { createHash } from 'node:crypto';
 import path from 'path';
@@ -16,6 +17,7 @@ import { syncOfficialMatchesWithIdentityReconciliation } from './match-reconcili
 import { deliverOfficialMatchSyncNotifications } from './match-sync-notifications';
 import { parseScraperOutput } from './output';
 import { failScraperRun, finishScraperRun, startScraperRun } from './runs';
+import { assertSportCoricoSyncEnabled } from './sync-gate';
 
 const execFileAsync = promisify(execFile);
 const MATCHES_URL_KEY_PATTERN = /^[a-z0-9-]{1,255}$/;
@@ -96,6 +98,7 @@ export async function runScraperAndPersistToDb(clubId: string = getCurrentClubId
     updatedCount: number;
   };
 }> {
+  assertSportCoricoSyncEnabled();
   const scraperPath = path.join(process.cwd(), 'scraper.js');
   const db = await getDb();
   const lockRunner = db.createQueryRunner();
@@ -156,7 +159,7 @@ export async function runScraperAndPersistToDb(clubId: string = getCurrentClubId
       try {
         await lockRunner.query('SELECT RELEASE_LOCK(?)', [lockName]);
       } catch (error) {
-        console.error('Impossible de libérer le verrou du scraper:', error);
+        logError('app.unhandled', 'Impossible de libérer le verrou du scraper:', error);
       }
     }
     await lockRunner.release();

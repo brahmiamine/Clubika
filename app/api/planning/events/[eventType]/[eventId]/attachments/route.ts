@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -12,25 +13,12 @@ import type { PlanningEventType } from '@/lib/planning/event-store';
 import { listPlanningAttachments, savePlanningAttachment } from '@/lib/planning/records';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { planningFeatureGuard } from '@/lib/planning/feature-guard';
+import { AttachmentRejectedError, inspectAttachment } from '@/lib/security/file-inspect';
 
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'text/plain',
-  'text/csv',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-]);
 
 function validEventType(value: string): value is PlanningEventType {
   return value === 'officiel' || value === 'amical' || value === 'entrainement' || value === 'plateau';
-}
-
-function safeFileName(value: string): string {
-  return value.replace(/[\\/\0\r\n]/g, '_').replace(/[^\p{L}\p{N}._() -]/gu, '_').slice(0, 180) || 'document';
 }
 
 async function loadContext(request: NextRequest, params: Promise<{ eventType: string; eventId: string }> | { eventType: string; eventId: string }) {
@@ -77,15 +65,26 @@ export async function POST(
     if (file.size <= 0 || file.size > MAX_ATTACHMENT_BYTES) {
       return NextResponse.json({ error: 'Le fichier doit faire au maximum 5 MiB' }, { status: 413 });
     }
-    if (!ALLOWED_MIME_TYPES.has(file.type)) {
-      return NextResponse.json({ error: 'Type de fichier non autorisé' }, { status: 415 });
-    }
     const content = Buffer.from(await file.arrayBuffer());
+    let inspected;
+    try {
+      inspected = inspectAttachment({
+        usage: 'planning',
+        fileName: file.name,
+        declaredMime: file.type,
+        content,
+      });
+    } catch (error) {
+      if (error instanceof AttachmentRejectedError) {
+        return NextResponse.json({ error: 'Type de fichier non autorisé' }, { status: 415 });
+      }
+      throw error;
+    }
     const attachment = await savePlanningAttachment(ctx.db, {
       eventType: ctx.eventType,
       eventId: ctx.eventId,
-      fileName: safeFileName(file.name),
-      mimeType: file.type,
+      fileName: inspected.safeName,
+      mimeType: inspected.canonicalMime,
       sizeBytes: file.size,
       content,
       uploadedByUserId: ctx.auth.user.id,
@@ -100,7 +99,7 @@ export async function POST(
     });
     return NextResponse.json({ success: true, attachment });
   } catch (error) {
-    console.error('Attachment upload failed:', error);
+    logError('app.unhandled', 'Attachment upload failed:', error);
     return NextResponse.json({ error: 'Impossible d’ajouter le document' }, { status: 500 });
   }
 }

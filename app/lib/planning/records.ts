@@ -20,7 +20,9 @@ export type PlanningRecordKind =
   | 'event-template'
   | 'published-planning'
   | 'published-planning-history'
-  | 'assignment-state-backfill';
+  | 'assignment-state-backfill'
+  | 'export-download'
+  | 'export-audit';
 
 export interface PlanningRecord<T = Record<string, unknown>> {
   id: string;
@@ -268,8 +270,8 @@ export async function savePlanningAttachment(
   const id = randomUUID();
   await db.query(
     `INSERT INTO planning_attachments
-      (id, club_id, event_type, event_id, file_name, mime_type, size_bytes, content, uploaded_by_user_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, club_id, event_type, event_id, file_name, mime_type, size_bytes, content, uploaded_by_user_id, scan_status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'clean')`,
     [id, requireClubScope(input.clubId), input.eventType, input.eventId, input.fileName, input.mimeType, input.sizeBytes, input.content, input.uploadedByUserId],
   );
   const stored = await getPlanningAttachment(db, id);
@@ -287,7 +289,7 @@ export async function listPlanningAttachments(
     `SELECT id, club_id AS clubId, event_type AS eventType, event_id AS eventId, file_name AS fileName,
             mime_type AS mimeType, size_bytes AS sizeBytes, uploaded_by_user_id AS uploadedByUserId,
             created_at AS createdAt
-       FROM planning_attachments WHERE club_id = ? AND event_type = ? AND event_id = ? ORDER BY created_at DESC`,
+       FROM planning_attachments WHERE club_id = ? AND event_type = ? AND event_id = ? AND scan_status = 'clean' ORDER BY created_at DESC`,
     [getCurrentClubId(), eventType, eventId],
   )) as Record<string, unknown>[];
   return rows.map((row) => attachmentRow(row, false) as PlanningAttachmentMeta);
@@ -298,7 +300,7 @@ export async function getPlanningAttachment(db: Queryable, id: string): Promise<
     `SELECT id, club_id AS clubId, event_type AS eventType, event_id AS eventId, file_name AS fileName,
             mime_type AS mimeType, size_bytes AS sizeBytes, content,
             uploaded_by_user_id AS uploadedByUserId, created_at AS createdAt
-       FROM planning_attachments WHERE id = ? AND club_id = ? LIMIT 1`,
+       FROM planning_attachments WHERE id = ? AND club_id = ? AND scan_status = 'clean' LIMIT 1`,
     [id, getCurrentClubId()],
   )) as Record<string, unknown>[];
   return rows[0] ? (attachmentRow(rows[0], true) as PlanningAttachment) : null;

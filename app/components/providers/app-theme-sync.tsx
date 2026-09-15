@@ -9,17 +9,13 @@ import { applyDefaultThemeVariables, applyThemeVariables, hasThemeUserOverride }
 // Écrans hors session : ils n'appartiennent à aucun club et ne doivent donc pas
 // prendre les couleurs primaire/secondaire d'un club. `/login` est l'entrée
 // commune de toute la plateforme et garde la palette par défaut de l'app.
-const CLUBLESS_PREFIXES = ["/login", "/mot-de-passe-oublie", "/reinitialiser", "/plateforme"];
+const CLUBLESS_PREFIXES = ["/login", "/mot-de-passe-oublie", "/reinitialiser", "/plateforme", "/inscription", "/droits-sans-compte", "/exercice-des-droits", "/confirmer-email"];
 
 function isClublessRoute(pathname: string): boolean {
   if (pathname === "/") return true;
   return CLUBLESS_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
-}
-
-function isInvitationRoute(pathname: string): boolean {
-  return pathname === "/inscription" || pathname.startsWith("/inscription/");
 }
 
 function isPublicShareRoute(pathname: string): boolean {
@@ -32,8 +28,8 @@ export function AppThemeSync() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (isInvitationRoute(pathname) || isPublicShareRoute(pathname)) {
-      // L'inscription et le planning public appliquent le thème du club concerné,
+    if (isPublicShareRoute(pathname)) {
+      // Le planning public applique le thème du club concerné,
       // pas celui de la session éventuelle du visiteur.
       return;
     }

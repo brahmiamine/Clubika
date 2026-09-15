@@ -19,7 +19,7 @@ import { Plus, Pencil, Trash2, UserCog, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/app/hooks/useUsers';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
-import { apiDelete, ApiRequestError } from '@/lib/utils/api';
+import { apiDelete } from '@/lib/utils/api';
 import {
   ACCESS_ROLE_LABELS,
   ALL_ACCESS_ROLES,
@@ -30,7 +30,7 @@ import {
 } from '@/lib/auth/roles';
 import { LoadingSpinner } from '@/app/components/ui/loading-spinner';
 
-type StatusFilter = 'all' | 'active' | 'inactive' | 'unclaimed';
+type StatusFilter = 'all' | 'active' | 'inactive' | 'unclaimed' | 'closed';
 type RoleFilter = 'all' | ClubAccessRole | PlanningFunction;
 
 const USER_COLS = 'minmax(0,1.1fr) minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr) auto 5rem';
@@ -51,11 +51,12 @@ export function UsersManagementTab() {
       if (roleFilter !== 'all'
         && user.accessRole !== roleFilter
         && !user.planningFunctions.includes(roleFilter as PlanningFunction)) return false;
-      if (statusFilter === 'active' && !user.active) return false;
-      if (statusFilter === 'inactive' && user.active) return false;
+      if (statusFilter === 'closed' && !user.closedAt) return false;
+      if (statusFilter === 'active' && (!user.active || Boolean(user.closedAt))) return false;
+      if (statusFilter === 'inactive' && (user.active || Boolean(user.closedAt))) return false;
       // Profils de dirigeants jamais activés (issue #204) : ce ne sont pas des
       // comptes actifs, ils attendent une invitation ciblée.
-      if (statusFilter === 'unclaimed' && user.hasAccess) return false;
+      if (statusFilter === 'unclaimed' && (user.hasAccess || Boolean(user.closedAt))) return false;
       if (term) {
         const haystack = `${user.nom} ${user.email} ${user.telephone ?? ''}`.toLowerCase();
         if (!haystack.includes(term)) return false;
@@ -68,17 +69,13 @@ export function UsersManagementTab() {
     if (deleteUserId === null) return;
     try {
       await apiDelete(`/api/users/${deleteUserId}`);
-      toast.success('Utilisateur supprimé');
+      toast.success('Compte fermé et anonymisé', {
+        description: 'L’identité nominative a été remplacée par « Utilisateur supprimé ».',
+      });
       setDeleteUserId(null);
       await reload();
     } catch (error) {
-      // Issue #273 : un compte référencé par des données existantes (affectations,
-      // chat…) renvoie 409 avec le détail des références dans `details`, pour que
-      // l'admin comprenne pourquoi il doit désactiver plutôt que supprimer.
-      const details = error instanceof ApiRequestError && Array.isArray(error.details)
-        ? error.details.filter((reason): reason is string => typeof reason === 'string').join(' · ')
-        : undefined;
-      toast.error(error instanceof Error ? error.message : 'Erreur inconnue', details ? { description: details } : undefined);
+      toast.error(error instanceof Error ? error.message : 'Erreur inconnue');
     }
   };
 
@@ -93,7 +90,7 @@ export function UsersManagementTab() {
         title="Utilisateurs"
         description="Gérez les comptes, leur rôle d'accès et leurs fonctions opérationnelles"
         actions={
-          <Button onClick={() => router.push('/club/utilisateurs/nouveau')} size="sm">
+          <Button onClick={() => router.push('/club/invitations')} size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Ajouter
           </Button>
@@ -134,6 +131,7 @@ export function UsersManagementTab() {
               <option value="active">Actifs</option>
               <option value="inactive">Désactivés</option>
               <option value="unclaimed">Sans accès</option>
+              <option value="closed">Fermés</option>
             </select>
           </div>
 
@@ -157,7 +155,12 @@ export function UsersManagementTab() {
               const functionsLabel = user.planningFunctions
                 .map((fn) => PLANNING_FUNCTION_LABELS[fn])
                 .join(', ');
-              const status = !user.hasAccess ? (
+              const closed = Boolean(user.closedAt);
+              const status = closed ? (
+                <StatusPill tone="danger" title="Identité anonymisée ; le stub technique reste pour les clés étrangères">
+                  Fermé
+                </StatusPill>
+              ) : !user.hasAccess ? (
                 <StatusPill tone="warning" title="Profil créé sans identifiants : activez-le depuis la page Invitations">
                   Sans accès
                 </StatusPill>
@@ -173,6 +176,7 @@ export function UsersManagementTab() {
                     size="icon"
                     className="h-8 w-8"
                     aria-label="Modifier l'utilisateur"
+                    disabled={closed}
                     onClick={() => router.push(`/club/utilisateurs/${user.id}`)}
                   >
                     <Pencil className="h-4 w-4 text-primary" />
@@ -181,8 +185,8 @@ export function UsersManagementTab() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    aria-label="Supprimer l'utilisateur"
-                    disabled={user.id === currentUser?.id}
+                    aria-label="Fermer le compte"
+                    disabled={closed || user.id === currentUser?.id}
                     onClick={() => setDeleteUserId(user.id)}
                   >
                     <Trash2 className="h-4 w-4 text-primary" />
@@ -213,7 +217,7 @@ export function UsersManagementTab() {
                     <DataCell>
                       <span className="font-medium text-foreground">{user.nom}</span>
                     </DataCell>
-                    <DataCell className="text-muted-foreground break-words">{user.email}</DataCell>
+                    <DataCell className="text-muted-foreground break-words">{user.email || '—'}</DataCell>
                     <DataCell className="text-muted-foreground">
                       {user.telephone || '—'}
                       {user.telephoneMasked ? ' (masqué)' : ''}
@@ -238,14 +242,16 @@ export function UsersManagementTab() {
       <AlertDialog open={deleteUserId !== null} onOpenChange={(open) => !open && setDeleteUserId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer l&apos;utilisateur</AlertDialogTitle>
+            <AlertDialogTitle>Fermer et anonymiser le compte</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.
+              L’identité (nom, e-mail, téléphone, mot de passe, sessions, iCal, invitations, push)
+              sera effacée. Le nom affiché dans le planning et le chat deviendra « Utilisateur
+              supprimé ». Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteUser}>Supprimer</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteUser}>Fermer le compte</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

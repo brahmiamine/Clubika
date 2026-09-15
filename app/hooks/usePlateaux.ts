@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { PlateauxData } from '@/types/match';
 import { apiGet } from '@/lib/utils/api';
@@ -20,7 +21,7 @@ export function usePlateaux() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des plateaux';
       setError(errorMessage);
-      console.error('Error loading plateaux:', err);
+      logError('app.unhandled', 'Error loading plateaux:', err);
     } finally {
       setIsLoading(false);
     }

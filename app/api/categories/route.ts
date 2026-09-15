@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error reading categories from DB:', error);
+    logError('app.unhandled', 'Error reading categories from DB:', error);
     return NextResponse.json(
       { error: 'Failed to read categories' },
       { status: 500 }
@@ -98,7 +99,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Error updating categories in DB:', error);
+    logError('app.unhandled', 'Error updating categories in DB:', error);
     return NextResponse.json(
       { error: 'Failed to update categories' },
       { status: 500 }
@@ -149,7 +150,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Error deleting category in DB:', error);
+    logError('app.unhandled', 'Error deleting category in DB:', error);
     return NextResponse.json(
       { error: 'Failed to delete category' },
       { status: 500 }
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
-    console.error('Error adding category in DB:', error);
+    logError('app.unhandled', 'Error adding category in DB:', error);
     return NextResponse.json(
       { error: 'Failed to add category' },
       { status: 500 }

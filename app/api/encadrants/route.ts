@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -11,6 +12,7 @@ import { setCurrentClubId } from '@/lib/auth/club-context';
 import { applyTelephoneGateAndMeta, contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
 import { normalizeTelephone } from '@/lib/non-account-contacts/meta';
 import { assertTelephoneAllowed, parseProvenance, parsePurpose, upsertContactMeta } from '@/lib/non-account-contacts/meta';
+import { isClosedAccount } from '@/lib/account-closure/constants';
 
 /** Fonction opérationnelle représentée par ce référentiel (issue #209). */
 const FUNCTION: PlanningFunction = 'encadrant';
@@ -49,6 +51,7 @@ async function findAllEncadrants(
   const users = await repo.find({ where: { clubId }, order: { nom: 'ASC' } });
   return users
     .filter((user) => normalizePlanningFunctions(user.planningFunctions).includes(FUNCTION))
+    .filter((user) => !isClosedAccount(user))
     .filter((user) => !activeOnly || user.active);
 }
 
@@ -63,7 +66,7 @@ export async function GET(request: NextRequest) {
     const all = await findAllEncadrants(db, auth.user.clubId, { activeOnly: true });
     return NextResponse.json({ encadrants: all.map(serialize) } satisfies EncadrantsData);
   } catch (error) {
-    console.error('Error reading encadrants from DB:', error);
+    logError('app.unhandled', 'Error reading encadrants from DB:', error);
     return NextResponse.json({ error: 'Failed to load encadrants' }, { status: 500 });
   }
 }
@@ -118,7 +121,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     const lifecycle = contactLifecycleResponse(error);
     if (lifecycle) return lifecycle;
-    console.error('Error updating encadrants in DB:', error);
+    logError('app.unhandled', 'Error updating encadrants in DB:', error);
     return NextResponse.json({ error: 'Failed to update encadrants' }, { status: 500 });
   }
 }
@@ -180,7 +183,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const lifecycle = contactLifecycleResponse(error);
     if (lifecycle) return lifecycle;
-    console.error('Error adding encadrant in DB:', error);
+    logError('app.unhandled', 'Error adding encadrant in DB:', error);
     return NextResponse.json({ error: 'Failed to add encadrant' }, { status: 500 });
   }
 }
@@ -217,7 +220,7 @@ export async function DELETE(request: NextRequest) {
     const all = await findAllEncadrants(db, clubId);
     return NextResponse.json({ success: true, data: { encadrants: all.map(serialize) } satisfies EncadrantsData });
   } catch (error) {
-    console.error('Error deleting encadrant in DB:', error);
+    logError('app.unhandled', 'Error deleting encadrant in DB:', error);
     return NextResponse.json({ error: 'Failed to delete encadrant' }, { status: 500 });
   }
 }

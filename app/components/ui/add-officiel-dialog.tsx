@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, memo } from 'react';
 import {
   Dialog,
@@ -41,7 +42,7 @@ export const AddOfficielDialog = memo(function AddOfficielDialog({
       setTelephone('');
       onClose();
     } catch (error) {
-      console.error('Erreur lors de l\'ajout:', error);
+      logError('app.unhandled', 'Erreur lors de l\'ajout:', error);
       alert('Erreur lors de l\'ajout de l\'officiel');
     } finally {
       setIsLoading(false);

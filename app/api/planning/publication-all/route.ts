@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
   try {
     return NextResponse.json(await getGlobalPlanningPublicationPreview(await getDb()));
   } catch (error) {
-    console.error('Global planning publication preview failed:', error);
+    logError('app.unhandled', 'Global planning publication preview failed:', error);
     return NextResponse.json({ error: 'Impossible de préparer la publication du planning' }, { status: 500 });
   }
 }
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof PlanningConcurrencyError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
-    console.error('Global planning publication failed:', error);
+    logError('app.unhandled', 'Global planning publication failed:', error);
     return NextResponse.json({ error: 'Impossible de publier le planning' }, { status: 500 });
   }
 }

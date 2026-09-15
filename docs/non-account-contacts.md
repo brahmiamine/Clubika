@@ -41,9 +41,8 @@ Colonnes : `nom`, `provenance`, `category` (obligatoires), `telephone`, `purpose
 
 ## Migration
 
-`0025` `fiches_sans_compte` : `non_account_contact_meta`, `club_notice_config`,
+`0040` `fiches_sans_compte` : `non_account_contact_meta`, `club_notice_config`,
 `non_account_rights_requests`. Idempotente (`CREATE TABLE IF NOT EXISTS`).
-Collisions possibles avec d’autres PR non fusionnées qui réutilisent `0025`.
 
 ## Risque résiduel
 

@@ -12,6 +12,8 @@
     "app/api/me/planning/route.ts",
     "app/api/cron/planning-reminders/route.ts",
     "app/api/cron/scraper/route.ts",
-    "app/api/settings/planning-features/route.ts"
+    "app/api/settings/planning-features/route.ts",
+    "app/api/health/live/route.ts",
+    "app/api/health/ready/route.ts"
   ]
 }

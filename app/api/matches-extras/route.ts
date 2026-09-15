@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(extras);
   } catch (error) {
-    console.error('Erreur GET all match extras:', error);
+    logError('app.unhandled', 'Erreur GET all match extras:', error);
     return NextResponse.json({ error: 'Erreur lors de la récupération des informations' }, { status: 500 });
   }
 }
