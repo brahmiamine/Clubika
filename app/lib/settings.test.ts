@@ -53,6 +53,17 @@ describe('normalizeAppSettings clubAbbreviation', () => {
   });
 });
 
+describe('normalizeAppSettings smtp.passwordSet', () => {
+  it('preserves a boolean passwordSet flag from stored settings', () => {
+    expect(normalizeAppSettings({
+      smtp: { host: 'smtp.example.test', passwordSet: true },
+    }).smtp.passwordSet).toBe(true);
+    expect(normalizeAppSettings({
+      smtp: { host: 'smtp.example.test' },
+    }).smtp.passwordSet).toBe(false);
+  });
+});
+
 describe('pickClubWritableSettings', () => {
   it('retire matchesUrlKey et scraperClubName du payload club', () => {
     const writable = pickClubWritableSettings({
