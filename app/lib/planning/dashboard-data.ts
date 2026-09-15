@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { IsNull, type DataSource } from 'typeorm';
 import type { MatchAuditLogEntity, NotificationEntity, UserEntity } from '@/lib/db/schemas';
 import type { AssignmentContact } from '@/types/match';
@@ -355,7 +356,7 @@ export async function buildClubDashboardData(
   try {
     await vacateDeclinedAssignmentsFromWorkingDraft(db, clubId);
   } catch (error) {
-    console.error('Impossible d’aligner le brouillon sur les refus d’affectation:', error);
+    logError('app.unhandled', 'Impossible d’aligner le brouillon sur les refus d’affectation:', error);
   }
   const [snapshots, publishedSnapshots, users, unreadNotifications, recentNotifications, recentAudit, settings] = await Promise.all([
     listPlanningEventSnapshots(db),

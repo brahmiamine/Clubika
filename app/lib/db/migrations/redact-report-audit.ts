@@ -20,7 +20,7 @@ function parseJsonColumn(value: unknown): Record<string, unknown> | null {
 }
 
 /**
- * Migration 0025 (issue #8) — les anciennes lignes d’audit `action = report`
+ * Migration 0034 (issue #8) — les anciennes lignes d’audit `action = report`
  * recopiaient le payload métier (texte, nom d’auteur). On les remplace par des
  * métadonnées minimales. Idempotent : une ligne déjà expurgée n’est pas retouchée.
  *

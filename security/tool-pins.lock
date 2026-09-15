@@ -1,0 +1,27 @@
+# Pins immuables des outils de scan (issue #37).
+# Les scanners s'exécutent en local dans la CI. Aucun envoi du dépôt vers un SaaS
+# hors GitHub (CodeQL / Dependabot / code scanning).
+
+GITLEAKS_VERSION=8.30.1
+GITLEAKS_TARBALL=gitleaks_8.30.1_linux_x64.tar.gz
+GITLEAKS_URL=https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+GITLEAKS_SHA256=551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+TRIVY_VERSION=0.74.0
+TRIVY_TARBALL=trivy_0.74.0_Linux-64bit.tar.gz
+TRIVY_URL=https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz
+TRIVY_SHA256=2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a
+
+# Actions GitHub : SHA de commit (jamais un tag flottant).
+ACTION_CHECKOUT=actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+ACTION_CHECKOUT_VERSION=v4.4.0
+ACTION_SETUP_NODE=actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+ACTION_SETUP_NODE_VERSION=v4.4.0
+ACTION_PNPM=pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda
+ACTION_PNPM_VERSION=v4.1.0
+ACTION_CODEQL=github/codeql-action@51f77329afa6477de8c49fc9c7046c15b9a4e79d
+ACTION_CODEQL_VERSION=v3.29.5
+ACTION_UPLOAD_ARTIFACT=actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+ACTION_UPLOAD_ARTIFACT_VERSION=v4.6.2
+ACTION_SSH=appleboy/ssh-action@2ead5e36573f08b82fbfce1504f1a4b05a647c6f
+ACTION_SSH_VERSION=v1.2.2

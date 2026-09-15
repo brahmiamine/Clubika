@@ -23,8 +23,10 @@ vi.mock('@/lib/push/service', () => ({
 vi.mock('./email', () => ({
   sendEmail: (...args: unknown[]) => sendEmail(...args),
 }));
+let whatsappGloballyEnabled = false;
 vi.mock('./whatsapp', () => ({
   sendWhatsAppNotification: (...args: unknown[]) => sendWhatsAppNotification(...args),
+  isWhatsAppGloballyEnabled: () => whatsappGloballyEnabled,
 }));
 vi.mock('./outbox', () => ({
   enqueueNotificationDelivery: (...args: unknown[]) => enqueueNotificationDelivery(...(args as [unknown, Record<string, unknown>, string | undefined])),
@@ -80,6 +82,7 @@ describe('createNotificationForUser', () => {
     sendEmail.mockClear();
     sendWhatsAppNotification.mockClear();
     enqueueNotificationDelivery.mockClear();
+    whatsappGloballyEnabled = false;
   });
 
   it('creates the in-app notification and enqueues push even when user.notifyChannel is "email"', async () => {
@@ -137,7 +140,7 @@ describe('createNotificationForUser', () => {
 
   it('never throws when the in-app write fails — a notification failure must not fail the caller\'s successful command (issue #208)', async () => {
     saveNotification.mockRejectedValueOnce(new Error('DB indisponible'));
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consoleError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const db = fakeDb();
     const user = fakeUser();
 
@@ -156,7 +159,7 @@ describe('createNotificationForUser', () => {
         id: 'delivery-1', userId: 1, channel: 'email', type: 'assignment', title: 'Affectation',
         message: 'Vous êtes affecté', eventType: null, eventId: null, urgency: 'normal', attempts: 0,
       } as never);
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const consoleError = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const db = fakeDb();
     const user = fakeUser();
 
@@ -233,6 +236,28 @@ describe('retryPendingNotifications (issue #215)', () => {
     expect(isClubTenantActive).not.toHaveBeenCalled();
     expect(markNotificationFailed).toHaveBeenCalledWith(db, 'outbox-1', 9, expect.any(Error));
   });
+
+  it('n’enqueue pas WhatsApp sans opt-in utilisateur, même si le canal serveur est actif', async () => {
+    whatsappGloballyEnabled = true;
+    preferenceRecord = { payload: { inApp: true, push: false, email: false, whatsapp: false } };
+    const db = fakeDb();
+    await createNotificationForUser(db, fakeUser({ telephone: '0612345678' }), {
+      type: 'assignment', title: 'Affectation', message: 'Vous êtes affecté',
+    });
+    const whatsappCalls = enqueueNotificationDelivery.mock.calls.filter(([, input]) => (input as { channel: string }).channel === 'whatsapp');
+    expect(whatsappCalls).toHaveLength(0);
+  });
+
+  it('enqueue WhatsApp seulement avec opt-in, numéro et activation serveur', async () => {
+    whatsappGloballyEnabled = true;
+    preferenceRecord = { payload: { inApp: true, push: false, email: false, whatsapp: true } };
+    const db = fakeDb();
+    await createNotificationForUser(db, fakeUser({ telephone: '0612345678' }), {
+      type: 'assignment', title: 'Affectation', message: 'Vous êtes affecté',
+    });
+    const whatsappCalls = enqueueNotificationDelivery.mock.calls.filter(([, input]) => (input as { channel: string }).channel === 'whatsapp');
+    expect(whatsappCalls).toHaveLength(1);
+  });
 });
 
 describe('enqueueContactNotificationIntents / deliverEnqueuedNotifications (issue #276)', () => {
@@ -244,6 +269,7 @@ describe('enqueueContactNotificationIntents / deliverEnqueuedNotifications (issu
     sendWhatsAppNotification.mockClear();
     enqueueNotificationDelivery.mockClear();
     markNotificationSent.mockClear();
+    whatsappGloballyEnabled = false;
   });
 
   it('persiste l’intention (ligne in-app + outbox) sans jamais tenter de livraison réseau', async () => {

@@ -71,7 +71,7 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
   },
   scraperSync: {
     label: 'Synchronisation du scraper',
-    description: 'Autorise l’import des matchs officiels vers MariaDB.',
+    description: 'Import des matchs officiels depuis une source externe. Désactivé par défaut jusqu’à validation d’une autorisation écrite. SPORTCORICO_SYNC_ENABLED=true est aussi requis (issues #4 et #30).',
     pages: [],
     routes: ['app/api/scraper/route.ts', 'app/api/cron/scraper/route.ts'],
   },
@@ -89,7 +89,7 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
   },
   travelAndWeather: {
     label: 'Trajet et météo',
-    description: 'Active les estimations de trajet et la météo événementielle.',
+    description: 'Active les estimations de trajet et la météo événementielle. En production, ROUTING_ENABLED / OPEN_METEO_ENABLED et une URL explicite sont aussi requis (issue #30).',
     pages: ['Espace événement · météo'],
     routes: ['app/api/planning/travel/route.ts', 'app/api/planning/weather/route.ts'],
   },
@@ -106,6 +106,7 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
     routes: [
       'app/api/planning/events/[eventType]/[eventId]/collaboration/route.ts',
       'app/api/planning/events/[eventType]/[eventId]/reports/route.ts',
+      'app/api/planning/events/[eventType]/[eventId]/reports/[reportId]/route.ts',
       'app/api/planning/events/[eventType]/[eventId]/attachments/route.ts',
       'app/api/planning/attachments/[id]/route.ts',
     ],
@@ -127,5 +128,14 @@ export const PLANNING_FEATURE_SURFACES: Record<keyof PlanningFeatureFlags, Plann
     description: 'Exige au moins un accompagnateur actif sur les matchs officiels et amicaux.',
     pages: [],
     routes: [],
+  },
+  massExport: {
+    label: 'Export massif du planning',
+    description: 'Autorise les exports CSV, PDF et JSON du planning. Les identités et téléphones restent opt-in.',
+    pages: [],
+    routes: [
+      'app/api/planning/export/route.ts',
+      'app/api/planning/export/[token]/route.ts',
+    ],
   },
 };

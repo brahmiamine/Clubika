@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ clubs });
   } catch (error) {
-    console.error('Error reading clubs from DB:', error);
+    logError('app.unhandled', 'Error reading clubs from DB:', error);
     return NextResponse.json(
       { error: 'Failed to load clubs' },
       { status: 500 }

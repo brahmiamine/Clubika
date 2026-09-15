@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof PlanningValidationError) {
       return NextResponse.json({ error: error.message, blockers: error.details }, { status: 409 });
     }
-    console.error('Admin assignment swap failed:', error);
+    logError('app.unhandled', 'Admin assignment swap failed:', error);
     return NextResponse.json({ error: 'Impossible de valider cet échange' }, { status: 500 });
   }
 }

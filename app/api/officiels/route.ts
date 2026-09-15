@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
     const all = await findAllOfficiels(db, auth.user.clubId, { activeOnly: true });
     return NextResponse.json({ officiels: all.map(serialize) } satisfies OfficielsData);
   } catch (error) {
-    console.error('Error reading officiels from DB:', error);
+    logError('app.unhandled', 'Error reading officiels from DB:', error);
     return NextResponse.json({ error: 'Failed to load officiels' }, { status: 500 });
   }
 }
@@ -109,7 +110,7 @@ export async function PUT(request: NextRequest) {
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error updating officiels in DB:', error);
+    logError('app.unhandled', 'Error updating officiels in DB:', error);
     return NextResponse.json({ error: 'Failed to update officiels' }, { status: 500 });
   }
 }
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error adding officiel in DB:', error);
+    logError('app.unhandled', 'Error adding officiel in DB:', error);
     return NextResponse.json({ error: 'Failed to add officiel' }, { status: 500 });
   }
 }
@@ -192,7 +193,7 @@ export async function DELETE(request: NextRequest) {
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error deleting officiel in DB:', error);
+    logError('app.unhandled', 'Error deleting officiel in DB:', error);
     return NextResponse.json({ error: 'Failed to delete officiel' }, { status: 500 });
   }
 }

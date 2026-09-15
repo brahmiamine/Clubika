@@ -7,7 +7,7 @@ import { redactHistoricalReportAudits } from './redact-report-audit';
 const dbAvailable = await isDbAvailable();
 const SECRET = 'UNIQUE_REPORT_BODY_DO_NOT_COPY';
 
-describe('migration 0025 — table absente', () => {
+describe('migration 0034 — table absente', () => {
   it('ignore le backfill lorsque match_audit_log n’existe pas encore', async () => {
     const query = async (sql: string) => {
       if (sql.includes('information_schema.tables')) return [];
@@ -18,7 +18,7 @@ describe('migration 0025 — table absente', () => {
   });
 });
 
-describe.skipIf(!dbAvailable)('migration 0025 — redactHistoricalReportAudits (issue #8)', () => {
+describe.skipIf(!dbAvailable)('migration 0034 — redactHistoricalReportAudits (issue #8)', () => {
   const suffix = Date.now().toString(36);
   const auditTable = `test_report_audit_${suffix}`;
   const recordsTable = `test_report_records_${suffix}`;

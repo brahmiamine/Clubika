@@ -5,6 +5,8 @@ import type {
   SportCoricoMatchApi,
   SportCoricoMatchApiResponse,
 } from './sportcorico-api.types';
+import { guardedFetch } from '@/lib/compliance/external-services';
+import { assertSportCoricoSyncEnabled } from './sync-gate';
 
 export const SPORTCORICO_API_BASE_URL = 'https://api.sportcorico.com/api';
 export const SPORTCORICO_CLUB_PAGE_BASE = 'https://www.sportcorico.com/clubs';
@@ -41,16 +43,17 @@ export async function fetchSportCoricoMatch(
   slug: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<SportCoricoMatchApi> {
+  assertSportCoricoSyncEnabled();
   const trimmedSlug = slug.trim();
   if (!trimmedSlug) {
     throw new Error('Slug SportCorico manquant');
   }
 
-  const response = await fetchImpl(sportCoricoMatchApiUrl(trimmedSlug), {
+  const response = await guardedFetch('sportcorico', sportCoricoMatchApiUrl(trimmedSlug), {
     headers: {
       Accept: 'application/json',
     },
-  });
+  }, fetchImpl);
 
   if (!response.ok) {
     throw new Error(`SportCorico API ${response.status} pour ${trimmedSlug}`);
@@ -107,16 +110,17 @@ export async function fetchSportCoricoClub(
   matchesUrlKey: string,
   fetchImpl: typeof fetch = fetch,
 ): Promise<SportCoricoClubApi> {
+  assertSportCoricoSyncEnabled();
   const trimmedKey = matchesUrlKey.trim();
   if (!trimmedKey) {
     throw new Error('Clé de club SportCorico manquante');
   }
 
-  const response = await fetchImpl(sportCoricoClubApiUrl(trimmedKey), {
+  const response = await guardedFetch('sportcorico', sportCoricoClubApiUrl(trimmedKey), {
     headers: {
       Accept: 'application/json',
     },
-  });
+  }, fetchImpl);
 
   if (!response.ok) {
     throw new Error(`SportCorico API ${response.status} pour le club ${trimmedKey}`);

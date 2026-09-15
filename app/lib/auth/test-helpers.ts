@@ -39,3 +39,17 @@ export async function createTestUserAndSession(
     },
   };
 }
+
+export function uniqueTestIp(): string {
+  const n = randomBytes(2).readUInt16BE(0);
+  return `198.51.${n >> 8}.${n & 255}`;
+}
+
+export function enableTrustedProxyHeaders(): () => void {
+  const previous = process.env.TRUST_PROXY_HEADERS;
+  process.env.TRUST_PROXY_HEADERS = 'true';
+  return () => {
+    if (previous === undefined) delete process.env.TRUST_PROXY_HEADERS;
+    else process.env.TRUST_PROXY_HEADERS = previous;
+  };
+}
