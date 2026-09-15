@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db';
 import { assertRoomAccess, ChatAccessError, ChatValidationError } from '@/lib/chat/service';
 import { getChatAttachment } from '@/lib/chat/attachments';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { attachmentDownloadHeaders } from '@/lib/security/attachment-headers';
 
 export async function GET(
   request: NextRequest,
@@ -23,21 +24,12 @@ export async function GET(
     }
     await assertRoomAccess(db, auth.user, attachment.roomId);
 
-    // Les documents bureautiques (Excel/CSV) n'ont pas de rendu navigateur natif utile :
-    // téléchargement forcé plutôt qu'une tentative d'affichage inline. Le PDF, comme les
-    // autres types de pièces jointes, reste affiché inline (visionneuse PDF du navigateur).
-    const disposition = attachment.kind === 'document' && attachment.mimeType !== 'application/pdf'
-      ? 'attachment'
-      : 'inline';
-
     return new NextResponse(new Uint8Array(attachment.content), {
-      headers: {
-        'Content-Type': attachment.mimeType,
-        'Content-Length': String(attachment.sizeBytes),
-        'Content-Disposition': `${disposition}; filename*=UTF-8''${encodeURIComponent(attachment.fileName)}`,
-        'X-Content-Type-Options': 'nosniff',
-        'Cache-Control': 'private, max-age=31536000, immutable',
-      },
+      headers: attachmentDownloadHeaders({
+        mimeType: attachment.mimeType,
+        fileName: attachment.fileName,
+        sizeBytes: attachment.sizeBytes,
+      }),
     });
   } catch (error) {
     if (error instanceof ChatAccessError) return NextResponse.json({ error: error.message }, { status: 403 });

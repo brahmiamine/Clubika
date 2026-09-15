@@ -62,25 +62,12 @@ import { purgeOutboxLastError } from './purge-outbox-last-error';
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
- * La migration 0025 (issue #4) désactive `scraperSync` sur tous les clubs existants.
- *
- * La migration 0026 (issue #7) recale les motifs de refus `injury` vers `personal`
- * et compte les commentaires libres ; la purge des commentaires n’a lieu que si
- * `HEALTH_COMMENT_PURGE=apply`.
- *
- * La migration 0027 (issue #5) inventorie les données SportCorico déjà importées
- * (dry-run par défaut). La quarantaine n'écrit que si `SPORTCORICO_DATA_PURGE=apply`
- * au moment de l'exécution, ou via `pnpm run sportcorico:quarantine` après sauvegarde.
- *
- * La migration 0028 (issue #31) purge `planning_notification_outbox.last_error`
- * des anciens `error.message` fournisseur ; les nouvelles valeurs sont
- * `{"code","retryable"}`. Dry-run : `MIGRATION_DRY_RUN=1`.
- *
- * La migration 0029 (issue #34) ajoute le contexte d'échange court des invitations
- * publiques (cookie httpOnly).
- *
  * La migration 0030 (issue #35) stocke les rapports CSP sanitizés (hôtes + directive,
  * jamais d'URI complète). Rétention 7 jours, purge à l'écriture.
+ *
+ * La migration 0031 (issue #23) ajoute `scan_status` aux pièces jointes chat/planning :
+ * seuls les fichiers `clean` sont téléchargeables. Les lignes existantes sont marquées
+ * `clean` (DEFAULT) ; les nouveaux uploads passent par l’inspection avant INSERT.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -534,6 +521,14 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         PRIMARY KEY (id),
         INDEX idx_csp_reports_created (created_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0031',
+    name: 'attachment_scan_status',
+    statements: [
+      "ALTER TABLE chat_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
+      "ALTER TABLE planning_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
     ],
   },
 ];

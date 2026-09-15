@@ -39,8 +39,8 @@ function baseAttachment(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('GET /api/chat/attachments/[id] Content-Disposition (issue #265)', () => {
-  it('serves a PDF document inline (browser PDF viewer)', async () => {
+describe('GET /api/chat/attachments/[id] Content-Disposition (issue #23)', () => {
+  it('force le téléchargement d’un PDF (pas de rendu inline)', async () => {
     mocks.getChatAttachment.mockResolvedValueOnce(baseAttachment({
       kind: 'document',
       fileName: 'rapport.pdf',
@@ -49,7 +49,9 @@ describe('GET /api/chat/attachments/[id] Content-Disposition (issue #265)', () =
 
     const response = await GET(attachmentRequest(), { params: { id: 'attachment-1' } });
 
-    expect(response.headers.get('Content-Disposition')).toMatch(/^inline;/);
+    expect(response.headers.get('Content-Disposition')).toMatch(/^attachment;/);
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(response.headers.get('Content-Security-Policy')).toContain("default-src 'none'");
   });
 
   it('forces download for a spreadsheet document (no useful inline render)', async () => {
