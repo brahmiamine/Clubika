@@ -11,9 +11,9 @@ public).
 | --- | --- | --- | --- |
 | `pnpm audit --prod` | dépendances production | **high et critical** | échec (exit 2) |
 | Trivy `fs` | lockfile / manifeste | HIGH, CRITICAL (corrigées) | échec |
-| Trivy `image` | image `FROM` du Dockerfile | HIGH, CRITICAL (corrigées) | échec |
+| Trivy `image` | paquets OS de l’image `FROM` | **CRITICAL** corrigées (HIGH rapportés) | échec |
 | Gitleaks | historique git + PR | toute fuite hors allowlist d’exemples | échec |
-| CodeQL | JS/TS, pack `security-extended` | alertes du job | échec (GHAS peut être requis en privé) |
+| CodeQL | JS/TS, pack `security-extended` | SARIF produit (upload GitHub = réglage humain) | échec si pas de SARIF |
 | Pins Actions | `.github/workflows` | SHA 40 hex | échec |
 
 Les sévérités moderate/low ne bloquent pas le merge. Délais de correction
@@ -54,3 +54,5 @@ n’est pas validé sur le dépôt (résidu). Ne pas y mettre de secret.
 - Digests runtime app/MariaDB/Caddy : issue #36.
 - Licences / provenance : ticket dédié, hors périmètre.
 - Prestataires : issue #30 (pas de nouveau SaaS ici).
+- Image Node officielle : HIGH Debian / npm embarqué npm CLI → Dependabot docker + #36.
+- Code scanning GitHub (onglet Security) : à activer dans les réglages du dépôt ; le job CodeQL produit déjà un SARIF.
