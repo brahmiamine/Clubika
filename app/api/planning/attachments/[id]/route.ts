@@ -12,6 +12,7 @@ import type { PlanningEventType } from '@/lib/planning/event-store';
 import { deletePlanningAttachment, getPlanningAttachment } from '@/lib/planning/records';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { planningFeatureGuard } from '@/lib/planning/feature-guard';
+import { attachmentDownloadHeaders } from '@/lib/security/attachment-headers';
 
 function validEventType(value: string): value is PlanningEventType {
   return value === 'officiel' || value === 'amical' || value === 'entrainement' || value === 'plateau';
@@ -42,13 +43,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const ctx = await load(request, params);
   if ('error' in ctx) return ctx.error;
   return new NextResponse(new Uint8Array(ctx.attachment.content), {
-    headers: {
-      'Content-Type': ctx.attachment.mimeType,
-      'Content-Length': String(ctx.attachment.sizeBytes),
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(ctx.attachment.fileName)}`,
-      'X-Content-Type-Options': 'nosniff',
-      'Cache-Control': 'private, no-store',
-    },
+    headers: attachmentDownloadHeaders({
+      mimeType: ctx.attachment.mimeType,
+      fileName: ctx.attachment.fileName,
+      sizeBytes: ctx.attachment.sizeBytes,
+    }),
   });
 }
 

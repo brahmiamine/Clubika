@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { isDbAvailable } from '@/lib/db/test-utils';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity, UserEntity } from '@/lib/db/schemas';
@@ -6,7 +6,9 @@ import { hashPassword } from './password';
 import {
   createSession,
   getSessionUser,
+  listPublicSessionsForUser,
   onSessionRevocation,
+  revokeOtherSessionsForUser,
   revokeSession,
   revokeAllSessionsForUser,
   type SessionRevocationEvent,
@@ -31,6 +33,11 @@ describe.skipIf(!dbAvailable)('session (integration)', () => {
       icalToken: `ical-${Date.now()}`,
     });
     userId = user.id;
+  });
+
+  beforeEach(async () => {
+    const db = await getDb();
+    await db.getRepository('UserSession').createQueryBuilder().delete().where('userId = :userId', { userId }).execute();
   });
 
   afterAll(async () => {
@@ -74,6 +81,67 @@ describe.skipIf(!dbAvailable)('session (integration)', () => {
     }
   });
 
+  it('does not store the raw token in the database (issue #29)', async () => {
+    const { token, id } = await createSession(userId);
+    const db = await getDb();
+    const row = await db.getRepository('UserSession').findOneBy({ id });
+    expect(row).toBeTruthy();
+    expect(row?.id).not.toBe(token);
+    expect(JSON.stringify(row)).not.toContain(token);
+    expect(await getSessionUser(token)).not.toBeNull();
+    expect(await getSessionUser(row?.id)).toBeNull();
+    expect(await getSessionUser(row?.tokenHash)).toBeNull();
+  });
+
+  it('expires a session after its idle TTL (issue #29)', async () => {
+    const { token, id } = await createSession(userId);
+    const db = await getDb();
+    await db.getRepository('UserSession').update({ id }, {
+      lastSeenAt: new Date(Date.now() - 5_000),
+      idleTtlSeconds: 1,
+    });
+    expect(await getSessionUser(token)).toBeNull();
+  });
+
+  it('expires a session after its absolute TTL even if idle is recent (issue #29)', async () => {
+    const { token, id } = await createSession(userId);
+    const db = await getDb();
+    await db.getRepository('UserSession').update({ id }, {
+      createdAt: new Date(Date.now() - 10_000),
+      lastSeenAt: new Date(),
+      absoluteTtlSeconds: 1,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+    expect(await getSessionUser(token)).toBeNull();
+  });
+
+  it('lists coarse session metadata without network hints (issue #29)', async () => {
+    const { token } = await createSession(userId, {
+      userAgent: 'Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36',
+      ipAddress: '203.0.113.44',
+    });
+    const sessions = await listPublicSessionsForUser(userId, token);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]?.current).toBe(true);
+    expect(sessions[0]?.clientHint).toBe('Chrome');
+    expect(JSON.stringify(sessions)).not.toContain('203.0.113');
+  });
+
+  it('revokes other sessions while keeping the current one (issue #29)', async () => {
+    const first = await createSession(userId);
+    const second = await createSession(userId);
+    const events: SessionRevocationEvent[] = [];
+    const unsubscribe = onSessionRevocation((event) => events.push(event));
+    try {
+      await revokeOtherSessionsForUser(userId, second.token);
+      expect(await getSessionUser(first.token)).toBeNull();
+      expect(await getSessionUser(second.token)).not.toBeNull();
+      expect(events.some((event) => event.userId === userId && event.exceptSessionId === second.id)).toBe(true);
+    } finally {
+      unsubscribe();
+    }
+  });
+
   it('returns null for a revoked session', async () => {
     const { token } = await createSession(userId);
     const events: SessionRevocationEvent[] = [];
@@ -82,7 +150,7 @@ describe.skipIf(!dbAvailable)('session (integration)', () => {
       await revokeSession(token);
       const sessionUser = await getSessionUser(token);
       expect(sessionUser).toBeNull();
-      expect(events).toContainEqual({ sessionToken: token, userId });
+      expect(events).toContainEqual({ sessionToken: token, sessionId: expect.any(String), userId });
     } finally {
       unsubscribe();
     }

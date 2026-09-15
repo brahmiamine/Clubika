@@ -1,0 +1,15 @@
+name: Clubika JavaScript/TypeScript
+
+queries:
+  - uses: security-and-quality
+  - uses: security-extended
+
+# Pack étendu : injections, path traversal, SSRF, secrets en dur, auth faible.
+# Les chemins d'audit/commandes ne sont pas du runtime.
+
+paths-ignore:
+  - audits
+  - commandes
+  - coverage
+  - csv
+  - pdf

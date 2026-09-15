@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ success: true, seriesId, count: events.length, planningStatus: 'draft' });
   } catch (error) {
-    console.error('Error creating recurring events:', error);
+    logError('app.unhandled', 'Error creating recurring events:', error);
     return NextResponse.json({ error: 'Impossible de créer la série' }, { status: 500 });
   }
 }

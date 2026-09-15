@@ -21,4 +21,14 @@ describe('Socket.IO handshake client address', () => {
       '10.0.0.4',
     );
   });
+
+  it('uses the trusted hop of X-Forwarded-For and ignores a forged prefix', () => {
+    expect(
+      handshakeClientAddress(
+        { 'x-forwarded-for': '203.0.113.1, 198.51.100.9' },
+        '10.0.0.4',
+        true,
+      ),
+    ).toBe('198.51.100.9');
+  });
 });

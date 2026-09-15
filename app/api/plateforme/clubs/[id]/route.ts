@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity } from '@/lib/db/schemas';
@@ -37,7 +38,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Error reading club tenant:', error);
+    logError('app.unhandled', 'Error reading club tenant:', error);
     return NextResponse.json({ error: 'Impossible de charger le club' }, { status: 500 });
   }
 }
@@ -140,7 +141,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error('Error updating club tenant:', error);
+    logError('app.unhandled', 'Error updating club tenant:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour le club' }, { status: 500 });
   }
 }

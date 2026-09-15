@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity } from '@/lib/db/schemas';
@@ -47,7 +48,7 @@ export async function GET(
 
     return NextResponse.json({ clubs });
   } catch (error) {
-    console.error('Error reading opponent clubs from DB:', error);
+    logError('app.unhandled', 'Error reading opponent clubs from DB:', error);
     return NextResponse.json({ error: 'Impossible de charger les clubs' }, { status: 500 });
   }
 }
@@ -94,7 +95,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, clubs });
   } catch (error) {
-    console.error('Error adding opponent club in DB:', error);
+    logError('app.unhandled', 'Error adding opponent club in DB:', error);
     return NextResponse.json({ error: 'Impossible de créer le club' }, { status: 500 });
   }
 }
@@ -154,7 +155,7 @@ export async function PUT(
 
     return NextResponse.json({ success: true, clubs });
   } catch (error) {
-    console.error('Error updating opponent club in DB:', error);
+    logError('app.unhandled', 'Error updating opponent club in DB:', error);
     return NextResponse.json({ error: 'Impossible de modifier le club' }, { status: 500 });
   }
 }
@@ -196,7 +197,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, clubs });
   } catch (error) {
-    console.error('Error deleting opponent club in DB:', error);
+    logError('app.unhandled', 'Error deleting opponent club in DB:', error);
     return NextResponse.json({ error: 'Impossible de supprimer le club' }, { status: 500 });
   }
 }

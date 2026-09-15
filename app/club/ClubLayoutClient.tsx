@@ -15,6 +15,7 @@ import {
   Mail,
   MessageCircle,
   Settings,
+  Shield,
   UserRound,
   Users,
 } from 'lucide-react';
@@ -80,6 +81,7 @@ export default function ClubLayoutClient({ children }: { children: React.ReactNo
       items: [
         { href: '/club/utilisateurs', label: 'Utilisateurs', icon: Users, exact: true },
         { href: '/club/invitations', label: 'Invitations', icon: Mail },
+        { href: '/club/droits', label: 'Droits RGPD', icon: Shield },
       ],
     },
     {

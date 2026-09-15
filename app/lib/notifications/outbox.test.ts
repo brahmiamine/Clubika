@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DataSource } from 'typeorm';
-import { enqueueNotificationDelivery } from './outbox';
+import { enqueueNotificationDelivery, markNotificationFailed } from './outbox';
 
 function baseInput() {
   return {
@@ -66,5 +66,18 @@ describe('enqueueNotificationDelivery — idempotence (issue #276)', () => {
       userId: 1,
       channel: 'push',
     });
+  });
+});
+
+describe('markNotificationFailed (issue #31)', () => {
+  it('stores a classified code instead of the provider message', async () => {
+    const query = vi.fn(async () => ({ affectedRows: 1 }));
+    const db = { query } as unknown as DataSource;
+    const sentinel = 'smtp failed for sentinel.user@example.test';
+    await markNotificationFailed(db, 'outbox-1', 0, new Error(sentinel));
+    const dumped = JSON.stringify(query.mock.calls);
+    expect(dumped).toContain('smtp_failed');
+    expect(dumped).toContain('retryable');
+    expect(dumped).not.toContain('sentinel.user@example.test');
   });
 });

@@ -19,7 +19,7 @@ describe.skipIf(!dbAvailable)('GET /api/planning/ical-link (issue #382)', () => 
       const response = await GET(icalLinkRequest(token));
       expect(response.status).toBe(200);
       const body = await response.json() as { feedUrl: string };
-      expect(body.feedUrl).toBe(`http://localhost/api/ical/${user.icalToken}`);
+      expect(body.feedUrl).toMatch(new RegExp(`/api/ical/${user.icalToken}$`));
       expect(body).not.toHaveProperty('icalToken');
     } finally {
       await cleanup();

@@ -48,6 +48,9 @@ function destinationForNotificationType(type: string | null, space: Notification
     case 'official_match_cancelled':
     case 'user-deactivated-with-assignments':
       return space === 'club' ? planningListHref('club') : null;
+    case 'account-closure-requested':
+    case 'account-closure-processed':
+      return space === 'club' ? '/club/utilisateurs' : null;
     default:
       return null;
   }

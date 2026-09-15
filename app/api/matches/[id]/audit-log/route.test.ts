@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db';
 import { createTestUserAndSession } from '@/lib/auth/test-helpers';
 import type { MatchAuditLogEntity } from '@/lib/db/schemas';
 import { GET } from './route';
+import { auditBlobContainsNeedle } from '@/lib/audit/minimize';
 
 const dbAvailable = await isDbAvailable();
 
@@ -53,7 +54,7 @@ describe.skipIf(!dbAvailable)('/api/matches/[id]/audit-log (integration)', () =>
           userEmail: null,
           userNom: null,
           before: null,
-          after: { note: 'A' },
+          after: { confirmed: true },
         },
         {
           clubId: 'club-b',
@@ -64,7 +65,7 @@ describe.skipIf(!dbAvailable)('/api/matches/[id]/audit-log (integration)', () =>
           userEmail: null,
           userNom: null,
           before: null,
-          after: { note: 'B' },
+          after: { confirmed: false },
         },
       ]);
 
@@ -73,7 +74,41 @@ describe.skipIf(!dbAvailable)('/api/matches/[id]/audit-log (integration)', () =>
       const payload = await response.json();
       expect(payload.entries).toHaveLength(1);
       expect(payload.entries[0]?.clubId).toBe('club-a');
-      expect(payload.entries[0]?.after).toEqual({ note: 'A' });
+      expect(payload.entries[0]?.after).toEqual({ confirmed: true });
+      expect(payload.entries[0]?.actorLabel).toBe('Système');
+      expect(payload.entries[0]).not.toHaveProperty('userEmail');
+      expect(payload.entries[0]).not.toHaveProperty('userNom');
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it('strips leftover personal content from the admin DTO (issue #20)', async () => {
+    const db = await getDb();
+    const { token, cleanup, user } = await createTestUserAndSession('admin', { clubId: 'club-a' });
+    const sentinels = ['sentinel.api@example.test', 'Sentinel Api', 'Texte API sentinelle'];
+    try {
+      await db.getRepository<MatchAuditLogEntity>('MatchAuditLog').save({
+        clubId: user.clubId,
+        entityType: 'PlanningCollaboration',
+        entityId,
+        action: 'report',
+        userId: user.id,
+        userEmail: sentinels[0],
+        userNom: sentinels[1],
+        before: null,
+        after: { text: sentinels[2], category: 'other', authorUserId: user.id, authorName: sentinels[1] },
+      });
+
+      const response = await GET(auditRequest(token, entityId), { params: { id: entityId } });
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+      expect(payload.entries).toHaveLength(1);
+      expect(payload.entries[0]?.actorLabel).toBe(`Utilisateur #${user.id}`);
+      expect(payload.entries[0]?.after).toEqual({ category: 'other', authorUserId: user.id });
+      expect(payload.entries[0]).not.toHaveProperty('userEmail');
+      expect(payload.entries[0]).not.toHaveProperty('userNom');
+      expect(auditBlobContainsNeedle(payload, sentinels)).toBe(false);
     } finally {
       await cleanup();
     }

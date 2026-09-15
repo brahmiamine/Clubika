@@ -7,130 +7,22 @@ import { useRouter } from 'next/navigation';
 import styles from './landing.module.css';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { homePathForAccessRole } from '@/lib/auth/roles';
+import {
+  LANDING_CHAT_FACTS,
+  LANDING_CHAT_INTRO,
+  LANDING_FAQ_ITEMS,
+  LANDING_FEATURES,
+  LANDING_FOOTER_NOTE,
+  LANDING_ROLES,
+  LANDING_SECURITY_ITEMS,
+} from '@/lib/compliance/public-claims';
 import { isStandaloneDisplay } from '@/lib/pwa/display-mode';
-
-interface Feature {
-  num: string;
-  title: string;
-  copy: string;
-}
-
-interface Role {
-  tag: string;
-  name: string;
-  copy: string;
-}
-
-interface SecurityItem {
-  title: string;
-  copy: string;
-}
-
-interface FaqItem {
-  q: string;
-  a: string;
-}
 
 const NAV_LINKS = [
   { href: '#fonctionnalites', label: 'Fonctionnalités' },
   { href: '#roles', label: 'Rôles' },
   { href: '#securite', label: 'Sécurité' },
   { href: '#faq', label: 'FAQ' },
-];
-
-const FEATURES: Feature[] = [
-  {
-    num: '01',
-    title: 'Planning unifié',
-    copy: 'Matchs officiels synchronisés par scraping, matchs amicaux, entraînements et plateaux. Vues carte, liste et calendrier, événements récurrents, duplication et modèles, avec un cycle clair brouillon → publié → modifié → annulé.',
-  },
-  {
-    num: '02',
-    title: 'Affectations & échanges',
-    copy: "Affectation des arbitres, encadrants et accompagnateurs avec identité stable. Acceptation ou refus motivé, échanges entre utilisateurs validés par un administrateur, auto-affectation qui tient compte des indisponibilités, conflits et charge.",
-  },
-  {
-    num: '03',
-    title: 'Pilotage opérationnel',
-    copy: "Dashboard administrateur avec alertes, charge, météo et historique. Suivi présent / excusé / absent / remplacé, statistiques de couverture et d'équité.",
-  },
-  {
-    num: '04',
-    title: 'Notifications multicanal',
-    copy: 'In-app, Web Push sur smartphone via la PWA, email et WhatsApp — avec des préférences de canal et d\'urgence propres à chaque utilisateur.',
-  },
-];
-
-const ROLES: Role[] = [
-  {
-    tag: 'Écriture',
-    name: 'Administrateur',
-    copy: "Seul rôle d'écriture : planning, référentiels, utilisateurs, invitations, dashboard et configuration du club.",
-  },
-  {
-    tag: 'Terrain',
-    name: 'Arbitre',
-    copy: 'Ses affectations publiées, ses disponibilités, ses préférences et ses échanges, en lecture seule.',
-  },
-  {
-    tag: 'Terrain',
-    name: 'Encadrant',
-    copy: 'Suivi de ses événements, de ses disponibilités et des espaces événement auxquels il est affecté.',
-  },
-  {
-    tag: 'Terrain',
-    name: 'Accompagnateur',
-    copy: 'Un espace dédié à ses propres affectations, sans accès aux données des autres membres.',
-  },
-];
-
-const CHAT_FACTS: string[] = [
-  'Conversations privées entre deux utilisateurs actifs du même club.',
-  'Un chat attaché à chaque événement publié, lisible par tous les affectés.',
-  'Canaux de groupe créés par un administrateur, avec liste de participants.',
-  'Reprise après reconnexion, déduplication des messages, accusés ✓ envoyé / ✓✓ lu.',
-];
-
-const SECURITY_ITEMS: SecurityItem[] = [
-  {
-    title: 'Chiffrement au repos',
-    copy: 'Messages de chat et mots de passe SMTP chiffrés en AES-256-GCM.',
-  },
-  {
-    title: 'Partage public maîtrisé',
-    copy: 'Seul le SHA-256 du lien de partage est enregistré ; les données exposées se limitent au calendrier.',
-  },
-  {
-    title: 'Isolation par club',
-    copy: "Chaque enregistrement est isolé par clubId, avec contrôle d'accès à chaque lecture et écriture.",
-  },
-  {
-    title: 'Export sans risque',
-    copy: "Export CSV protégé contre l'injection de formules tableur.",
-  },
-];
-
-const FAQ_ITEMS: FaqItem[] = [
-  {
-    q: 'Clubika gère-t-il plusieurs clubs ?',
-    a: "Oui. Chaque club dispose de ses propres données, réglages et administrateurs, isolés les uns des autres. Un compte plateforme distinct supervise l'ensemble des clubs.",
-  },
-  {
-    q: "Quels rôles existent dans l'application ?",
-    a: "Quatre rôles : administrateur (seul rôle d'écriture) puis arbitre, encadrant et accompagnateur, des rôles terrain en lecture seule sur leurs propres affectations.",
-  },
-  {
-    q: "Comment fonctionnent les échanges d'affectations ?",
-    a: "Un utilisateur propose un échange, la personne visée l'accepte, puis un administrateur valide le remplacement — avec revalidation des disponibilités et des conflits avant toute approbation.",
-  },
-  {
-    q: 'Peut-on exporter ou partager le planning ?',
-    a: 'Oui : export CSV, vue imprimable et export PDF, abonnement iCal et liens publics temporaires de 1 à 90 jours.',
-  },
-  {
-    q: 'Quelles notifications reçoivent les utilisateurs ?',
-    a: 'In-app, Web Push via la PWA, email SMTP et WhatsApp, selon les préférences de canal et d\'urgence de chacun.',
-  },
 ];
 
 export function LandingPage() {
@@ -249,15 +141,15 @@ export function LandingPage() {
               <p className={styles.statLabel}>Durée des liens de partage public du planning</p>
             </div>
             <div className={styles.statCard}>
-              <p className={styles.statValue}>AES-256</p>
-              <p className={styles.statLabel}>Chiffrement des messages et mots de passe SMTP</p>
+              <p className={styles.statValue}>AES-256-GCM</p>
+              <p className={styles.statLabel}>Texte des messages et mots de passe SMTP, si la clé applicative est définie</p>
             </div>
           </div>
         </section>
 
         <section id="fonctionnalites" className={styles.section}>
           <span className={styles.kicker}>Ce que fait Clubika</span>
-          {FEATURES.map((item) => (
+          {LANDING_FEATURES.map((item) => (
             <div key={item.num} className={styles.featureRow}>
               <p className={styles.featureNum}>
                 <span className={styles.dot} />
@@ -272,7 +164,7 @@ export function LandingPage() {
         <section id="roles" className={styles.section}>
           <span className={styles.kicker}>Un espace pour chaque rôle</span>
           <div className={styles.rolesGrid}>
-            {ROLES.map((role) => (
+            {LANDING_ROLES.map((role) => (
               <div key={role.name} className={styles.roleCard}>
                 <span className={`${styles.tag} ${styles.tagAccent}`}>{role.tag}</span>
                 <h3 className={styles.roleName}>{role.name}</h3>
@@ -288,14 +180,10 @@ export function LandingPage() {
             <h2 className={styles.chatTitle}>
               Une messagerie pensée pour le club, pas un canal en plus.
             </h2>
-            <p className={styles.chatCopy}>
-              Conversations privées, chat par événement visible de tous les affectés, canaux de
-              groupe créés par un administrateur. Messages persistés, accusés de lecture, envoi
-              de photos, GIF, vidéos et audio — le tout chiffré au repos et isolé par club.
-            </p>
+            <p className={styles.chatCopy}>{LANDING_CHAT_INTRO}</p>
           </div>
           <div className={styles.chatFacts}>
-            {CHAT_FACTS.map((fact) => (
+            {LANDING_CHAT_FACTS.map((fact) => (
               <div key={fact} className={styles.chatFact}>
                 <span className={styles.dot} />
                 <p>{fact}</p>
@@ -307,7 +195,7 @@ export function LandingPage() {
         <section id="securite" className={styles.section}>
           <span className={styles.kicker}>Sécurité &amp; confidentialité</span>
           <div className={styles.securityGrid}>
-            {SECURITY_ITEMS.map((item) => (
+            {LANDING_SECURITY_ITEMS.map((item) => (
               <div key={item.title} className={styles.securityCard}>
                 <h3 className={styles.securityTitle}>{item.title}</h3>
                 <p className={styles.securityCopy}>{item.copy}</p>
@@ -318,7 +206,7 @@ export function LandingPage() {
 
         <section id="faq" className={styles.faqSection}>
           <span className={styles.kicker}>Questions fréquentes</span>
-          {FAQ_ITEMS.map((item, index) => {
+          {LANDING_FAQ_ITEMS.map((item, index) => {
             const isOpen = openFaq === index;
             return (
               <div key={item.q} className={styles.faqItem}>
@@ -356,7 +244,9 @@ export function LandingPage() {
         <div className={styles.footerInner}>
           <Image src="/branding/clubika-icon.png" alt="" width={18} height={18} className={styles.footerMark} />
           Clubika — planning, affectations et communication pour les clubs de football
-          amateurs.
+          amateurs. {LANDING_FOOTER_NOTE}
+          {' '}
+          <Link href="/exercice-des-droits">Exercer vos droits</Link>
         </div>
       </footer>
     </div>

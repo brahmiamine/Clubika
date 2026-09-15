@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -8,6 +9,7 @@ import { normalizePlanningFunctions, WRITE_ROLES, type PlanningFunction } from '
 import { hashPassword } from '@/lib/auth/password';
 import { generatePlaceholderEmail } from '@/lib/auth/placeholder-account';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { isClosedAccount } from '@/lib/account-closure/constants';
 
 /** Fonction opérationnelle représentée par ce référentiel (issue #209). */
 const FUNCTION: PlanningFunction = 'accompagnateur';
@@ -46,6 +48,7 @@ async function findAllAccompagnateurs(
   const users = await repo.find({ where: { clubId }, order: { nom: 'ASC' } });
   return users
     .filter((user) => normalizePlanningFunctions(user.planningFunctions).includes(FUNCTION))
+    .filter((user) => !isClosedAccount(user))
     .filter((user) => !activeOnly || user.active);
 }
 
@@ -60,7 +63,7 @@ export async function GET(request: NextRequest) {
     const all = await findAllAccompagnateurs(db, auth.user.clubId, { activeOnly: true });
     return NextResponse.json({ accompagnateurs: all.map(serialize) } satisfies AccompagnateursData);
   } catch (error) {
-    console.error('Error reading accompagnateurs from DB:', error);
+    logError('app.unhandled', 'Error reading accompagnateurs from DB:', error);
     return NextResponse.json({ error: 'Failed to load accompagnateurs' }, { status: 500 });
   }
 }
@@ -107,7 +110,7 @@ export async function PUT(request: NextRequest) {
     const all = await findAllAccompagnateurs(db, clubId);
     return NextResponse.json({ success: true, data: { accompagnateurs: all.map(serialize) } satisfies AccompagnateursData });
   } catch (error) {
-    console.error('Error updating accompagnateurs in DB:', error);
+    logError('app.unhandled', 'Error updating accompagnateurs in DB:', error);
     return NextResponse.json({ error: 'Failed to update accompagnateurs' }, { status: 500 });
   }
 }
@@ -153,7 +156,7 @@ export async function POST(request: NextRequest) {
     const all = await findAllAccompagnateurs(db, clubId);
     return NextResponse.json({ success: true, data: { accompagnateurs: all.map(serialize) } satisfies AccompagnateursData });
   } catch (error) {
-    console.error('Error adding accompagnateur in DB:', error);
+    logError('app.unhandled', 'Error adding accompagnateur in DB:', error);
     return NextResponse.json({ error: 'Failed to add accompagnateur' }, { status: 500 });
   }
 }
@@ -190,7 +193,7 @@ export async function DELETE(request: NextRequest) {
     const all = await findAllAccompagnateurs(db, clubId);
     return NextResponse.json({ success: true, data: { accompagnateurs: all.map(serialize) } satisfies AccompagnateursData });
   } catch (error) {
-    console.error('Error deleting accompagnateur in DB:', error);
+    logError('app.unhandled', 'Error deleting accompagnateur in DB:', error);
     return NextResponse.json({ error: 'Failed to delete accompagnateur' }, { status: 500 });
   }
 }

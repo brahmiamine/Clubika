@@ -244,10 +244,23 @@ export interface UserEntity {
    * peut pas se connecter et n'est pas présenté comme un compte actif.
    */
   claimedAt: Date | null;
+  /**
+   * Fermeture RGPD (issue #11) : date à laquelle l'identité a été remplacée par le
+   * stub « Utilisateur supprimé ». `null` = compte non fermé.
+   */
+  closedAt: Date | null;
+  /** Demande de fermeture initiée par le titulaire, en attente ou déjà traitée. */
+  closureRequestedAt: Date | null;
+  /** Utilisateur (admin ou soi-même) qui a exécuté la fermeture. */
+  closedByUserId: number | null;
   telephone: string | null;
   indisponibilites: OfficielIndisponibilite[] | null;
   icalToken: string;
   notifyChannel: string;
+  /** Restriction de traitements non essentiels (issue #22). */
+  processingRestrictedAt?: Date | null;
+  /** Opposition aux traitements non essentiels (issue #22). */
+  processingOpposedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -273,10 +286,15 @@ export const UserSchema = new EntitySchema<UserEntity>({
     planningFunctions: { type: 'simple-json' },
     active: { type: Boolean, default: true },
     claimedAt: { type: 'datetime', nullable: true },
+    closedAt: { type: 'datetime', nullable: true },
+    closureRequestedAt: { type: 'datetime', nullable: true },
+    closedByUserId: { type: Number, nullable: true },
     telephone: { type: String, nullable: true },
     indisponibilites: { type: 'simple-json', nullable: true },
     icalToken: { type: String, unique: true },
     notifyChannel: { type: String, default: 'push' },
+    processingRestrictedAt: { type: 'datetime', nullable: true },
+    processingOpposedAt: { type: 'datetime', nullable: true },
     createdAt: { type: 'datetime', createDate: true },
     updatedAt: { type: 'datetime', updateDate: true },
   },
@@ -284,12 +302,18 @@ export const UserSchema = new EntitySchema<UserEntity>({
 
 export interface UserSessionEntity {
   id: string;
+  tokenHash: string;
   userId: number;
   createdAt: Date;
+  lastSeenAt: Date;
   expiresAt: Date;
+  idleTtlSeconds: number;
+  absoluteTtlSeconds: number;
   revokedAt: Date | null;
-  userAgent: string | null;
-  ipAddress: string | null;
+  clientHint: string | null;
+  networkHint: string | null;
+  /** Instant de la dernière preuve de mot de passe (issue #32). */
+  authenticatedAt: Date | null;
 }
 
 export const UserSessionSchema = new EntitySchema<UserSessionEntity>({
@@ -298,15 +322,21 @@ export const UserSessionSchema = new EntitySchema<UserSessionEntity>({
   indices: [
     { name: 'idx_user_sessions_user_id', columns: ['userId'] },
     { name: 'idx_user_sessions_expires_at', columns: ['expiresAt'] },
+    { name: 'uq_user_sessions_token_hash', columns: ['tokenHash'], unique: true },
   ],
   columns: {
     id: { type: String, primary: true },
+    tokenHash: { type: String, length: 96 },
     userId: { type: Number },
     createdAt: { type: 'datetime', createDate: true },
+    lastSeenAt: { type: 'datetime' },
     expiresAt: { type: 'datetime' },
+    idleTtlSeconds: { type: Number },
+    absoluteTtlSeconds: { type: Number },
     revokedAt: { type: 'datetime', nullable: true },
-    userAgent: { type: String, nullable: true },
-    ipAddress: { type: String, nullable: true },
+    clientHint: { type: String, nullable: true, length: 32 },
+    networkHint: { type: String, nullable: true, length: 16 },
+    authenticatedAt: { type: 'datetime', nullable: true },
   },
 });
 
@@ -323,17 +353,24 @@ export interface InvitationEntity {
   personNom: string | null;
   personType: string | null;
   personId: number | null;
-  createdByUserId: number;
+  createdByUserId: number | null;
+  createdByPlatformAdminId: number | null;
   expiresAt: Date;
   usedAt: Date | null;
   usedByUserId: number | null;
   createdAt: Date;
+  /** Empreinte du contexte d'échange court (cookie), jamais le jeton d'URL (issue #34). */
+  validationContextHash: string | null;
+  validationContextExpiresAt: Date | null;
 }
 
 export const InvitationSchema = new EntitySchema<InvitationEntity>({
   name: 'Invitation',
   tableName: 'invitations',
-  indices: [{ name: 'idx_invitations_person', columns: ['personType', 'personId'] }],
+  indices: [
+    { name: 'idx_invitations_person', columns: ['personType', 'personId'] },
+    { name: 'idx_invitations_validation_context', columns: ['validationContextHash'] },
+  ],
   columns: {
     id: { type: String, primary: true },
     clubId: { type: String, default: process.env.APP_CLUB_ID || 'afp' },
@@ -344,11 +381,14 @@ export const InvitationSchema = new EntitySchema<InvitationEntity>({
     personNom: { type: String, nullable: true },
     personType: { type: String, nullable: true },
     personId: { type: Number, nullable: true },
-    createdByUserId: { type: Number },
+    createdByUserId: { type: Number, nullable: true },
+    createdByPlatformAdminId: { type: Number, nullable: true },
     expiresAt: { type: 'datetime' },
     usedAt: { type: 'datetime', nullable: true },
     usedByUserId: { type: Number, nullable: true },
     createdAt: { type: 'datetime', createDate: true },
+    validationContextHash: { type: String, length: 64, nullable: true },
+    validationContextExpiresAt: { type: 'datetime', nullable: true },
   },
 });
 
@@ -683,6 +723,8 @@ export interface PlatformAdminEntity {
   passwordHash: string;
   nom: string;
   active: boolean;
+  totpSecretEncrypted: string | null;
+  totpEnrolledAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -696,6 +738,8 @@ export const PlatformAdminSchema = new EntitySchema<PlatformAdminEntity>({
     passwordHash: { type: String },
     nom: { type: String },
     active: { type: Boolean, default: true },
+    totpSecretEncrypted: { type: 'text', nullable: true },
+    totpEnrolledAt: { type: 'datetime', nullable: true },
     createdAt: { type: 'datetime', createDate: true },
     updatedAt: { type: 'datetime', updateDate: true },
   },
@@ -703,22 +747,205 @@ export const PlatformAdminSchema = new EntitySchema<PlatformAdminEntity>({
 
 export interface PlatformSessionEntity {
   id: string;
+  tokenHash: string;
   platformAdminId: number;
   createdAt: Date;
+  lastSeenAt: Date;
   expiresAt: Date;
+  idleTtlSeconds: number;
+  absoluteTtlSeconds: number;
   revokedAt: Date | null;
+  clientHint: string | null;
+  networkHint: string | null;
+  authenticatedAt: Date | null;
+  mfaVerifiedAt: Date | null;
 }
 
 export const PlatformSessionSchema = new EntitySchema<PlatformSessionEntity>({
   name: 'PlatformSession',
   tableName: 'platform_sessions',
-  indices: [{ name: 'idx_platform_sessions_admin', columns: ['platformAdminId'] }],
+  indices: [
+    { name: 'idx_platform_sessions_admin', columns: ['platformAdminId'] },
+    { name: 'uq_platform_sessions_token_hash', columns: ['tokenHash'], unique: true },
+  ],
   columns: {
     id: { type: String, primary: true },
+    tokenHash: { type: String, length: 96 },
     platformAdminId: { type: Number },
     createdAt: { type: 'datetime', createDate: true },
+    lastSeenAt: { type: 'datetime' },
+    expiresAt: { type: 'datetime' },
+    idleTtlSeconds: { type: Number },
+    absoluteTtlSeconds: { type: Number },
+    revokedAt: { type: 'datetime', nullable: true },
+    clientHint: { type: String, nullable: true, length: 32 },
+    networkHint: { type: String, nullable: true, length: 16 },
+    authenticatedAt: { type: 'datetime', nullable: true },
+    mfaVerifiedAt: { type: 'datetime', nullable: true },
+  },
+});
+
+export interface PlatformMfaChallengeEntity {
+  tokenHash: string;
+  platformAdminId: number;
+  purpose: string;
+  totpSecretEncrypted: string | null;
+  expiresAt: Date;
+  consumedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PlatformMfaChallengeSchema = new EntitySchema<PlatformMfaChallengeEntity>({
+  name: 'PlatformMfaChallenge',
+  tableName: 'platform_mfa_challenges',
+  indices: [{ name: 'idx_platform_mfa_challenges_admin', columns: ['platformAdminId'] }],
+  columns: {
+    tokenHash: { type: String, primary: true },
+    platformAdminId: { type: Number },
+    purpose: { type: String },
+    totpSecretEncrypted: { type: 'text', nullable: true },
+    expiresAt: { type: 'datetime' },
+    consumedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface PlatformMfaRecoveryCodeEntity {
+  id: number;
+  platformAdminId: number;
+  codeHash: string;
+  usedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PlatformMfaRecoveryCodeSchema = new EntitySchema<PlatformMfaRecoveryCodeEntity>({
+  name: 'PlatformMfaRecoveryCode',
+  tableName: 'platform_mfa_recovery_codes',
+  indices: [{ name: 'idx_platform_mfa_recovery_admin', columns: ['platformAdminId'] }],
+  columns: {
+    id: { type: Number, primary: true, generated: 'increment' },
+    platformAdminId: { type: Number },
+    codeHash: { type: String },
+    usedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface PrivilegedAuthEventEntity {
+  id: number;
+  action: string;
+  actorType: string;
+  actorId: number | null;
+  clubId: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: Date;
+}
+
+export const PrivilegedAuthEventSchema = new EntitySchema<PrivilegedAuthEventEntity>({
+  name: 'PrivilegedAuthEvent',
+  tableName: 'privileged_auth_events',
+  indices: [{ name: 'idx_privileged_auth_events_created', columns: ['createdAt'] }],
+  columns: {
+    id: { type: Number, primary: true, generated: 'increment' },
+    action: { type: String },
+    actorType: { type: String },
+    actorId: { type: Number, nullable: true },
+    clubId: { type: String, nullable: true },
+    metadata: { type: 'simple-json', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface PrivacyRequestEntity {
+  id: string;
+  clubId: string;
+  type: string;
+  status: string;
+  subjectUserId: number | null;
+  subjectEmailHash: string | null;
+  identityVerifiedAt: Date | null;
+  dueAt: Date | null;
+  assigneeUserId: number | null;
+  decisionCode: string | null;
+  responseProof: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt: Date | null;
+}
+
+export const PrivacyRequestSchema = new EntitySchema<PrivacyRequestEntity>({
+  name: 'PrivacyRequest',
+  tableName: 'privacy_requests',
+  indices: [
+    { name: 'idx_privacy_requests_club', columns: ['clubId', 'createdAt'] },
+    { name: 'idx_privacy_requests_subject', columns: ['clubId', 'subjectUserId'] },
+  ],
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    type: { type: String },
+    status: { type: String },
+    subjectUserId: { type: Number, nullable: true },
+    subjectEmailHash: { type: String, nullable: true },
+    identityVerifiedAt: { type: 'datetime', nullable: true },
+    dueAt: { type: 'datetime', nullable: true },
+    assigneeUserId: { type: Number, nullable: true },
+    decisionCode: { type: String, nullable: true },
+    responseProof: { type: String, nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+    updatedAt: { type: 'datetime', updateDate: true },
+    completedAt: { type: 'datetime', nullable: true },
+  },
+});
+
+export interface PrivacyExportTokenEntity {
+  id: string;
+  clubId: string;
+  userId: number;
+  requestId: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  downloadedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PrivacyExportTokenSchema = new EntitySchema<PrivacyExportTokenEntity>({
+  name: 'PrivacyExportToken',
+  tableName: 'privacy_export_tokens',
+  indices: [{ name: 'idx_privacy_export_tokens_user', columns: ['clubId', 'userId'] }],
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    userId: { type: Number },
+    requestId: { type: String },
     expiresAt: { type: 'datetime' },
     revokedAt: { type: 'datetime', nullable: true },
+    downloadedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface PrivacyContactChangeEntity {
+  id: string;
+  clubId: string;
+  userId: number;
+  newEmail: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PrivacyContactChangeSchema = new EntitySchema<PrivacyContactChangeEntity>({
+  name: 'PrivacyContactChange',
+  tableName: 'privacy_contact_changes',
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    userId: { type: Number },
+    newEmail: { type: String },
+    expiresAt: { type: 'datetime' },
+    usedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
   },
 });
 
@@ -844,6 +1071,12 @@ export const allSchemas = [
   ClubTenantSchema,
   PlatformAdminSchema,
   PlatformSessionSchema,
+  PlatformMfaChallengeSchema,
+  PlatformMfaRecoveryCodeSchema,
+  PrivilegedAuthEventSchema,
+  PrivacyRequestSchema,
+  PrivacyExportTokenSchema,
+  PrivacyContactChangeSchema,
   TenantOffboardingExportSchema,
   TenantProcessorInstructionSchema,
   TenantOffboardingEventSchema,

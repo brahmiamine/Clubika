@@ -26,8 +26,12 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "routes:coverage": "node scripts/route-test-coverage.mjs",
+    "audit:deps": "node scripts/audit-dependencies.mjs",
+    "audit:actions": "node scripts/check-action-pins.mjs",
+    "audit:exceptions": "node scripts/check-exceptions.mjs",
     "postinstall": "npx playwright install chromium --with-deps || echo 'Playwright installation skipped'",
-    "db:migrate": "tsx scripts/run-migrations.ts"
+    "db:migrate": "tsx scripts/run-migrations.ts",
+    "sportcorico:quarantine": "tsx scripts/apply-sportcorico-quarantine.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

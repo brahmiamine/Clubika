@@ -54,13 +54,12 @@ ENFORCE_TOMBSTONES=1 pnpm tsx scripts/enforce-tenant-tombstones.ts
 Archiver le JSON du certificat **hors** de la base (coffre exploitant). Ne pas
 remettre en production un dump qui réintroduit un club déjà certifié supprimé.
 
-## Migration 0025
+## Migration 0039
 
 `offboarding_club_tenant` : colonnes d’état sur `club_tenants` + tables
 `tenant_offboarding_exports`, `tenant_processor_instructions`,
 `tenant_offboarding_events`, `tenant_deletion_certificates`. Idempotente. Pas
 de purge destructive au migrate. Ne pas modifier `typeorm-entity-tables.ts`.
 
-Si une autre PR non fusionnée a déjà posé une ligne `schema_migrations` `0025`
-sur un bac local, la supprimer avant de tester cette branche (la CI part de
-`dev`, où `0025` est libre).
+Si une autre PR non fusionnée a déjà posé une ligne `schema_migrations` `0039`
+sur un bac local, la supprimer avant de tester cette branche.

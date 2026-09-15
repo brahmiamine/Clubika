@@ -87,7 +87,6 @@ describe('operationalStateFromContact / applyOperationalStateToContact', () => {
       assignedAt: undefined,
       respondedAt: undefined,
       declineReason: undefined,
-      declineComment: undefined,
       remindersSent: [],
       lastReminderAt: undefined,
       reminderCount: 0,
