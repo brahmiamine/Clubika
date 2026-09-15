@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
@@ -52,7 +53,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error('Error updating club admin:', error);
+    logError('app.unhandled', 'Error updating club admin:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour l\'administrateur' }, { status: 500 });
   }
 }

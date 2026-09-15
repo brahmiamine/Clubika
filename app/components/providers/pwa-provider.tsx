@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { BellRing, X } from 'lucide-react';
@@ -118,9 +119,12 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     if ('Notification' in window) setPushPermission(Notification.permission);
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
-        console.error('Service worker registration failed:', error);
-      });
+      const onInvitationPage = pathname === '/inscription' || pathname.startsWith('/inscription/');
+      if (!onInvitationPage) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
+          logError('app.unhandled', 'Service worker registration failed:', error);
+        });
+      }
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
@@ -139,7 +143,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
-  }, [settings.clubName]);
+  }, [pathname, settings.clubName]);
 
   useEffect(() => {
     if (usesTokenClubDocumentHead(pathname)) return;
@@ -170,7 +174,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     if (typeof navigator === 'undefined' || !canUseWebPush(navigator.userAgent, window.isSecureContext)) return;
     syncSubscription().catch((error) => {
       if (isPushServiceUnavailableError(error)) return;
-      console.error('Push subscription sync failed:', error);
+      logError('app.unhandled', 'Push subscription sync failed:', error);
     });
   }, [user, pushSupported, pushPermission]);
 

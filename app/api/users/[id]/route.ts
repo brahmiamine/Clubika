@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import type { EntityManager } from 'typeorm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -185,7 +186,7 @@ export async function PUT(
     const users = await getRepo(db).find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
     return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
   } catch (error) {
-    console.error('Error updating user in DB:', error);
+    logError('app.unhandled', 'Error updating user in DB:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
@@ -263,7 +264,7 @@ export async function DELETE(
     const users = await getRepo(db).find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
     return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
   } catch (error) {
-    console.error('Error deleting user in DB:', error);
+    logError('app.unhandled', 'Error deleting user in DB:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });
   }
 }

@@ -43,7 +43,7 @@ async function hashPlaintextSessionRows(db: DataSource, table: string): Promise<
 }
 
 /**
- * Migration 0025 (issue #29) : les jetons de session club et plateforme ne sont
+ * Migration 0032 (issue #29) : les jetons de session club et plateforme ne sont
  * plus la clé primaire en clair. Les lignes dont `id` est encore un jeton 64 hex
  * sont réécrites : nouvel UUID interne + HMAC versionné, le cookie historique
  * reste valide. Les lignes sans jeton récupérable sont supprimées (révocation

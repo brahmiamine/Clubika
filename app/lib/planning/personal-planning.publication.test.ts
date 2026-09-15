@@ -155,7 +155,7 @@ describe('personal planning publication visibility', () => {
     expect(assignments[0]).toMatchObject({ eventId: 'amical-2', cancelled: true, status: 'accepted' });
   });
 
-  it('réexpose le motif et le commentaire de refus après rechargement (issue #44)', async () => {
+  it('réexpose le motif de refus après rechargement, sans commentaire libre (issues #44 et #7)', async () => {
     const declinedMatch = {
       eventId: 'amical-3',
       eventType: 'amical',
@@ -194,7 +194,7 @@ describe('personal planning publication visibility', () => {
       eventId: 'amical-3',
       status: 'declined',
       declineReason: 'work',
-      declineComment: 'astreinte',
+      declineComment: null,
     });
   });
 

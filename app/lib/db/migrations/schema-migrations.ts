@@ -9,6 +9,10 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { disableScraperSyncOnAllClubs } from './disable-sportcorico-sync';
+import { migrateHealthDataFields } from './remove-health-data';
+import { runSportCoricoDataAudit } from './audit-sportcorico-data';
+import { purgeOutboxLastError } from './purge-outbox-last-error';
 import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed-sessions';
 
 /**
@@ -59,7 +63,31 @@ import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
- * La migration 0025 (issue #29) ajoute le condensat HMAC des jetons de session
+ * La migration 0025 (issue #4) désactive `scraperSync` sur tous les clubs existants.
+ *
+ * La migration 0026 (issue #7) recale les motifs de refus `injury` vers `personal`
+ * et compte les commentaires libres ; la purge des commentaires n’a lieu que si
+ * `HEALTH_COMMENT_PURGE=apply`.
+ *
+ * La migration 0027 (issue #5) inventorie les données SportCorico déjà importées
+ * (dry-run par défaut). La quarantaine n'écrit que si `SPORTCORICO_DATA_PURGE=apply`
+ * au moment de l'exécution, ou via `pnpm run sportcorico:quarantine` après sauvegarde.
+ *
+ * La migration 0028 (issue #31) purge `planning_notification_outbox.last_error`
+ * des anciens `error.message` fournisseur ; les nouvelles valeurs sont
+ * `{"code","retryable"}`. Dry-run : `MIGRATION_DRY_RUN=1`.
+ *
+ * La migration 0029 (issue #34) ajoute le contexte d'échange court des invitations
+ * publiques (cookie httpOnly).
+ *
+ * La migration 0030 (issue #35) stocke les rapports CSP sanitizés (hôtes + directive,
+ * jamais d'URI complète). Rétention 7 jours, purge à l'écriture.
+ *
+ * La migration 0031 (issue #23) ajoute `scan_status` aux pièces jointes chat/planning :
+ * seuls les fichiers `clean` sont téléchargeables. Les lignes existantes sont marquées
+ * `clean` (DEFAULT) ; les nouveaux uploads passent par l’inspection avant INSERT.
+ *
+ * La migration 0032 (issue #29) ajoute le condensat HMAC des jetons de session
  * (`tokenHash`) et les TTL idle/absolu, puis révoque le stockage en clair.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
@@ -454,6 +482,78 @@ export const schemaMigrations: readonly SchemaMigration[] = [
   },
   {
     version: '0025',
+    name: 'desactiver_scraper_sync_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('disable-sportcorico-sync.ts'),
+    up: async (db) => {
+      await disableScraperSyncOnAllClubs(db);
+    },
+  },
+  {
+    version: '0026',
+    name: 'retirer_donnees_sante_structurees',
+    statements: [],
+    logic: readMigrationLogicFile('remove-health-data.ts'),
+    up: async (db) => {
+      await migrateHealthDataFields(db);
+    },
+  },
+  {
+    version: '0027',
+    name: 'audit_quarantaine_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('audit-sportcorico-data.ts'),
+    up: async (db) => {
+      await runSportCoricoDataAudit(db);
+    },
+  },
+  {
+    version: '0028',
+    name: 'purge_outbox_last_error_messages',
+    statements: [],
+    logic: readMigrationLogicFile('purge-outbox-last-error.ts'),
+    up: async (db) => {
+      await purgeOutboxLastError(db);
+    },
+  },
+  {
+    version: '0029',
+    name: 'invitation_validation_context',
+    // Contexte d'échange court (cookie httpOnly) pour retirer le jeton d'URL
+    // de l'historique après validation publique (issue #34). Colonnes nullables :
+    // les invitations déjà émises n'ont pas encore de contexte.
+    statements: [
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextHash VARCHAR(64) NULL AFTER createdAt',
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextExpiresAt DATETIME(6) NULL AFTER validationContextHash',
+      'CREATE INDEX IF NOT EXISTS idx_invitations_validation_context ON invitations (validationContextHash)',
+    ],
+  },
+  {
+    version: '0030',
+    name: 'csp_reports_sanitized',
+    statements: [
+      `CREATE TABLE IF NOT EXISTS csp_reports (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        document_host VARCHAR(255) NOT NULL,
+        blocked_host VARCHAR(255) NULL,
+        violated_directive VARCHAR(64) NOT NULL,
+        disposition VARCHAR(16) NOT NULL,
+        PRIMARY KEY (id),
+        INDEX idx_csp_reports_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0031',
+    name: 'attachment_scan_status',
+    statements: [
+      "ALTER TABLE chat_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
+      "ALTER TABLE planning_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
+    ],
+  },
+  {
+    version: '0032',
     name: 'sessions_token_hash_et_ttl',
     statements: [
       'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS tokenHash VARCHAR(96) NULL AFTER id',

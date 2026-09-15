@@ -1,3 +1,4 @@
+import { logError, logWarn } from '@/lib/observability/log';
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/constants';
@@ -18,6 +19,11 @@ import {
 } from './service';
 import { ChatProtocolError, parseDeleteCommand, parseMessageCommand, parseReactCommand, parseResumeCommand, parseTypingCommand } from './protocol';
 import { handshakeClientAddress } from './socket-security';
+import {
+  isAllowedOriginUrl,
+  requestHostOrigin,
+  resolveBrowserOrigin,
+} from '@/lib/security/request-origin';
 import { notifyChatMessage, notifyChatReaction, chatMessagePreview } from './notifications';
 import {
   acceptsSharedHandshake,
@@ -110,38 +116,24 @@ function cookieValue(header: string | undefined, name: string): string | null {
 }
 
 function isAllowedOrigin(headers: Record<string, string | string[] | undefined>): boolean {
-  const origin = Array.isArray(headers.origin) ? headers.origin[0] : headers.origin;
-  if (!origin) return false;
-  let originUrl: URL;
-  try {
-    originUrl = new URL(origin);
-  } catch {
-    return false;
-  }
+  const originHeader = Array.isArray(headers.origin) ? headers.origin[0] : headers.origin;
+  const refererHeader = Array.isArray(headers.referer) ? headers.referer[0] : headers.referer;
+  const resolved = resolveBrowserOrigin({ origin: originHeader, referer: refererHeader });
+  if (!resolved.origin) return false;
 
-  // Développement : toujours autoriser localhost / 127.0.0.1, quelle que soit la
-  // configuration (évite qu'un APP_BASE_URL de prod dans .env casse le temps réel
-  // en local).
-  if (process.env.NODE_ENV !== 'production'
-    && (originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1')) {
-    return true;
-  }
-
-  // Origine explicitement configurée.
-  if (process.env.APP_BASE_URL) {
-    try {
-      if (originUrl.origin === new URL(process.env.APP_BASE_URL).origin) return true;
-    } catch {
-      // APP_BASE_URL mal formé : on retombe sur la comparaison d'hôte ci-dessous.
-    }
-  }
-
-  // Repli : même hôte que la requête (reverse-proxy inclus via x-forwarded-host).
   const forwardedHost = Array.isArray(headers['x-forwarded-host'])
     ? headers['x-forwarded-host'][0]
     : headers['x-forwarded-host'];
   const host = forwardedHost || (Array.isArray(headers.host) ? headers.host[0] : headers.host);
-  return !!host && originUrl.host === host.split(',')[0]?.trim();
+  const forwardedProto = Array.isArray(headers['x-forwarded-proto'])
+    ? headers['x-forwarded-proto'][0]
+    : headers['x-forwarded-proto'];
+  const requestOrigin = requestHostOrigin({
+    host,
+    forwardedHost,
+    forwardedProto,
+  });
+  return isAllowedOriginUrl(resolved.origin, requestOrigin);
 }
 
 function userSocketRoom(clubId: string, userId: number): string {
@@ -196,7 +188,7 @@ function warnIfMultiInstanceWithoutSharedRateLimits(): void {
   if (!raw) return;
   const count = Number(raw);
   if (Number.isFinite(count) && count > 1) {
-    console.warn(
+    logWarn('app.unhandled', 
       `[chat] CHAT_INSTANCE_COUNT=${raw} : les limites handshake/messages/actions sont partagées `
       + 'via MariaDB (migration 0020). Vérifiez que `pnpm db:migrate` a été exécuté sur toutes les instances.',
     );
@@ -373,7 +365,7 @@ export function attachChatSocketServer(httpServer: HttpServer): ChatSocketServer
         acknowledgeSafely(acknowledge, { ok: true, message: result.message });
         if (!result.duplicate) {
           void notifyChatMessage(db, user, result, command.mentionedUserIds ?? []).catch((error) => {
-            console.error('[chat] Échec de notification après envoi :', error);
+            logError('app.unhandled', '[chat] Échec de notification après envoi :', error);
           });
         }
       } catch (error) {
@@ -489,7 +481,7 @@ export function attachChatSocketServer(httpServer: HttpServer): ChatSocketServer
         acknowledgeSafely(acknowledge, { ok: true, reactions: result.reactions });
         if (result.added) {
           void notifyChatReaction(db, user, result, command.emoji).catch((error) => {
-            console.error('[chat] Échec de notification après réaction :', error);
+            logError('app.unhandled', '[chat] Échec de notification après réaction :', error);
           });
         }
       } catch (error) {

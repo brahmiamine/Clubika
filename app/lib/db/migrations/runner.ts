@@ -1,3 +1,4 @@
+import { logWarn } from '@/lib/observability/log';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -191,7 +192,7 @@ export async function runSchemaMigrations(
             [checksum, migration.version],
           );
           appliedChecksums.set(migration.version, checksum);
-          console.warn(
+          logWarn('app.unhandled', 
             `[migrations] ${migration.version} (${migration.name}) : empreinte étendue à la logique up().`,
           );
           continue;
@@ -213,7 +214,7 @@ export async function runSchemaMigrations(
         [migration.version, migration.name, checksum],
       );
       newlyApplied.push(migration.version);
-      console.warn(`[migrations] ${migration.version} (${migration.name}) appliquée.`);
+      logWarn('app.unhandled', `[migrations] ${migration.version} (${migration.name}) appliquée.`);
     }
 
     return newlyApplied;

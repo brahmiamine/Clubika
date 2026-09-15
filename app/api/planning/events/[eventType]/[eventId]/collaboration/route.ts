@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -126,7 +127,7 @@ export async function POST(
 
     return NextResponse.json({ error: 'Type de collaboration invalide' }, { status: 400 });
   } catch (error) {
-    console.error('Event collaboration write failed:', error);
+    logError('app.unhandled', 'Event collaboration write failed:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer la collaboration' }, { status: 500 });
   }
 }

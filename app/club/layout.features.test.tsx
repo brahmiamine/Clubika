@@ -36,6 +36,7 @@ vi.mock('@/hooks/useAppSettings', () => ({
         requireArbitreForPublication: true,
         requireEncadrantForPublication: true,
         requireAccompagnateurForPublication: true,
+        massExport: true,
       },
     },
   }),

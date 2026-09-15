@@ -1,3 +1,4 @@
+import { logError, logWarn } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { PlatformAdminEntity } from '@/lib/db/schemas';
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
         recordFailedLoginAttempt(db, identityBucket),
       ]);
       if (ipResult.limited) {
-        console.warn(`[auth] Connexion plateforme : verrouillage par IP déclenché (bucket=${hashBucketComponent(ip).slice(0, 16)}, ${ipResult.retryAfterSeconds}s)`);
+        logWarn('auth.failed');
       }
       return NextResponse.json(GENERIC_ERROR, { status: 401 });
     };
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set(PLATFORM_SESSION_COOKIE_NAME, token, sessionCookieSetOptions(expiresAt));
     return response;
   } catch (error) {
-    console.error('Error during platform login:', error);
+    logError('auth.failed', error);
     return NextResponse.json({ error: 'Une erreur est survenue' }, { status: 500 });
   }
 }

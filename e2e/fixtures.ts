@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { test as base, type BrowserContext, type Page } from '@playwright/test';
+import { test as base, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import { getDb } from '@/lib/db';
 import { createTestUserAndSession } from '@/lib/auth/test-helpers';
 import type { ClubAccessRole, PlanningFunction } from '@/lib/auth/roles';
@@ -7,6 +7,7 @@ import type { UserEntity } from '@/lib/db/schemas';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/constants';
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://127.0.0.1:3100';
+const BASE_ORIGIN = new URL(BASE_URL).origin;
 
 type TestAccount = Awaited<ReturnType<typeof createTestUserAndSession>>;
 
@@ -20,8 +21,10 @@ export function freshClubId(): string {
   return `e2e-${randomBytes(8).toString('hex')}`;
 }
 
-export async function authedContext(browser: { newContext: () => Promise<BrowserContext> }, account: TestAccount): Promise<BrowserContext> {
-  const context = await browser.newContext();
+export async function authedContext(browser: Pick<Browser, 'newContext'>, account: TestAccount): Promise<BrowserContext> {
+  const context = await browser.newContext({
+    extraHTTPHeaders: { Origin: BASE_ORIGIN },
+  });
   await context.addCookies([{
     name: SESSION_COOKIE_NAME,
     value: account.token,

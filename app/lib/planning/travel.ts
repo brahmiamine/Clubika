@@ -1,3 +1,8 @@
+import {
+  configuredServiceBaseUrl,
+  guardedFetch,
+  isExternalServiceEnabled,
+} from '@/lib/compliance/external-services';
 
 export interface GeoPoint {
   lat: number;
@@ -45,15 +50,20 @@ export async function estimateTravelMinutes(
   options: TravelEstimateOptions = {},
 ): Promise<TravelEstimate> {
   const fetchImpl = options.fetchImpl ?? fetch;
-  const baseUrl = (options.baseUrl ?? process.env.ROUTING_API_BASE_URL ?? 'https://router.project-osrm.org').replace(/\/$/, '');
+  const configured = configuredServiceBaseUrl('routing');
+  const baseUrl = (options.baseUrl ?? configured)?.replace(/\/$/, '');
   const timeoutMs = options.timeoutMs ?? 1800;
   const straightLineKm = haversineDistanceKm(from, to);
+  if (!isExternalServiceEnabled('routing') || !baseUrl) {
+    return { status: 'unavailable', straightLineKm, source: 'unavailable' };
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const url = `${baseUrl}/route/v1/driving/${encodeURIComponent(String(from.lon))},${encodeURIComponent(String(from.lat))};${encodeURIComponent(String(to.lon))},${encodeURIComponent(String(to.lat))}?overview=false&alternatives=false&steps=false`;
-    const response = await fetchImpl(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+    const response = await guardedFetch('routing', url, { signal: controller.signal, headers: { Accept: 'application/json' } }, fetchImpl);
     if (!response.ok) return { status: 'unavailable', straightLineKm, source: 'unavailable' };
     const data = await response.json() as { routes?: Array<{ duration?: number; distance?: number }> };
     const route = data.routes?.[0];

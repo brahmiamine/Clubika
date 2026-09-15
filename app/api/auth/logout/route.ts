@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getSessionUser, revokeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set(SESSION_COOKIE_NAME, '', sessionCookieClearOptions());
     return response;
   } catch (error) {
-    console.error('Error during logout:', error);
+    logError('app.unhandled', 'Error during logout:', error);
     return NextResponse.json(
       { error: 'Une erreur est survenue' },
       { status: 500 },

@@ -4,6 +4,11 @@ import { eventStartTimestamp } from './p0-rules';
 import { readAppSettings } from '@/lib/settings-store';
 import { getCurrentClubId } from '@/lib/auth/club-context';
 import type { EventWeatherDisplay } from './weather-condition';
+import {
+  configuredServiceBaseUrl,
+  guardedFetch,
+  isExternalServiceEnabled,
+} from '@/lib/compliance/external-services';
 
 /** Paris — 48°51'03.4"N 2°20'59.5"E. Toutes les prévisions Open-Meteo partent de ce point. */
 export const PARIS_WEATHER_COORDINATES = {
@@ -203,14 +208,15 @@ export async function geocodeLocation(location: string): Promise<{ lat: number; 
   const cached = fromCache(geocodeCache, cacheKey);
   if (cached !== undefined) return cached;
 
-  const base = process.env.OPEN_METEO_GEOCODING_URL?.trim() || 'https://geocoding-api.open-meteo.com/v1/search';
+  const base = configuredServiceBaseUrl('open-meteo-geocoding');
+  if (!isExternalServiceEnabled('open-meteo') || !base) return null;
   try {
     const url = new URL(base);
     url.searchParams.set('name', location);
     url.searchParams.set('count', '1');
     url.searchParams.set('language', 'fr');
     url.searchParams.set('format', 'json');
-    const response = await fetch(url, { signal: AbortSignal.timeout(3500), cache: 'no-store' });
+    const response = await guardedFetch('open-meteo', url.toString(), { signal: AbortSignal.timeout(3500), cache: 'no-store' });
     if (!response.ok) return null;
     const data = await response.json() as { results?: Array<{ latitude?: number; longitude?: number }> };
     const first = data.results?.[0];
@@ -250,7 +256,10 @@ export async function getPlanningWeather(
   const target = new Date(start);
   const date = target.toISOString().slice(0, 10);
   const targetHour = `${target.toISOString().slice(0, 13)}:00:00Z`;
-  const base = process.env.OPEN_METEO_FORECAST_URL?.trim() || 'https://api.open-meteo.com/v1/forecast';
+  const base = configuredServiceBaseUrl('open-meteo-forecast');
+  if (!isExternalServiceEnabled('open-meteo') || !base) {
+    return { available: false, reason: 'provider-disabled' };
+  }
   // Clé par lieu (arrondi à ~100 m, largement suffisant pour une prévision horaire) et par
   // jour : la charge utile brute est mise en cache, puis reparsée pour l'heure exacte de
   // chaque événement — plusieurs événements le même jour au même endroit ne déclenchent
@@ -269,7 +278,7 @@ export async function getPlanningWeather(
       url.searchParams.set('timezone', 'UTC');
       url.searchParams.set('start_date', date);
       url.searchParams.set('end_date', date);
-      const response = await fetch(url, { signal: AbortSignal.timeout(4000), cache: 'no-store' });
+      const response = await guardedFetch('open-meteo', url.toString(), { signal: AbortSignal.timeout(4000), cache: 'no-store' });
       if (!response.ok) return { available: false, reason: 'provider-unavailable' };
       payload = await response.json();
       toCache(forecastCache, forecastCacheKey, payload, FORECAST_CACHE_TTL_MS);

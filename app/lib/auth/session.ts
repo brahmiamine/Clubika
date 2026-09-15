@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomUUID } from 'node:crypto';
 import { In, IsNull } from 'typeorm';
 import { getDb } from '@/lib/db';
@@ -43,7 +44,7 @@ function publishSessionRevocation(event: SessionRevocationEvent): void {
     try {
       listener(event);
     } catch {
-      console.error('Session revocation listener failed');
+      logError('app.unhandled', 'Session revocation listener failed');
     }
   }
 }

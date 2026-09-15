@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import type { DataSource, EntityManager } from 'typeorm';
 import type { AssignmentContact } from '@/types/match';
 import type {
@@ -12,7 +13,7 @@ import { getPlanningRecord } from '@/lib/planning/records';
 import { emitNotificationsChanged } from '@/lib/realtime/hub';
 import { CHAT_INBOX_EXCLUDED_TYPES } from './inbox';
 import { sendEmail } from './email';
-import { sendWhatsAppNotification } from './whatsapp';
+import { sendWhatsAppNotification, isWhatsAppGloballyEnabled } from './whatsapp';
 import { notificationDestinationHref } from './destinations';
 import {
   normalizeNotificationPreferences,
@@ -39,7 +40,10 @@ export interface NotificationInput {
   urgency?: NotificationUrgency;
 }
 
-async function deliverWhatsApp(_db: DataSource, user: UserEntity, input: NotificationInput): Promise<void> {
+async function deliverWhatsApp(db: DataSource, user: UserEntity, input: NotificationInput): Promise<void> {
+  if (!isWhatsAppGloballyEnabled()) return;
+  const preferenceRecord = await getPlanningRecord(db, `notification-preferences:${user.id}`);
+  if (!normalizeNotificationPreferences(preferenceRecord?.payload).whatsapp) return;
   const phone = user.telephone?.trim() || null;
   if (!phone) return;
   await sendWhatsAppNotification({
@@ -58,7 +62,8 @@ async function deliverChannel(db: DataSource, user: UserEntity, channel: OutboxC
   }
   if (channel === 'email') {
     if (!user.email) return;
-    return sendEmail({ to: user.email, subject: input.title, text: input.message, clubId: user.clubId });
+    await sendEmail({ to: user.email, subject: input.title, text: input.message, clubId: user.clubId });
+    return;
   }
   return deliverWhatsApp(db, user, input);
 }
@@ -128,7 +133,7 @@ async function enqueueChannelsForUser(
         emitNotificationsChanged(user.clubId, user.id);
       }
     } catch (error) {
-      console.error(`[notifications] Échec de la notification in-app pour l'utilisateur ${user.id} :`, error);
+      logError('app.unhandled', error);
     }
   }
 
@@ -137,6 +142,7 @@ async function enqueueChannelsForUser(
   for (const channel of channels) {
     if (!selected.includes(channel)) continue;
     if (channel === 'email' && !user.email) continue;
+    if (channel === 'whatsapp' && (!isWhatsAppGloballyEnabled() || !user.telephone?.trim())) continue;
     try {
       const item = await enqueueNotificationDelivery(
         db,
@@ -154,7 +160,7 @@ async function enqueueChannelsForUser(
       );
       items.push(item);
     } catch (error) {
-      console.error(`[notifications] Échec de mise en file du canal ${channel} pour l'utilisateur ${user.id} :`, error);
+      logError('app.unhandled', error);
     }
   }
   return items;
@@ -264,7 +270,7 @@ export async function createNotificationForUser(
     const items = await enqueueChannelsForUser(db, user, input);
     await Promise.all(items.map((item) => deliverOutboxItem(db, user, item)));
   } catch (error) {
-    console.error(`[notifications] Échec inattendu de la notification pour l'utilisateur ${user.id} :`, error);
+    logError('app.unhandled', error);
   }
 }
 

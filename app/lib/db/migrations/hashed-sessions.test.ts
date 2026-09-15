@@ -10,7 +10,7 @@ import type { UserSessionEntity } from '@/lib/db/schemas';
 
 const dbAvailable = await isDbAvailable();
 
-describe('migration 0025 — base neuve', () => {
+describe('migration 0032 — base neuve', () => {
   it("ignore le backfill lorsque la table n'existe pas encore", async () => {
     const query = vi.fn().mockResolvedValue([]);
     const result = await hashExistingSessionTokens({ query } as unknown as Awaited<ReturnType<typeof getDb>>);
