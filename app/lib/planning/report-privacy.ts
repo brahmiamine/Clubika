@@ -21,9 +21,9 @@ export interface ReportAuditMetadata {
   category: PostEventReportCategory;
 }
 
-/** Durée opérationnelle (jours). La base légale globale est issue #9 — ne pas l’inventer ici. */
+/** Durée opérationnelle (jours). RETENTION_REPORTS_DAYS (#9) prime ; sinon POST_EVENT_REPORT_RETENTION_DAYS (#8). */
 export function postEventReportRetentionDays(): number {
-  const raw = process.env.POST_EVENT_REPORT_RETENTION_DAYS;
+  const raw = process.env.RETENTION_REPORTS_DAYS || process.env.POST_EVENT_REPORT_RETENTION_DAYS;
   const parsed = raw ? Number.parseInt(raw, 10) : DEFAULT_POST_EVENT_REPORT_RETENTION_DAYS;
   if (!Number.isFinite(parsed) || parsed < 1) return DEFAULT_POST_EVENT_REPORT_RETENTION_DAYS;
   return Math.min(parsed, 3650);

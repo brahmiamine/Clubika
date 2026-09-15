@@ -81,6 +81,9 @@ import { redactHistoricalReportAudits } from './redact-report-audit';
  * La migration 0034 (issue #8) expurge le texte des anciennes entrées d'audit
  * `action = report` (PlanningCollaboration) : plus de copie du payload métier.
  *
+ * La migration 0035 (issue #9) journalise les exécutions de purge de rétention
+ * (compteurs agrégés uniquement, aucun contenu personnel).
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -620,5 +623,20 @@ export const schemaMigrations: readonly SchemaMigration[] = [
     up: async (db) => {
       await redactHistoricalReportAudits(db);
     },
+  },
+  {
+    version: '0035',
+    name: 'retention_purge_runs',
+    statements: [
+      `CREATE TABLE IF NOT EXISTS retention_purge_runs (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        dry_run TINYINT(1) NOT NULL DEFAULT 0,
+        success TINYINT(1) NOT NULL DEFAULT 1,
+        started_at DATETIME(6) NOT NULL,
+        finished_at DATETIME(6) NOT NULL,
+        summary LONGTEXT NOT NULL,
+        INDEX idx_retention_purge_runs_started (started_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
   },
 ];
