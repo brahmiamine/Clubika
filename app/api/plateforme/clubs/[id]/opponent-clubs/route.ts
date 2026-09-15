@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity } from '@/lib/db/schemas';
 import { requirePlatformAuth } from '@/lib/auth/platform-require';
+import { rejectIfClubNotWritable } from '@/lib/tenant-offboarding/writable';
 
 export interface OpponentClub {
   nom: string;
@@ -60,8 +61,8 @@ export async function POST(
 
   try {
     const clubId = await resolveClubId(params);
-    const notFound = await assertClubExists(clubId);
-    if (notFound) return notFound;
+    const blocked = await rejectIfClubNotWritable(await getDb(), clubId);
+    if (blocked) return blocked;
 
     const body = await request.json();
     const { nom, logo } = body;
@@ -107,8 +108,8 @@ export async function PUT(
 
   try {
     const clubId = await resolveClubId(params);
-    const notFound = await assertClubExists(clubId);
-    if (notFound) return notFound;
+    const blocked = await rejectIfClubNotWritable(await getDb(), clubId);
+    if (blocked) return blocked;
 
     const body = await request.json();
     const { oldNom, nom, logo } = body;
@@ -167,8 +168,8 @@ export async function DELETE(
 
   try {
     const clubId = await resolveClubId(params);
-    const notFound = await assertClubExists(clubId);
-    if (notFound) return notFound;
+    const blocked = await rejectIfClubNotWritable(await getDb(), clubId);
+    if (blocked) return blocked;
 
     const { searchParams } = new URL(request.url);
     const nom = searchParams.get('nom');

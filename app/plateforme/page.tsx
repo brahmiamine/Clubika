@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -22,6 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
   Database,
+  FileWarning,
   Palette,
   Plus,
   Save,
@@ -51,6 +53,8 @@ interface ClubRow {
   active: boolean;
   matchesUrlKey: string;
   scraperClubName: string;
+  offboardingStatus?: string;
+  legalHoldActive?: boolean;
   createdAt: string;
 }
 
@@ -350,11 +354,22 @@ export default function PlatformDashboardPage() {
                             <p className="flex items-center gap-2 truncate font-medium text-foreground">
                               {club.name}
                               {!club.active && <StatusPill tone="danger">Désactivé</StatusPill>}
+                              {club.offboardingStatus === 'frozen' && <StatusPill tone="warning">Gelé</StatusPill>}
+                              {club.offboardingStatus === 'purged' && <StatusPill tone="danger">Supprimé</StatusPill>}
+                              {club.legalHoldActive && <StatusPill tone="danger">Hold</StatusPill>}
                             </p>
                             <p className="truncate font-mono text-sm text-muted-foreground">{club.id}</p>
                           </div>
                         </button>
                         <div className="flex items-center gap-2 shrink-0">
+                          <Link
+                            href={`/plateforme/offboarding/${encodeURIComponent(club.id)}`}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary-soft hover:text-foreground"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <FileWarning className="h-3.5 w-3.5" />
+                            Fin de contrat
+                          </Link>
                           <Label htmlFor={`club-active-${club.id}`} className="text-xs text-muted-foreground">
                             Actif
                           </Label>

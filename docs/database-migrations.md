@@ -90,6 +90,10 @@ Avec Docker Compose, ajouter un service one-shot `migrate` (même image, command
 `TYPEORM_SYNCHRONIZE=1` n'est utile que pour un bac de développement hors CI, jamais
 en production (`NODE_ENV=production` l'ignore).
 
+La migration `0025` (issue #25) ajoute l’état d’offboarding sur `club_tenants` et
+les tables de restitution / instructions sous-traitants / certificats. Idempotente.
+Voir [tenant-offboarding.md](./tenant-offboarding.md).
+
 ### Rollback
 
 Les migrations sont à sens unique et sans `down` automatisé. Stratégie :

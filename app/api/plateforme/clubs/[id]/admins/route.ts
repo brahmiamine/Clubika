@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db';
 import { ClubTenantEntity, UserEntity } from '@/lib/db/schemas';
 import { requirePlatformAuth } from '@/lib/auth/platform-require';
 import { hashPassword } from '@/lib/auth/password';
+import { rejectIfClubNotWritable } from '@/lib/tenant-offboarding/writable';
 
 function serializeAdmin(user: UserEntity) {
   return {
@@ -55,13 +56,9 @@ export async function POST(
 
   try {
     const { id } = params instanceof Promise ? await params : params;
+    const blocked = await rejectIfClubNotWritable(await getDb(), id);
+    if (blocked) return blocked;
     const db = await getDb();
-    const clubRepo = db.getRepository<ClubTenantEntity>('ClubTenant');
-    const club = await clubRepo.findOneBy({ id });
-    if (!club) {
-      return NextResponse.json({ error: 'Club non trouvé' }, { status: 404 });
-    }
-
     const body = await request.json();
     const { email, password, nom } = body;
 
