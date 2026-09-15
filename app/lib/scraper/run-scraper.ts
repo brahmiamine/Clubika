@@ -16,6 +16,7 @@ import { syncOfficialMatchesWithIdentityReconciliation } from './match-reconcili
 import { deliverOfficialMatchSyncNotifications } from './match-sync-notifications';
 import { parseScraperOutput } from './output';
 import { failScraperRun, finishScraperRun, startScraperRun } from './runs';
+import { assertSportCoricoSyncEnabled } from './sync-gate';
 
 const execFileAsync = promisify(execFile);
 const MATCHES_URL_KEY_PATTERN = /^[a-z0-9-]{1,255}$/;
@@ -96,6 +97,7 @@ export async function runScraperAndPersistToDb(clubId: string = getCurrentClubId
     updatedCount: number;
   };
 }> {
+  assertSportCoricoSyncEnabled();
   const scraperPath = path.join(process.cwd(), 'scraper.js');
   const db = await getDb();
   const lockRunner = db.createQueryRunner();

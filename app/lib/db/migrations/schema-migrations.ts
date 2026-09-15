@@ -9,6 +9,7 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { disableScraperSyncOnAllClubs } from './disable-sportcorico-sync';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -57,6 +58,8 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  * `chat_messages`.
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
+ *
+ * La migration 0025 (issue #4) désactive `scraperSync` sur tous les clubs existants.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -447,5 +450,14 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0025',
+    name: 'desactiver_scraper_sync_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('disable-sportcorico-sync.ts'),
+    up: async (db) => {
+      await disableScraperSyncOnAllClubs(db);
+    },
   },
 ];

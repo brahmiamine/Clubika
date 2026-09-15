@@ -67,7 +67,7 @@ describe.skipIf(!dbAvailable)('/api/settings/planning-features (issue #286)', ()
     const readB = await GET(featuresRequest('GET', adminB.token));
     expect(readB.status).toBe(200);
     const bodyB = await readB.json() as { features: { scraperSync: boolean; automaticReminders: boolean } };
-    expect(bodyB.features.scraperSync).toBe(true);
+    expect(bodyB.features.scraperSync).toBe(false);
     expect(bodyB.features.automaticReminders).toBe(true);
   });
 });
