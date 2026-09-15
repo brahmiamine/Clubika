@@ -85,8 +85,8 @@ describe.skipIf(!dbAvailable)('GET/POST /api/invitations (issue #155)', () => {
       expect(createBody.invitation.email).toBe('nouveau.encadrant@example.com');
       // Le jeton brut de l'URL n'est jamais stocké tel quel : seule son empreinte
       // SHA-256 l'est, comme `id` (issue #271).
-      const rawToken = (createBody.url as string).replace('/inscription/', '');
-      expect(createBody.url).toBe(`/inscription/${rawToken}`);
+      const rawToken = String(createBody.url).split('/inscription/').pop() ?? '';
+      expect(createBody.url).toMatch(/\/inscription\/[a-f0-9]+$/);
       expect(rawToken).not.toBe(invitationId);
       expect(hashInvitationToken(rawToken)).toBe(invitationId);
 

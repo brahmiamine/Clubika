@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
 import { requireRole } from '@/lib/auth/require';
-import { hashPassword } from '@/lib/auth/password';
+import { UNUSABLE_PASSWORD_HASH } from '@/lib/auth/password';
 import { normalizeAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 
@@ -55,11 +55,13 @@ export async function POST(request: NextRequest) {
     const accessRole = normalizeAccessRole(body.accessRole);
     const planningFunctions = normalizePlanningFunctions(body.planningFunctions);
 
+    if (typeof password === 'string' && password.length > 0) {
+      return NextResponse.json({
+        error: 'Un administrateur ne peut pas définir le mot de passe d\'un tiers. Envoyez une invitation.',
+      }, { status: 400 });
+    }
     if (!email || typeof email !== 'string' || email.trim() === '') {
       return NextResponse.json({ error: 'L\'email est requis' }, { status: 400 });
-    }
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, { status: 400 });
     }
     if (!nom || typeof nom !== 'string' || nom.trim() === '') {
       return NextResponse.json({ error: 'Le nom est requis' }, { status: 400 });
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Un utilisateur avec cet email existe déjà dans ce club' }, { status: 400 });
     }
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = UNUSABLE_PASSWORD_HASH;
     await repo.save({
       clubId: auth.user.clubId,
       email: normalizedEmail,
@@ -83,8 +85,8 @@ export async function POST(request: NextRequest) {
       accessRole,
       planningFunctions,
       active: true,
-      // Compte créé directement par un administrateur : accès actif immédiat.
-      claimedAt: new Date(),
+      // Profil créé sans identifiants : la prise de contrôle passe par une invitation (issue #32).
+      claimedAt: null,
       telephone: typeof telephone === 'string' && telephone.trim() ? telephone.trim() : null,
       icalToken: randomBytes(24).toString('hex'),
     });

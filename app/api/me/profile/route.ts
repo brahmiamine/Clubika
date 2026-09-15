@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
 import type { UserEntity } from '@/lib/db/schemas';
 import { hashPassword, verifyPassword } from '@/lib/auth/password';
+import { assertPasswordPolicy } from '@/lib/auth/password-policy';
 import { isNotifyChannel, revokeAllSessionsForUser } from '@/lib/auth/session';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 
@@ -28,8 +29,9 @@ export async function PUT(request: NextRequest) {
 
     let passwordChanged = false;
     if (typeof body.newPassword === 'string' && body.newPassword.length > 0) {
-      if (body.newPassword.length < 8) {
-        return NextResponse.json({ error: 'Le nouveau mot de passe doit contenir au moins 8 caractères' }, { status: 400 });
+      const policyError = await assertPasswordPolicy(body.newPassword);
+      if (policyError) {
+        return NextResponse.json({ error: policyError }, { status: 400 });
       }
       if (typeof body.currentPassword !== 'string' || !(await verifyPassword(body.currentPassword, user.passwordHash))) {
         return NextResponse.json({ error: 'Mot de passe actuel incorrect' }, { status: 400 });

@@ -8,45 +8,115 @@ const scryptAsync = promisify(scrypt) as (
   options: { N: number; r: number; p: number },
 ) => Promise<Buffer>;
 
-const SCRYPT_N = 16384;
+/**
+ * Format versionné (issue #32) : `v1:scrypt:N:r:p:saltHex:hashHex`.
+ * Les empreintes historiques `scrypt:N:r:p:saltHex:hashHex` restent vérifiables
+ * et sont réécrites (rehash opportuniste) au prochain login réussi.
+ *
+ * Paramètres évalués (2026) : OWASP recommande scrypt N=2^17 pour le stockage.
+ * Le plancher intégré est N=2^15 hors tests (latence interactive) ; jamais
+ * d'affaiblissement : un hash déjà plus coûteux n'est pas réécrit vers un N
+ * inférieur. `PASSWORD_SCRYPT_N` (puissance de 2 ≥ 16384) permet de monter.
+ */
+export const PASSWORD_HASH_VERSION = 1;
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const KEY_LENGTH = 64;
+const MIN_N = 16384;
 
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const derived = await scryptAsync(password, salt, KEY_LENGTH, {
-    N: SCRYPT_N,
-    r: SCRYPT_R,
-    p: SCRYPT_P,
-  });
-  return `scrypt:${SCRYPT_N}:${SCRYPT_R}:${SCRYPT_P}:${salt.toString('hex')}:${derived.toString('hex')}`;
+function isPowerOfTwo(value: number): boolean {
+  return value > 0 && (value & (value - 1)) === 0;
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export function currentScryptN(): number {
+  const raw = Number.parseInt(process.env.PASSWORD_SCRYPT_N ?? '', 10);
+  if (Number.isFinite(raw) && raw >= MIN_N && isPowerOfTwo(raw)) return raw;
+  return process.env.NODE_ENV === 'test' ? MIN_N : 32768;
+}
+
+/** Empreinte volontairement invérifiable : profil sans accès, jamais un secret connu. */
+export const UNUSABLE_PASSWORD_HASH = 'unusable';
+
+type ParsedHash = {
+  version: number | null;
+  N: number;
+  r: number;
+  p: number;
+  salt: Buffer;
+  expected: Buffer;
+};
+
+function parseStoredHash(stored: string): ParsedHash | null {
+  if (!stored || stored === UNUSABLE_PASSWORD_HASH) return null;
   const parts = stored.split(':');
-  if (parts.length !== 6) {
-    return false;
+  let version: number | null = null;
+  let scheme: string | undefined;
+  let nRaw: string | undefined;
+  let rRaw: string | undefined;
+  let pRaw: string | undefined;
+  let saltHex: string | undefined;
+  let hashHex: string | undefined;
+
+  if (parts[0]?.startsWith('v') && parts.length === 7) {
+    const parsedVersion = Number.parseInt(parts[0].slice(1), 10);
+    if (!Number.isFinite(parsedVersion) || parsedVersion < 1) return null;
+    version = parsedVersion;
+    [, scheme, nRaw, rRaw, pRaw, saltHex, hashHex] = parts;
+  } else if (parts.length === 6) {
+    [scheme, nRaw, rRaw, pRaw, saltHex, hashHex] = parts;
+  } else {
+    return null;
   }
 
-  const [scheme, nRaw, rRaw, pRaw, saltHex, hashHex] = parts;
-  if (scheme !== 'scrypt' || !nRaw || !rRaw || !pRaw || !saltHex || !hashHex) {
-    return false;
-  }
-
+  if (scheme !== 'scrypt' || !nRaw || !rRaw || !pRaw || !saltHex || !hashHex) return null;
   const N = Number.parseInt(nRaw, 10);
   const r = Number.parseInt(rRaw, 10);
   const p = Number.parseInt(pRaw, 10);
-  if (!Number.isFinite(N) || !Number.isFinite(r) || !Number.isFinite(p)) {
-    return false;
-  }
-
+  if (!Number.isFinite(N) || !Number.isFinite(r) || !Number.isFinite(p) || N < MIN_N) return null;
   const salt = Buffer.from(saltHex, 'hex');
   const expected = Buffer.from(hashHex, 'hex');
-  if (expected.length === 0) {
-    return false;
-  }
+  if (salt.length === 0 || expected.length === 0) return null;
+  return { version, N, r, p, salt, expected };
+}
 
-  const derived = await scryptAsync(password, salt, expected.length, { N, r, p });
-  return derived.length === expected.length && timingSafeEqual(derived, expected);
+export async function hashPassword(password: string): Promise<string> {
+  const N = currentScryptN();
+  const salt = randomBytes(16);
+  const derived = await scryptAsync(password, salt, KEY_LENGTH, {
+    N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+  });
+  return `v${PASSWORD_HASH_VERSION}:scrypt:${N}:${SCRYPT_R}:${SCRYPT_P}:${salt.toString('hex')}:${derived.toString('hex')}`;
+}
+
+export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const parsed = parseStoredHash(stored);
+  if (!parsed) return false;
+  const derived = await scryptAsync(password, parsed.salt, parsed.expected.length, {
+    N: parsed.N,
+    r: parsed.r,
+    p: parsed.p,
+  });
+  return derived.length === parsed.expected.length && timingSafeEqual(derived, parsed.expected);
+}
+
+export function passwordNeedsRehash(stored: string): boolean {
+  const parsed = parseStoredHash(stored);
+  if (!parsed) return false;
+  const currentN = currentScryptN();
+  if (parsed.N > currentN) return false;
+  if (parsed.N < currentN) return true;
+  if (parsed.r !== SCRYPT_R || parsed.p !== SCRYPT_P) return true;
+  return parsed.version !== PASSWORD_HASH_VERSION;
+}
+
+export async function verifyPasswordAndMaybeRehash(
+  password: string,
+  stored: string,
+): Promise<{ ok: boolean; newHash?: string }> {
+  const ok = await verifyPassword(password, stored);
+  if (!ok) return { ok: false };
+  if (!passwordNeedsRehash(stored)) return { ok: true };
+  return { ok: true, newHash: await hashPassword(password) };
 }

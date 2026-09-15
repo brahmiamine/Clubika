@@ -45,7 +45,10 @@ describe.skipIf(!dbAvailable)('POST /api/plateforme/login (integration)', () => 
 
     const response = await POST(loginRequest({ email, password: 'correct-password' }));
     expect(response.status).toBe(200);
-    expect(response.cookies.get('platform_session_token')?.value).toBeTruthy();
+    const body = await response.json() as { mfaEnrollmentRequired?: boolean; success?: boolean };
+    expect(body.mfaEnrollmentRequired).toBe(true);
+    expect(response.cookies.get('platform_session_token')?.value).toBeFalsy();
+    expect(response.cookies.get('platform_mfa_pending')?.value).toBeTruthy();
   });
 
   it('rejects an incorrect password', async () => {

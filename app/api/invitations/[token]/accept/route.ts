@@ -4,6 +4,7 @@ import { IsNull, type EntityManager } from 'typeorm';
 import { getDb } from '@/lib/db';
 import { InvitationEntity, UserEntity } from '@/lib/db/schemas';
 import { hashPassword } from '@/lib/auth/password';
+import { assertPasswordPolicy } from '@/lib/auth/password-policy';
 import { hashInvitationToken } from '@/lib/auth/invitation-tokens';
 import {
   ALL_PLANNING_FUNCTIONS,
@@ -154,8 +155,12 @@ export async function POST(
     if (!email || typeof email !== 'string' || email.trim() === '') {
       return NextResponse.json({ error: 'L\'email est requis' }, { status: 400 });
     }
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, { status: 400 });
+    if (!password || typeof password !== 'string') {
+      return NextResponse.json({ error: 'Le mot de passe est requis' }, { status: 400 });
+    }
+    const policyError = await assertPasswordPolicy(password);
+    if (policyError) {
+      return NextResponse.json({ error: policyError }, { status: 400 });
     }
     if (!nom || typeof nom !== 'string' || nom.trim() === '') {
       return NextResponse.json({ error: 'Le nom est requis' }, { status: 400 });

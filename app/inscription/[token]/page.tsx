@@ -185,11 +185,11 @@ export default function InscriptionPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="8 caractères minimum"
+                placeholder="12 caractères minimum, phrase de passe acceptée"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
+                minLength={12}
                 disabled={isSubmitting}
               />
             </div>

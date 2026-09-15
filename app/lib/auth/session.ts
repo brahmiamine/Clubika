@@ -105,6 +105,7 @@ export async function createSession(
     revokedAt: null,
     userAgent: meta?.userAgent ?? null,
     ipAddress: meta?.ipAddress ?? null,
+    authenticatedAt: new Date(),
   });
 
   return { token, expiresAt };

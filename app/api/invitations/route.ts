@@ -9,6 +9,7 @@ import { setCurrentClubId } from '@/lib/auth/club-context';
 import { hashInvitationToken, newInvitationToken } from '@/lib/auth/invitation-tokens';
 import { isDuplicateEntryError } from '@/lib/db/duplicate-entry';
 import { BodyValidator, parseJsonBody, RequestValidationError } from '@/lib/validation/request';
+import { resolveCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
 
 function pendingInvitationEmailKey(clubId: string, email: string | null): string | null {
   return email ? `${clubId}:${email.toLowerCase()}` : null;
@@ -199,6 +200,7 @@ export async function POST(request: NextRequest) {
       personType: targetProfile ? 'user' : null,
       personId: targetProfile?.id ?? null,
       createdByUserId: auth.user.id,
+      createdByPlatformAdminId: null,
       expiresAt,
       usedAt: null,
       usedByUserId: null,
@@ -207,10 +209,12 @@ export async function POST(request: NextRequest) {
 
     await repo.save(invitation);
 
+    const path = `/inscription/${rawToken}`;
+    const origin = resolveCanonicalPublicOrigin();
     return NextResponse.json({
       success: true,
       invitation: serializeInvitation(invitation),
-      url: `/inscription/${rawToken}`,
+      url: origin ? `${origin}${path}` : path,
     });
   } catch (error) {
     if (error instanceof RequestValidationError) {

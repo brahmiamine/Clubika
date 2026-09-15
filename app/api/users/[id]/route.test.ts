@@ -211,3 +211,73 @@ describe.skipIf(!dbAvailable)('DELETE/PUT /api/users/[id] — invariant du derni
     }
   });
 });
+
+describe.skipIf(!dbAvailable)('PUT /api/users/[id] — mots de passe et élévation (issue #32)', () => {
+  it('refuse qu\'un admin pose le mot de passe d\'un tiers', async () => {
+    const clubId = `test-club-${randomBytes(6).toString('hex')}`;
+    const admin = await createTestUserAndSession('admin', { clubId });
+    const dirigeant = await createTestUserAndSession('dirigeant', { clubId });
+    try {
+      const response = await PUT(
+        putRequest({ password: 'invitee-passphrase-12' }, admin.token),
+        { params: { id: String(dirigeant.user.id) } },
+      );
+      expect(response.status).toBe(400);
+    } finally {
+      await admin.cleanup();
+      await dirigeant.cleanup();
+    }
+  });
+
+  it('révoque les sessions et notifie lors d\'une élévation de rôle', async () => {
+    const clubId = `test-club-${randomBytes(6).toString('hex')}`;
+    const admin = await createTestUserAndSession('admin', { clubId });
+    const dirigeant = await createTestUserAndSession('dirigeant', { clubId });
+    try {
+      const db = await getDb();
+      const before = await db.getRepository('UserSession').findBy({ userId: dirigeant.user.id }) as Array<{ revokedAt: Date | null }>;
+      expect(before.some((row: { revokedAt: Date | null }) => row.revokedAt == null)).toBe(true);
+
+      const response = await PUT(
+        putRequest({ accessRole: 'admin' }, admin.token),
+        { params: { id: String(dirigeant.user.id) } },
+      );
+      expect(response.status).toBe(200);
+
+      const sessions = await db.getRepository('UserSession').findBy({ userId: dirigeant.user.id }) as Array<{ revokedAt: Date | null }>;
+      expect(sessions.every((row: { revokedAt: Date | null }) => row.revokedAt != null)).toBe(true);
+
+      const notes = await db.getRepository<NotificationEntity>('Notification').find({ where: { userId: dirigeant.user.id } });
+      expect(notes.some((n) => n.type === 'privileged-role-changed')).toBe(true);
+    } finally {
+      const db = await getDb();
+      await db.getRepository('Notification').delete({ userId: admin.user.id });
+      await db.getRepository('Notification').delete({ userId: dirigeant.user.id });
+      await admin.cleanup();
+      await dirigeant.cleanup();
+    }
+  });
+
+  it('refuse une élévation si la session admin n\'est plus récente', async () => {
+    const clubId = `test-club-${randomBytes(6).toString('hex')}`;
+    const admin = await createTestUserAndSession('admin', { clubId });
+    const dirigeant = await createTestUserAndSession('dirigeant', { clubId });
+    try {
+      const db = await getDb();
+      await db.getRepository('UserSession').update(
+        { id: admin.token },
+        { authenticatedAt: new Date(Date.now() - 16 * 60 * 1000) },
+      );
+      const response = await PUT(
+        putRequest({ accessRole: 'admin' }, admin.token),
+        { params: { id: String(dirigeant.user.id) } },
+      );
+      expect(response.status).toBe(401);
+      const body = await response.json() as { code?: string };
+      expect(body.code).toBe('REAUTH_REQUIRED');
+    } finally {
+      await admin.cleanup();
+      await dirigeant.cleanup();
+    }
+  });
+});

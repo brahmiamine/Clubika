@@ -58,6 +58,10 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
+ * La migration 0025 (issue #32) durcit les comptes privilégiés : colonnes MFA
+ * plateforme, preuves d'authentification récente, journal d'événements, et
+ * invitations émises sans compte club (createdByUserId nullable).
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -445,6 +449,52 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
         PRIMARY KEY (messageId, userId, emoji),
         INDEX idx_chat_message_reactions_message (messageId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0025',
+    name: 'privileged_auth_mfa_et_origine',
+    statements: [
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS authenticatedAt DATETIME(6) NULL AFTER ipAddress',
+      'UPDATE user_sessions SET authenticatedAt = createdAt WHERE authenticatedAt IS NULL',
+      'ALTER TABLE platform_admins ADD COLUMN IF NOT EXISTS totpSecretEncrypted TEXT NULL AFTER active',
+      'ALTER TABLE platform_admins ADD COLUMN IF NOT EXISTS totpEnrolledAt DATETIME(6) NULL AFTER totpSecretEncrypted',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS authenticatedAt DATETIME(6) NULL AFTER revokedAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS mfaVerifiedAt DATETIME(6) NULL AFTER authenticatedAt',
+      'UPDATE platform_sessions SET authenticatedAt = createdAt WHERE authenticatedAt IS NULL',
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS createdByPlatformAdminId INT NULL AFTER createdByUserId',
+      'ALTER TABLE invitations MODIFY createdByUserId INT NULL',
+      `CREATE TABLE IF NOT EXISTS platform_mfa_challenges (
+        tokenHash VARCHAR(64) NOT NULL,
+        platformAdminId INT NOT NULL,
+        purpose VARCHAR(32) NOT NULL,
+        totpSecretEncrypted TEXT NULL,
+        expiresAt DATETIME(6) NOT NULL,
+        consumedAt DATETIME(6) NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        PRIMARY KEY (tokenHash),
+        INDEX idx_platform_mfa_challenges_admin (platformAdminId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS platform_mfa_recovery_codes (
+        id INT NOT NULL AUTO_INCREMENT,
+        platformAdminId INT NOT NULL,
+        codeHash VARCHAR(64) NOT NULL,
+        usedAt DATETIME(6) NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        PRIMARY KEY (id),
+        INDEX idx_platform_mfa_recovery_admin (platformAdminId)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS privileged_auth_events (
+        id INT NOT NULL AUTO_INCREMENT,
+        action VARCHAR(64) NOT NULL,
+        actorType VARCHAR(32) NOT NULL,
+        actorId INT NULL,
+        clubId VARCHAR(255) NULL,
+        metadata TEXT NULL,
+        createdAt DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        PRIMARY KEY (id),
+        INDEX idx_privileged_auth_events_created (createdAt)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
   },
