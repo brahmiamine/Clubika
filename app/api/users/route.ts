@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     const visible = unclaimedOnly ? users.filter((user) => user.claimedAt == null) : users;
     return NextResponse.json({ users: visible.map(serializeUser) });
   } catch (error) {
-    console.error('Error reading users from DB:', error);
+    logError('app.unhandled', 'Error reading users from DB:', error);
     return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
   }
 }
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
     const users = await repo.find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
     return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
   } catch (error) {
-    console.error('Error creating user in DB:', error);
+    logError('app.unhandled', 'Error creating user in DB:', error);
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

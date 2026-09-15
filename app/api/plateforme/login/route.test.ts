@@ -1,18 +1,17 @@
 import { randomBytes } from 'node:crypto';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { isDbAvailable } from '@/lib/db/test-utils';
 import { getDb } from '@/lib/db';
 import { PlatformAdminEntity } from '@/lib/db/schemas';
 import { hashPassword } from '@/lib/auth/password';
 import { checkLoginRateLimit, hashBucketComponent } from '@/lib/auth/login-rate-limit';
+import { enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import { POST } from './route';
 
 const dbAvailable = await isDbAvailable();
 
-// Chaque test simule une IP distincte (issue #274) : sans cela, tous les échecs de
-// connexion de ce fichier partageraient le même bucket de limitation de débit.
-function loginRequest(body: unknown, ip = randomBytes(8).toString('hex')) {
+function loginRequest(body: unknown, ip = uniqueTestIp()) {
   return new NextRequest('http://localhost/api/plateforme/login', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -23,8 +22,14 @@ function loginRequest(body: unknown, ip = randomBytes(8).toString('hex')) {
 describe.skipIf(!dbAvailable)('POST /api/plateforme/login (integration)', () => {
   const email = `platform-login-test-${randomBytes(6).toString('hex')}@example.com`;
   let adminId: number;
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     if (adminId) {
       await db.getRepository('PlatformSession').createQueryBuilder().delete().where('platformAdminId = :adminId', { adminId }).execute();
@@ -76,8 +81,14 @@ describe.skipIf(!dbAvailable)('POST /api/plateforme/login (integration)', () => 
 
 describe.skipIf(!dbAvailable)('POST /api/plateforme/login — limitation de débit (issue #274)', () => {
   const email = `platform-rate-limit-${randomBytes(6).toString('hex')}@example.com`;
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     await db.query('DELETE FROM login_rate_limits WHERE bucket_key = ?', [`platform-login:identity:${hashBucketComponent(email)}`]);
   });

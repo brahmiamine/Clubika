@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { IsNull, type EntityManager } from 'typeorm';
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof PasswordResetConfirmError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error('Password reset confirmation failed:', error);
+    logError('app.unhandled', 'Password reset confirmation failed:', error);
     return NextResponse.json({ error: 'Impossible de réinitialiser le mot de passe' }, { status: 500 });
   }
 }

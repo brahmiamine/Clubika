@@ -23,6 +23,10 @@ export default defineConfig({
   timeout: 30_000,
   use: {
     baseURL: process.env.E2E_BASE_URL || 'http://127.0.0.1:3100',
+    extraHTTPHeaders: {
+      // page.request (APIRequestContext) n’envoie pas Origin comme un fetch navigateur.
+      Origin: new URL(process.env.E2E_BASE_URL || 'http://127.0.0.1:3100').origin,
+    },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

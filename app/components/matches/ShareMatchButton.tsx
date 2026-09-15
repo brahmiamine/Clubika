@@ -1,5 +1,6 @@
 "use client";
 
+import { logError } from '@/lib/observability/client-log';
 import { Share2, Loader2 } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { Match } from "@/types/match";
@@ -64,7 +65,7 @@ export function ShareMatchButton({ match, extras, variant = "ghost", size = "ico
       setImageBlob(blob);
       toast.success("Image générée avec succès !");
     } catch (error) {
-      console.error("Error generating share image:", error);
+      logError('app.unhandled', "Error generating share image:", error);
       const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
       toast.error(`Erreur lors de la génération de l'image: ${errorMessage}`);
       setIsPreviewOpen(false);

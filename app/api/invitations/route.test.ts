@@ -90,6 +90,13 @@ describe.skipIf(!dbAvailable)('GET/POST /api/invitations (issue #155)', () => {
       expect(rawToken).not.toBe(invitationId);
       expect(hashInvitationToken(rawToken)).toBe(invitationId);
 
+      const tooLong = await POST(postRequest({
+        email: `long-expiry-${randomBytes(6).toString('hex')}@example.com`,
+        accessRole: 'dirigeant',
+        expiresInDays: 365,
+      }, admin.token));
+      expect(tooLong.status).toBe(400);
+
       const stored = await db.getRepository<InvitationEntity>('Invitation').findOneBy({ id: invitationId });
       expect(stored?.clubId).toBe(clubId);
 

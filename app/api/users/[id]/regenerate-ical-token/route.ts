@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -47,7 +48,7 @@ export async function POST(
       feedUrl: buildIcalFeedUrl(origin, user.icalToken),
     });
   } catch (error) {
-    console.error('Error regenerating ical token:', error);
+    logError('app.unhandled', 'Error regenerating ical token:', error);
     return NextResponse.json({ error: 'Failed to regenerate token' }, { status: 500 });
   }
 }

@@ -32,6 +32,7 @@ import {
 import { DEFAULT_APP_SETTINGS } from '@/lib/settings';
 import { apiGet, apiPatch, apiPost } from '@/lib/utils/api';
 import { OpponentClubsSection } from '@/app/components/plateforme/OpponentClubsSection';
+import { ActiveSessionsCard } from '@/app/components/profile/ActiveSessionsCard';
 
 interface PlatformAdmin {
   id: number;
@@ -313,6 +314,17 @@ export default function PlatformDashboardPage() {
             </div>
           </div>
         )}
+        <SectionCard
+          icon={<ShieldCheck />}
+          title="Sessions de la plateforme"
+          description="Révoquez un appareil ou toutes les autres sessions administrateur."
+        >
+          <ActiveSessionsCard
+            listUrl="/api/plateforme/sessions"
+            revokeOthersUrl="/api/plateforme/sessions/revoke-others"
+            revokeUrl={(id) => `/api/plateforme/sessions/${encodeURIComponent(id)}`}
+          />
+        </SectionCard>
         <SectionCard
           icon={<Building2 />}
           title="Clubs"

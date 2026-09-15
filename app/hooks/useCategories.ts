@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '@/lib/utils/api';
 
@@ -21,7 +22,7 @@ export function useCategories() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des catégories';
       setError(errorMessage);
-      console.error('Error loading categories:', err);
+      logError('app.unhandled', 'Error loading categories:', err);
     } finally {
       setIsLoading(false);
     }

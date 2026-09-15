@@ -284,12 +284,16 @@ export const UserSchema = new EntitySchema<UserEntity>({
 
 export interface UserSessionEntity {
   id: string;
+  tokenHash: string;
   userId: number;
   createdAt: Date;
+  lastSeenAt: Date;
   expiresAt: Date;
+  idleTtlSeconds: number;
+  absoluteTtlSeconds: number;
   revokedAt: Date | null;
-  userAgent: string | null;
-  ipAddress: string | null;
+  clientHint: string | null;
+  networkHint: string | null;
   /** Instant de la dernière preuve de mot de passe (issue #32). */
   authenticatedAt: Date | null;
 }
@@ -300,15 +304,20 @@ export const UserSessionSchema = new EntitySchema<UserSessionEntity>({
   indices: [
     { name: 'idx_user_sessions_user_id', columns: ['userId'] },
     { name: 'idx_user_sessions_expires_at', columns: ['expiresAt'] },
+    { name: 'uq_user_sessions_token_hash', columns: ['tokenHash'], unique: true },
   ],
   columns: {
     id: { type: String, primary: true },
+    tokenHash: { type: String, length: 96 },
     userId: { type: Number },
     createdAt: { type: 'datetime', createDate: true },
+    lastSeenAt: { type: 'datetime' },
     expiresAt: { type: 'datetime' },
+    idleTtlSeconds: { type: Number },
+    absoluteTtlSeconds: { type: Number },
     revokedAt: { type: 'datetime', nullable: true },
-    userAgent: { type: String, nullable: true },
-    ipAddress: { type: String, nullable: true },
+    clientHint: { type: String, nullable: true, length: 32 },
+    networkHint: { type: String, nullable: true, length: 16 },
     authenticatedAt: { type: 'datetime', nullable: true },
   },
 });
@@ -332,12 +341,18 @@ export interface InvitationEntity {
   usedAt: Date | null;
   usedByUserId: number | null;
   createdAt: Date;
+  /** Empreinte du contexte d'échange court (cookie), jamais le jeton d'URL (issue #34). */
+  validationContextHash: string | null;
+  validationContextExpiresAt: Date | null;
 }
 
 export const InvitationSchema = new EntitySchema<InvitationEntity>({
   name: 'Invitation',
   tableName: 'invitations',
-  indices: [{ name: 'idx_invitations_person', columns: ['personType', 'personId'] }],
+  indices: [
+    { name: 'idx_invitations_person', columns: ['personType', 'personId'] },
+    { name: 'idx_invitations_validation_context', columns: ['validationContextHash'] },
+  ],
   columns: {
     id: { type: String, primary: true },
     clubId: { type: String, default: process.env.APP_CLUB_ID || 'afp' },
@@ -354,6 +369,8 @@ export const InvitationSchema = new EntitySchema<InvitationEntity>({
     usedAt: { type: 'datetime', nullable: true },
     usedByUserId: { type: Number, nullable: true },
     createdAt: { type: 'datetime', createDate: true },
+    validationContextHash: { type: String, length: 64, nullable: true },
+    validationContextExpiresAt: { type: 'datetime', nullable: true },
   },
 });
 
@@ -691,10 +708,16 @@ export const PlatformAdminSchema = new EntitySchema<PlatformAdminEntity>({
 
 export interface PlatformSessionEntity {
   id: string;
+  tokenHash: string;
   platformAdminId: number;
   createdAt: Date;
+  lastSeenAt: Date;
   expiresAt: Date;
+  idleTtlSeconds: number;
+  absoluteTtlSeconds: number;
   revokedAt: Date | null;
+  clientHint: string | null;
+  networkHint: string | null;
   authenticatedAt: Date | null;
   mfaVerifiedAt: Date | null;
 }
@@ -702,13 +725,22 @@ export interface PlatformSessionEntity {
 export const PlatformSessionSchema = new EntitySchema<PlatformSessionEntity>({
   name: 'PlatformSession',
   tableName: 'platform_sessions',
-  indices: [{ name: 'idx_platform_sessions_admin', columns: ['platformAdminId'] }],
+  indices: [
+    { name: 'idx_platform_sessions_admin', columns: ['platformAdminId'] },
+    { name: 'uq_platform_sessions_token_hash', columns: ['tokenHash'], unique: true },
+  ],
   columns: {
     id: { type: String, primary: true },
+    tokenHash: { type: String, length: 96 },
     platformAdminId: { type: Number },
     createdAt: { type: 'datetime', createDate: true },
+    lastSeenAt: { type: 'datetime' },
     expiresAt: { type: 'datetime' },
+    idleTtlSeconds: { type: Number },
+    absoluteTtlSeconds: { type: Number },
     revokedAt: { type: 'datetime', nullable: true },
+    clientHint: { type: String, nullable: true, length: 32 },
+    networkHint: { type: String, nullable: true, length: 16 },
     authenticatedAt: { type: 'datetime', nullable: true },
     mfaVerifiedAt: { type: 'datetime', nullable: true },
   },

@@ -246,7 +246,8 @@ export function PersonnalisationTab() {
               <h3 className="text-sm font-semibold">Email SMTP du club</h3>
             </div>
             <p className="text-xs text-muted-foreground">
-              Configuré ici, ce serveur SMTP est utilisé uniquement pour les notifications de ce club. Laissez vide pour retomber sur la configuration par défaut du déploiement.
+              Configuré ici, ce serveur SMTP n’envoie rien tant que SMTP_ENABLED=true n’est pas posé sur le serveur.
+              Le TLS est exigé (implicite sur 465, STARTTLS sur 587) : aucun repli en clair.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -276,7 +277,7 @@ export function PersonnalisationTab() {
             </div>
             <div className="flex items-center gap-2">
               <Switch id="smtp-secure" checked={smtp.secure} onCheckedChange={(checked) => setSmtp((prev) => ({ ...prev, secure: checked }))} />
-              <Label htmlFor="smtp-secure">Connexion sécurisée (TLS implicite)</Label>
+              <Label htmlFor="smtp-secure">TLS implicite (port 465). Décoché = STARTTLS obligatoire (port 587).</Label>
             </div>
           </div>
         )}

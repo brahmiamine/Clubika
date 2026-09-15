@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
     const outbox = await retryPendingNotifications(db);
     return NextResponse.json({ success: true, ...totals, perClub, outbox });
   } catch (error) {
-    console.error('Planning reminders cron failed:', error);
+    logError('app.unhandled', 'Planning reminders cron failed:', error);
     return NextResponse.json({ error: 'Planning reminders cron failed' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { logError, logWarn } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { PlatformAdminEntity } from '@/lib/db/schemas';
@@ -6,6 +7,7 @@ import {
   createPlatformSession,
   PLATFORM_SESSION_COOKIE_NAME,
 } from '@/lib/auth/platform-session';
+import { sessionCookieSetOptions } from '@/lib/auth/session-cookie';
 import { getClientIp } from '@/lib/auth/client-ip';
 import {
   checkLoginRateLimit,
@@ -36,13 +38,7 @@ function tooManyRequests(retryAfterSeconds: number) {
 }
 
 function attachPlatformSession(response: NextResponse, token: string, expiresAt: Date) {
-  response.cookies.set(PLATFORM_SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    expires: expiresAt,
-    path: '/',
-  });
+  response.cookies.set(PLATFORM_SESSION_COOKIE_NAME, token, sessionCookieSetOptions(expiresAt));
   clearMfaPendingCookie(response);
   return response;
 }
@@ -79,7 +75,7 @@ export async function POST(request: NextRequest) {
         recordFailedLoginAttempt(db, identityBucket),
       ]);
       if (ipResult.limited) {
-        console.warn(`[auth] Connexion plateforme : verrouillage par IP déclenché (${ipResult.retryAfterSeconds}s)`);
+        logWarn('auth.failed');
       }
       return NextResponse.json(GENERIC_ERROR, { status: 401 });
     };
@@ -104,6 +100,10 @@ export async function POST(request: NextRequest) {
 
     const totp = typeof body.totp === 'string' ? body.totp : '';
     const recoveryCode = typeof body.recoveryCode === 'string' ? body.recoveryCode : '';
+    const sessionMeta = {
+      userAgent: request.headers.get('user-agent'),
+      ipAddress: ip,
+    };
 
     if (!isPlatformMfaEnrolled(admin)) {
       const { rawToken, expiresAt } = await createMfaChallenge(admin.id, 'enroll');
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (totp && await verifyAdminTotp(admin, totp)) {
-      const { token, expiresAt } = await createPlatformSession(admin.id);
+      const { token, expiresAt } = await createPlatformSession(admin.id, sessionMeta);
       return attachPlatformSession(NextResponse.json({ success: true }), token, expiresAt);
     }
 
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
         actorId: admin.id,
         email: admin.email,
       });
-      const { token, expiresAt } = await createPlatformSession(admin.id);
+      const { token, expiresAt } = await createPlatformSession(admin.id, sessionMeta);
       return attachPlatformSession(
         NextResponse.json({ success: true, mfaRecoveryUsed: true }),
         token,
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
     setMfaPendingCookie(response, rawToken, expiresAt);
     return response;
   } catch (error) {
-    console.error('Error during platform login:', error);
+    logError('auth.failed', error);
     return NextResponse.json({ error: 'Une erreur est survenue' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
     const history = await buildReadableHistory(db, 100);
     return NextResponse.json({ history });
   } catch (error) {
-    console.error('Error building readable history:', error);
+    logError('app.unhandled', 'Error building readable history:', error);
     return NextResponse.json({ error: 'Impossible de charger l\'historique' }, { status: 500 });
   }
 }

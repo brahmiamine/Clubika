@@ -9,6 +9,11 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { disableScraperSyncOnAllClubs } from './disable-sportcorico-sync';
+import { migrateHealthDataFields } from './remove-health-data';
+import { runSportCoricoDataAudit } from './audit-sportcorico-data';
+import { purgeOutboxLastError } from './purge-outbox-last-error';
+import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed-sessions';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -58,7 +63,10 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
- * La migration 0025 (issue #32) durcit les comptes privilégiés : colonnes MFA
+ * La migration 0032 (issue #29) ajoute le condensat HMAC des jetons de session
+ * (`tokenHash`) et les TTL idle/absolu, puis révoque le stockage en clair.
+ *
+ * La migration 0033 (issue #32) durcit les comptes privilégiés : colonnes MFA
  * plateforme, preuves d'authentification récente, journal d'événements, et
  * invitations émises sans compte club (createdByUserId nullable).
  *
@@ -454,13 +462,108 @@ export const schemaMigrations: readonly SchemaMigration[] = [
   },
   {
     version: '0025',
+    name: 'desactiver_scraper_sync_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('disable-sportcorico-sync.ts'),
+    up: async (db) => {
+      await disableScraperSyncOnAllClubs(db);
+    },
+  },
+  {
+    version: '0026',
+    name: 'retirer_donnees_sante_structurees',
+    statements: [],
+    logic: readMigrationLogicFile('remove-health-data.ts'),
+    up: async (db) => {
+      await migrateHealthDataFields(db);
+    },
+  },
+  {
+    version: '0027',
+    name: 'audit_quarantaine_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('audit-sportcorico-data.ts'),
+    up: async (db) => {
+      await runSportCoricoDataAudit(db);
+    },
+  },
+  {
+    version: '0028',
+    name: 'purge_outbox_last_error_messages',
+    statements: [],
+    logic: readMigrationLogicFile('purge-outbox-last-error.ts'),
+    up: async (db) => {
+      await purgeOutboxLastError(db);
+    },
+  },
+  {
+    version: '0029',
+    name: 'invitation_validation_context',
+    // Contexte d'échange court (cookie httpOnly) pour retirer le jeton d'URL
+    // de l'historique après validation publique (issue #34). Colonnes nullables :
+    // les invitations déjà émises n'ont pas encore de contexte.
+    statements: [
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextHash VARCHAR(64) NULL AFTER createdAt',
+      'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS validationContextExpiresAt DATETIME(6) NULL AFTER validationContextHash',
+      'CREATE INDEX IF NOT EXISTS idx_invitations_validation_context ON invitations (validationContextHash)',
+    ],
+  },
+  {
+    version: '0030',
+    name: 'csp_reports_sanitized',
+    statements: [
+      `CREATE TABLE IF NOT EXISTS csp_reports (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+        document_host VARCHAR(255) NOT NULL,
+        blocked_host VARCHAR(255) NULL,
+        violated_directive VARCHAR(64) NOT NULL,
+        disposition VARCHAR(16) NOT NULL,
+        PRIMARY KEY (id),
+        INDEX idx_csp_reports_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ],
+  },
+  {
+    version: '0031',
+    name: 'attachment_scan_status',
+    statements: [
+      "ALTER TABLE chat_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
+      "ALTER TABLE planning_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
+    ],
+  },
+  {
+    version: '0032',
+    name: 'sessions_token_hash_et_ttl',
+    statements: [
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS tokenHash VARCHAR(96) NULL AFTER id',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS lastSeenAt DATETIME(6) NULL AFTER createdAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS idleTtlSeconds INT NOT NULL DEFAULT 604800 AFTER expiresAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS absoluteTtlSeconds INT NOT NULL DEFAULT 2592000 AFTER idleTtlSeconds',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS clientHint VARCHAR(32) NULL AFTER revokedAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS networkHint VARCHAR(16) NULL AFTER clientHint',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS tokenHash VARCHAR(96) NULL AFTER id',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS lastSeenAt DATETIME(6) NULL AFTER createdAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS idleTtlSeconds INT NOT NULL DEFAULT 14400 AFTER expiresAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS absoluteTtlSeconds INT NOT NULL DEFAULT 43200 AFTER idleTtlSeconds',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS clientHint VARCHAR(32) NULL AFTER revokedAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS networkHint VARCHAR(16) NULL AFTER clientHint',
+    ],
+    logic: readMigrationLogicFile('hashed-sessions.ts'),
+    up: async (db) => {
+      await hashExistingSessionTokens(db);
+      await finalizeHashedSessionSchema(db);
+    },
+  },
+  {
+    version: '0033',
     name: 'privileged_auth_mfa_et_origine',
     statements: [
-      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS authenticatedAt DATETIME(6) NULL AFTER ipAddress',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS authenticatedAt DATETIME(6) NULL AFTER networkHint',
       'UPDATE user_sessions SET authenticatedAt = createdAt WHERE authenticatedAt IS NULL',
       'ALTER TABLE platform_admins ADD COLUMN IF NOT EXISTS totpSecretEncrypted TEXT NULL AFTER active',
       'ALTER TABLE platform_admins ADD COLUMN IF NOT EXISTS totpEnrolledAt DATETIME(6) NULL AFTER totpSecretEncrypted',
-      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS authenticatedAt DATETIME(6) NULL AFTER revokedAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS authenticatedAt DATETIME(6) NULL AFTER networkHint',
       'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS mfaVerifiedAt DATETIME(6) NULL AFTER authenticatedAt',
       'UPDATE platform_sessions SET authenticatedAt = createdAt WHERE authenticatedAt IS NULL',
       'ALTER TABLE invitations ADD COLUMN IF NOT EXISTS createdByPlatformAdminId INT NULL AFTER createdByUserId',

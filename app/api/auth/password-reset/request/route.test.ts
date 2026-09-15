@@ -1,16 +1,16 @@
 import { randomBytes } from 'node:crypto';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
-import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { createTestUserAndSession, enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import type { PasswordResetTokenEntity } from '@/lib/db/schemas';
 import { hashBucketComponent } from '@/lib/auth/login-rate-limit';
 import { POST } from './route';
 
 const dbAvailable = await isDbAvailable();
 
-function requestReset(body: unknown, ip = randomBytes(8).toString('hex')) {
+function requestReset(body: unknown, ip = uniqueTestIp()) {
   return new NextRequest('http://localhost/api/auth/password-reset/request', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -21,8 +21,14 @@ function requestReset(body: unknown, ip = randomBytes(8).toString('hex')) {
 describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request (issue #286)', () => {
   const previousBase = process.env.APP_BASE_URL;
   const cleanups: Array<() => Promise<void>> = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     if (previousBase === undefined) delete process.env.APP_BASE_URL;
     else process.env.APP_BASE_URL = previousBase;
     while (cleanups.length) {

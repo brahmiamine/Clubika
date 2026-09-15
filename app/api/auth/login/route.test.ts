@@ -1,20 +1,18 @@
 import { randomBytes } from 'node:crypto';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { isDbAvailable } from '@/lib/db/test-utils';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
 import { hashPassword } from '@/lib/auth/password';
 import { checkLoginRateLimit, hashBucketComponent } from '@/lib/auth/login-rate-limit';
+import { enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
+import { getSessionUser } from '@/lib/auth/session';
 import { POST } from './route';
 
 const dbAvailable = await isDbAvailable();
 
-// Chaque test simule une IP distincte (issue #274) : sans cela, tous les échecs de
-// connexion de ce fichier partageraient le même bucket de limitation de débit
-// ("unknown", faute d'en-tête), au risque de déclencher un 429 inattendu au lieu du
-// 401 attendu si un autre test échoue déjà plusieurs fois dans la même fenêtre.
-function loginRequest(body: unknown, ip = randomBytes(8).toString('hex')) {
+function loginRequest(body: unknown, ip = uniqueTestIp()) {
   return new NextRequest('http://localhost/api/auth/login', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -25,8 +23,14 @@ function loginRequest(body: unknown, ip = randomBytes(8).toString('hex')) {
 describe.skipIf(!dbAvailable)('POST /api/auth/login (integration)', () => {
   const email = `login-test-${Date.now()}@example.com`;
   let userId: number;
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     if (userId) {
       const db = await getDb();
       await db.getRepository('UserSession').createQueryBuilder().delete().where('userId = :userId', { userId }).execute();
@@ -53,7 +57,46 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login (integration)', () => {
 
     const response = await POST(loginRequest({ email, password: 'correct-password' }));
     expect(response.status).toBe(200);
-    expect(response.cookies.get('session_token')?.value).toBeTruthy();
+    const cookie = response.cookies.get('session_token');
+    expect(cookie?.value).toBeTruthy();
+    expect(cookie?.httpOnly).toBe(true);
+    expect(cookie?.path).toBe('/');
+    expect(cookie?.sameSite).toBe('lax');
+  });
+
+  it('rotates the previous session cookie on a new login (issue #29)', async () => {
+    const db = await getDb();
+    const user = await db.getRepository<UserEntity>('User').save({
+      email,
+      passwordHash: await hashPassword('correct-password'),
+      nom: 'Login Rotation',
+      accessRole: 'dirigeant',
+      planningFunctions: [],
+      active: true,
+      claimedAt: new Date(),
+      personLinks: [],
+      icalToken: `ical-login-rotation-${randomBytes(4).toString('hex')}`,
+    });
+    userId = user.id;
+
+    const first = await POST(loginRequest({ email, password: 'correct-password' }));
+    const firstToken = first.cookies.get('session_token')?.value;
+    expect(firstToken).toBeTruthy();
+
+    const second = await POST(new NextRequest('http://localhost/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password: 'correct-password' }),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': uniqueTestIp(),
+        cookie: `session_token=${firstToken}`,
+      },
+    }));
+    const secondToken = second.cookies.get('session_token')?.value;
+    expect(secondToken).toBeTruthy();
+    expect(secondToken).not.toBe(firstToken);
+    expect(await getSessionUser(firstToken)).toBeNull();
+    expect(await getSessionUser(secondToken)).not.toBeNull();
   });
 
   it('rejects an incorrect password', async () => {
@@ -211,8 +254,14 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login — sélecteur de club (issu
 
 describe.skipIf(!dbAvailable)('POST /api/auth/login — limitation de débit (issue #274)', () => {
   const email = `rate-limit-test-${randomBytes(6).toString('hex')}@example.com`;
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     await db.query('DELETE FROM login_rate_limits WHERE bucket_key = ?', [`login:identity:${hashBucketComponent(email)}`]);
   });
@@ -228,7 +277,7 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login — limitation de débit (is
   });
 
   it('bloque avec 429 après 5 échecs depuis la même IP, même avec des identités différentes', async () => {
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     const cleanupEmails: string[] = [];
     try {
       for (let i = 0; i < 5; i += 1) {

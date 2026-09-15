@@ -1,3 +1,5 @@
+import { logError } from '@/lib/observability/log';
+import { randomBytes } from 'node:crypto';
 import { IsNull, MoreThan } from 'typeorm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -49,7 +51,7 @@ export async function GET(
     const admins = await listAdmins(id);
     return NextResponse.json({ admins: admins.map(serializeAdmin) });
   } catch (error) {
-    console.error('Error listing club admins:', error);
+    logError('app.unhandled', 'Error listing club admins:', error);
     return NextResponse.json({ error: 'Impossible de charger les administrateurs' }, { status: 500 });
   }
 }
@@ -149,7 +151,7 @@ export async function POST(
       invitationUrl: origin ? `${origin}${path}` : path,
     });
   } catch (error) {
-    console.error('Error inviting club admin:', error);
+    logError('app.unhandled', 'Error inviting club admin:', error);
     return NextResponse.json({ error: 'Impossible de créer l\'invitation administrateur' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -8,12 +9,13 @@ import {
   checkCapabilityIpRateLimit,
   recordCapabilityIpAttempt,
 } from '@/lib/auth/capability-rate-limit';
+import { CanonicalPublicOriginError, requireCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
 import {
   checkLoginRateLimit,
   hashBucketComponent,
   recordFailedLoginAttempt,
 } from '@/lib/auth/login-rate-limit';
-import { CanonicalPublicOriginError, requireCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
+import { deliverPasswordResetLink } from '@/lib/auth/password-reset-delivery';
 
 const RATE_LIMIT_ROUTE_KEY = 'password-reset-request';
 const GENERIC_MESSAGE = 'Si ce compte existe, les instructions de réinitialisation ont été préparées.';
@@ -22,35 +24,10 @@ function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-async function deliverResetNotice(email: string): Promise<boolean> {
-  const url = process.env.PASSWORD_RESET_WEBHOOK_URL?.trim()
-    || process.env.NOTIFICATION_EMAIL_WEBHOOK_URL?.trim();
-  if (!url) return false;
-
-  const token = process.env.PASSWORD_RESET_WEBHOOK_TOKEN?.trim()
-    || process.env.NOTIFICATION_EMAIL_WEBHOOK_TOKEN?.trim();
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({
-        to: email,
-        subject: 'Réinitialisation de votre mot de passe Clubika',
-        text: 'Si vous avez demandé une réinitialisation, ouvrez Clubika et suivez les instructions reçues. Ce message ne contient aucun lien ni jeton.',
-      }),
-    });
-    return response.ok;
-  } catch (error) {
-    console.error('Password reset delivery failed:', error);
-    return false;
-  }
-}
-
 export async function POST(request: NextRequest) {
+  // Réponse volontairement peu informative (ne révèle ni l'existence ni le nombre
+  // de comptes) ; `resetUrl`/`resetUrls` n'apparaissent qu'en développement, comme
+  // repli quand l'envoi SMTP n'est pas configuré.
   const genericResponse = (resetUrls: string[] = []) => NextResponse.json({
     success: true,
     message: GENERIC_MESSAGE,
@@ -82,7 +59,7 @@ export async function POST(request: NextRequest) {
       origin = requireCanonicalPublicOrigin();
     } catch (error) {
       if (error instanceof CanonicalPublicOriginError && process.env.NODE_ENV === 'production') {
-        console.error('[auth] Réinitialisation refusée : APP_BASE_URL canonique manquant.');
+        logError('app.unhandled', '[auth] Réinitialisation refusée : APP_BASE_URL canonique manquant.');
         return genericResponse();
       }
       if (error instanceof CanonicalPublicOriginError) {
@@ -113,13 +90,13 @@ export async function POST(request: NextRequest) {
       });
 
       const resetUrl = `${origin}/reinitialiser/${rawToken}`;
-      const delivered = await deliverResetNotice(user.email);
+      const delivered = await deliverPasswordResetLink(user.email, resetUrl, user.clubId);
       if (!delivered) pendingUrls.push(resetUrl);
     }
 
     return genericResponse(pendingUrls);
   } catch (error) {
-    console.error('Password reset request failed:', error);
+    logError('app.unhandled', 'Password reset request failed:', error);
     return genericResponse();
   }
 }

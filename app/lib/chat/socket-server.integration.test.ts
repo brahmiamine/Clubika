@@ -660,4 +660,47 @@ describe.skipIf(!dbAvailable)('Socket.IO chat integration', () => {
       await viewer.cleanup();
     }
   });
+
+  it('refuse une connexion WebSocket d’origine tierce', async () => {
+    const user = await createTestUserAndSession('dirigeant', { clubId: 'afp' });
+    const httpServer = createServer();
+    const socketServer = attachChatSocketServer(httpServer);
+    await new Promise<void>((resolve) => httpServer.listen(0, '127.0.0.1', resolve));
+    const address = httpServer.address() as AddressInfo;
+    const origin = `http://127.0.0.1:${address.port}`;
+    try {
+      await expect(new Promise<void>((resolve, reject) => {
+        const socket = createClient(origin, {
+          autoConnect: false,
+          path: '/socket.io',
+          transports: ['websocket'],
+          reconnection: false,
+          extraHeaders: {
+            Cookie: `${SESSION_COOKIE_NAME}=${user.token}`,
+            Origin: 'https://evil.example',
+          },
+        });
+        const timeout = setTimeout(() => {
+          socket.disconnect();
+          reject(new Error('expected cross-origin handshake to fail'));
+        }, 5_000);
+        socket.once('connect', () => {
+          clearTimeout(timeout);
+          socket.disconnect();
+          reject(new Error('cross-origin socket connected'));
+        });
+        socket.once('connect_error', () => {
+          clearTimeout(timeout);
+          socket.disconnect();
+          resolve();
+        });
+        socket.connect();
+      })).resolves.toBeUndefined();
+    } finally {
+      socketServer.stopSessionRevocationListener();
+      await new Promise<void>((resolve) => socketServer.io.close(() => resolve()));
+      if (httpServer.listening) await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+      await user.cleanup();
+    }
+  });
 });

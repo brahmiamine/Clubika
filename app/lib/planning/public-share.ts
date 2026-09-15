@@ -1,26 +1,21 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { Match } from '@/types/match';
-import type { PlanningEventSnapshot, PlanningEventType, PlanningRole } from './event-store';
+import type { PlanningEventSnapshot, PlanningEventType } from './event-store';
 import type { TeamLogoResolver } from './team-logos';
 
-export interface PublicPlanningOfficial {
-  role: PlanningRole;
-  nom: string;
-}
-
+/**
+ * DTO public (issue #6) : liste blanche calendrier uniquement.
+ * Pas de noms de personnes, téléphones, e-mails, identifiants internes,
+ * convocation, commentaires, rapports ni audit.
+ */
 export interface PublicPlanningItem {
   eventType: PlanningEventType;
   title: string;
   date: string;
   time: string;
-  /** Heure de fin calculée à partir de `time` + `durationMinutes` (null si l'heure de début manque). */
   endTime: string | null;
   durationMinutes: number;
-  location: string | null;
   category: string | null;
-  /** Heure de rendez-vous / convocation, quand elle est renseignée (rencontres). */
-  meetingTime: string | null;
-  /** Champs « rencontre » (matchs officiels et amicaux) — null pour les entraînements et plateaux. */
   competition: string | null;
   homeTeam: string | null;
   awayTeam: string | null;
@@ -29,20 +24,57 @@ export interface PublicPlanningItem {
   venue: 'domicile' | 'extérieur' | null;
   stadium: string | null;
   address: string | null;
-  /** Arbitres officiels renseignés par la source (matchs officiels). */
-  referee: string | null;
-  assistants: string[];
-  /**
-   * Personnes affectées, nom uniquement : le lien public ne transporte jamais de
-   * numéro de téléphone ni d'autre donnée personnelle des affectés.
-   */
-  officials: PublicPlanningOfficial[];
-  /** Prévision à l’heure de l’événement, si la météo est activée. */
   weather?: {
     weatherCode: number;
     temperatureC: number | null;
   } | null;
 }
+
+export const PUBLIC_PLANNING_ITEM_KEYS = [
+  'eventType',
+  'title',
+  'date',
+  'time',
+  'endTime',
+  'durationMinutes',
+  'category',
+  'competition',
+  'homeTeam',
+  'awayTeam',
+  'homeTeamLogo',
+  'awayTeamLogo',
+  'venue',
+  'stadium',
+  'address',
+  'weather',
+] as const;
+
+export const FORBIDDEN_PUBLIC_PLANNING_KEYS = [
+  'officials',
+  'referee',
+  'assistants',
+  'meetingTime',
+  'location',
+  'personId',
+  'personType',
+  'numero',
+  'email',
+  'telephone',
+  'assignments',
+  'clubId',
+  'comments',
+  'rapport',
+  'audit',
+] as const;
+
+const EVENT_TYPE_TITLES: Record<PlanningEventType, string> = {
+  officiel: 'Match officiel',
+  amical: 'Match amical',
+  entrainement: 'Entraînement',
+  plateau: 'Plateau',
+};
+
+const PUBLIC_VENUE_HINT = /stade|gymnase|complexe|terrain|sport|municipal|omnisport|hall des sports/i;
 
 export interface PublicShareScope {
   eventTypes: PlanningEventType[];
@@ -92,32 +124,32 @@ function cleanString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
-function collectOfficials(snapshot: PlanningEventSnapshot): PublicPlanningOfficial[] {
-  const officials: PublicPlanningOfficial[] = [];
-  for (const [role, contacts] of Object.entries(snapshot.assignments ?? {})) {
-    if (!Array.isArray(contacts)) continue;
-    for (const contact of contacts) {
-      const nom = cleanString(contact?.nom);
-      if (nom) officials.push({ role: role as PlanningRole, nom });
-    }
-  }
-  return officials;
+function publicCalendarTitle(item: Pick<PublicPlanningItem, 'eventType' | 'category' | 'homeTeam' | 'awayTeam'>): string {
+  if (item.homeTeam && item.awayTeam) return `${item.homeTeam} – ${item.awayTeam}`;
+  if (item.category) return `${EVENT_TYPE_TITLES[item.eventType]} · ${item.category}`;
+  return EVENT_TYPE_TITLES[item.eventType];
+}
+
+/** Adresse uniquement pour une enceinte sportive officielle, jamais un lieu libre. */
+export function publicSportsVenueAddress(stadium: string | null, address: string | null): string | null {
+  if (!stadium || !address) return null;
+  if (!PUBLIC_VENUE_HINT.test(stadium) && !PUBLIC_VENUE_HINT.test(address)) return null;
+  return address;
 }
 
 export function toPublicPlanningItem(
   snapshot: PlanningEventSnapshot,
   resolveLogos?: TeamLogoResolver,
 ): PublicPlanningItem {
-  const base: PublicPlanningItem = {
+  const category = eventCategory(snapshot);
+  const item: PublicPlanningItem = {
     eventType: snapshot.eventType,
-    title: snapshot.title,
+    title: publicCalendarTitle({ eventType: snapshot.eventType, category, homeTeam: null, awayTeam: null }),
     date: snapshot.date,
     time: snapshot.time,
     endTime: endTimeFromStart(snapshot.time, snapshot.durationMinutes),
     durationMinutes: snapshot.durationMinutes,
-    location: snapshot.location,
-    category: eventCategory(snapshot),
-    meetingTime: null,
+    category,
     competition: null,
     homeTeam: null,
     awayTeam: null,
@@ -126,30 +158,23 @@ export function toPublicPlanningItem(
     venue: null,
     stadium: null,
     address: null,
-    referee: null,
-    assistants: [],
-    officials: collectOfficials(snapshot),
   };
 
   if (isMatchEvent(snapshot)) {
     const match = snapshot.event;
     const logos = resolveLogos?.(match) ?? {};
-    base.meetingTime = cleanString(match.horaireRendezVous);
-    base.competition = cleanString(match.competition) ?? cleanString(match.details?.competition);
-    base.homeTeam = cleanString(match.localTeam);
-    base.awayTeam = cleanString(match.awayTeam);
-    base.homeTeamLogo = cleanString(logos.localTeamLogo);
-    base.awayTeamLogo = cleanString(logos.awayTeamLogo);
-    base.venue = match.venue === 'domicile' || match.venue === 'extérieur' ? match.venue : null;
-    base.stadium = cleanString(match.details?.stadium) ?? snapshot.location;
-    base.address = cleanString(match.details?.address);
-    base.referee = cleanString(match.staff?.referee);
-    base.assistants = [match.staff?.assistant1, match.staff?.assistant2]
-      .map(cleanString)
-      .filter((value): value is string => value !== null);
+    item.competition = cleanString(match.competition) ?? cleanString(match.details?.competition);
+    item.homeTeam = cleanString(match.localTeam);
+    item.awayTeam = cleanString(match.awayTeam);
+    item.homeTeamLogo = cleanString(logos.localTeamLogo);
+    item.awayTeamLogo = cleanString(logos.awayTeamLogo);
+    item.venue = match.venue === 'domicile' || match.venue === 'extérieur' ? match.venue : null;
+    item.stadium = cleanString(match.details?.stadium);
+    item.address = publicSportsVenueAddress(item.stadium, cleanString(match.details?.address));
+    item.title = publicCalendarTitle(item);
   }
 
-  return base;
+  return item;
 }
 
 export function isSnapshotInShareScope(snapshot: PlanningEventSnapshot, scope: PublicShareScope): boolean {
