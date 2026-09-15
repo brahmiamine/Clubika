@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import type { DataSource, EntityManager } from 'typeorm';
 import type { AssignmentContact } from '@/types/match';
 import type {
@@ -132,7 +133,7 @@ async function enqueueChannelsForUser(
         emitNotificationsChanged(user.clubId, user.id);
       }
     } catch (error) {
-      console.error(`[notifications] Échec de la notification in-app pour l'utilisateur ${user.id} :`, error);
+      logError('app.unhandled', error);
     }
   }
 
@@ -159,7 +160,7 @@ async function enqueueChannelsForUser(
       );
       items.push(item);
     } catch (error) {
-      console.error(`[notifications] Échec de mise en file du canal ${channel} pour l'utilisateur ${user.id} :`, error);
+      logError('app.unhandled', error);
     }
   }
   return items;
@@ -269,7 +270,7 @@ export async function createNotificationForUser(
     const items = await enqueueChannelsForUser(db, user, input);
     await Promise.all(items.map((item) => deliverOutboxItem(db, user, item)));
   } catch (error) {
-    console.error(`[notifications] Échec inattendu de la notification pour l'utilisateur ${user.id} :`, error);
+    logError('app.unhandled', error);
   }
 }
 

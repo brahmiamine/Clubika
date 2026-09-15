@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { listPlanningEventSnapshots } from '@/lib/planning/event-store';
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       { headers: { 'Cache-Control': 'private, no-store, max-age=0' } },
     );
   } catch (error) {
-    console.error('Public planning share failed:', error);
+    logError('app.unhandled', 'Public planning share failed:', error);
     return NextResponse.json({ error: 'Impossible de charger ce planning' }, { status: 500 });
   }
 }

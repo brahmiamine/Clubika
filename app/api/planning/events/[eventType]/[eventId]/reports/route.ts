@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -149,8 +150,9 @@ export async function POST(
       updatedAt: new Date(),
     };
     return reportJson({ success: true, report: toVisibleReport(ctx.accessUser, stored) });
-  } catch {
-    console.error('Post-event report failed');
+  } catch (error) {
+    logError('app.unhandled', 'Post-event report failed:', error);
     return reportJson({ error: 'Impossible d’enregistrer le rapport' }, 500);
+  }
   }
 }

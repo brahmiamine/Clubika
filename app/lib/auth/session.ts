@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { getDb } from '@/lib/db';
 import { UserEntity, UserSessionEntity } from '@/lib/db/schemas';
@@ -31,7 +32,7 @@ function publishSessionRevocation(event: SessionRevocationEvent): void {
     try {
       listener(event);
     } catch {
-      console.error('Session revocation listener failed');
+      logError('app.unhandled', 'Session revocation listener failed');
     }
   }
 }

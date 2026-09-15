@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { promises as dns } from 'node:dns';
 import * as http from 'node:http';
 import * as https from 'node:https';
@@ -238,7 +239,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof UpstreamStatusError) {
       return NextResponse.json({ error: `Amont ${error.status}` }, { status: 502 });
     }
-    console.error('logo-proxy failed:', error);
+    logError('app.unhandled', 'logo-proxy failed:', error);
     return NextResponse.json({ error: 'Récupération de l’image impossible' }, { status: 502 });
   }
 }

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'private, no-store' },
     });
   } catch (error) {
-    console.error('Planning export failed:', error);
+    logError('app.unhandled', 'Planning export failed:', error);
     return NextResponse.json({ error: 'Impossible d’exporter le planning' }, { status: 500 });
   }
 }

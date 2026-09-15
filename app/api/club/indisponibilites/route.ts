@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items: flattenClubIndisponibilites(users) });
   } catch (error) {
-    console.error('Error listing club indisponibilites:', error);
+    logError('app.unhandled', 'Error listing club indisponibilites:', error);
     return NextResponse.json({ error: 'Impossible de charger les indisponibilités' }, { status: 500 });
   }
 }

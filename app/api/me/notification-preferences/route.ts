@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -40,7 +41,7 @@ export async function PUT(request: NextRequest) {
     });
     return NextResponse.json({ success: true, preferences });
   } catch (error) {
-    console.error('Notification preferences update failed:', error);
+    logError('app.unhandled', 'Notification preferences update failed:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour vos notifications' }, { status: 500 });
   }
 }

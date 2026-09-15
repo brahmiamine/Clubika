@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       headers: { 'Cache-Control': 'private, max-age=300' },
     });
   } catch (error) {
-    console.error('Planning weather failed:', error);
+    logError('app.unhandled', 'Planning weather failed:', error);
     return NextResponse.json({ available: false, reason: 'provider-unavailable', provider: 'Open-Meteo' });
   }
 }

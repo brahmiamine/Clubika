@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
       indisponibilite: result.reviewed,
     });
   } catch (error) {
-    console.error('Error reviewing club indisponibilite:', error);
+    logError('app.unhandled', 'Error reviewing club indisponibilite:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer la décision' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
@@ -344,7 +345,7 @@ export async function PUT(
     if (error instanceof PlanningConcurrencyError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
-    console.error('Planning event update failed:', error);
+    logError('app.unhandled', 'Planning event update failed:', error);
     return NextResponse.json({ error: 'Impossible de modifier cet événement' }, { status: 500 });
   }
 }
@@ -422,7 +423,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Planning event delete failed:', error);
+    logError('app.unhandled', 'Planning event delete failed:', error);
     return NextResponse.json({ error: 'Impossible de supprimer cet événement' }, { status: 500 });
   }
 }

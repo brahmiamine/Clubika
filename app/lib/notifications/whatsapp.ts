@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { guardedFetch } from '@/lib/compliance/external-services';
 
 export type WhatsAppProvider = 'disabled' | 'webhook' | 'meta';
@@ -123,10 +124,10 @@ export function buildWebhookWhatsAppPayload(
 
 function logWhatsAppFailure(kind: 'meta' | 'webhook' | 'delivery', status?: number): void {
   if (typeof status === 'number') {
-    console.error(`Notification WhatsApp ${kind} failed with status ${status}`);
+    logError('whatsapp.delivery_failed', { kind, status });
     return;
   }
-  console.error(`Notification WhatsApp ${kind} failed`);
+  logError('whatsapp.delivery_failed', { kind });
 }
 
 async function deliverMeta(message: WhatsAppNotificationMessage): Promise<void> {
@@ -170,7 +171,7 @@ export async function sendWhatsAppNotification(message: WhatsAppNotificationMess
   try {
     if (provider === 'meta') await deliverMeta(normalized);
     if (provider === 'webhook') await deliverWebhook(normalized);
-  } catch {
-    logWhatsAppFailure('delivery');
+  } catch (error) {
+    logError('whatsapp.delivery_failed', error);
   }
 }

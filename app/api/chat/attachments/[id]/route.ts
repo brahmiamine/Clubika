@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -41,7 +42,7 @@ export async function GET(
   } catch (error) {
     if (error instanceof ChatAccessError) return NextResponse.json({ error: error.message }, { status: 403 });
     if (error instanceof ChatValidationError) return NextResponse.json({ error: error.message }, { status: 404 });
-    console.error('Chat attachment fetch failed:', error);
+    logError('app.unhandled', 'Chat attachment fetch failed:', error);
     return NextResponse.json({ error: 'Impossible de charger le fichier' }, { status: 500 });
   }
 }

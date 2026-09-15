@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
           { id: auth.user.id, nom: auth.user.nom },
         );
       } catch (error) {
-        console.error('Impossible de retirer le refus du brouillon de préparation:', error);
+        logError('app.unhandled', 'Impossible de retirer le refus du brouillon de préparation:', error);
       }
     }
     await logAuditEntry(db, {
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, status, declineReason });
   } catch (error) {
-    console.error('Error responding to assignment:', error);
+    logError('app.unhandled', 'Error responding to assignment:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer votre réponse' }, { status: 500 });
   }
 }

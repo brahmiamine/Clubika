@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
     const settings = await readAppSettings(await getDb(), auth.user.clubId);
     return NextResponse.json({ features: settings.features, timeZone: settings.timeZone });
   } catch (error) {
-    console.error('Planning feature settings read failed:', error);
+    logError('app.unhandled', 'Planning feature settings read failed:', error);
     return NextResponse.json({ error: 'Impossible de charger les fonctionnalités' }, { status: 500 });
   }
 }
@@ -35,7 +36,7 @@ export async function PUT(request: NextRequest) {
     }));
     return NextResponse.json({ success: true, features: settings.features, timeZone: settings.timeZone });
   } catch (error) {
-    console.error('Planning feature settings update failed:', error);
+    logError('app.unhandled', 'Planning feature settings update failed:', error);
     return NextResponse.json({ error: 'Impossible de modifier les fonctionnalités' }, { status: 500 });
   }
 }

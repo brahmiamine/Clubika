@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ ...base, analytics, weekend, weatherAlerts });
   } catch (error) {
-    console.error('Club dashboard failed:', error);
+    logError('app.unhandled', 'Club dashboard failed:', error);
     return NextResponse.json({ error: 'Impossible de charger le dashboard' }, { status: 500 });
   }
 }

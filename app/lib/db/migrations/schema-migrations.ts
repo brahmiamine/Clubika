@@ -12,6 +12,7 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
 import { disableScraperSyncOnAllClubs } from './disable-sportcorico-sync';
 import { migrateHealthDataFields } from './remove-health-data';
 import { runSportCoricoDataAudit } from './audit-sportcorico-data';
+import { purgeOutboxLastError } from './purge-outbox-last-error';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -70,6 +71,10 @@ import { runSportCoricoDataAudit } from './audit-sportcorico-data';
  * La migration 0027 (issue #5) inventorie les données SportCorico déjà importées
  * (dry-run par défaut). La quarantaine n'écrit que si `SPORTCORICO_DATA_PURGE=apply`
  * au moment de l'exécution, ou via `pnpm run sportcorico:quarantine` après sauvegarde.
+ *
+ * La migration 0028 (issue #31) purge `planning_notification_outbox.last_error`
+ * des anciens `error.message` fournisseur ; les nouvelles valeurs sont
+ * `{"code","retryable"}`. Dry-run : `MIGRATION_DRY_RUN=1`.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -486,6 +491,15 @@ export const schemaMigrations: readonly SchemaMigration[] = [
     logic: readMigrationLogicFile('audit-sportcorico-data.ts'),
     up: async (db) => {
       await runSportCoricoDataAudit(db);
+    },
+  },
+  {
+    version: '0028',
+    name: 'purge_outbox_last_error_messages',
+    statements: [],
+    logic: readMigrationLogicFile('purge-outbox-last-error.ts'),
+    up: async (db) => {
+      await purgeOutboxLastError(db);
     },
   },
 ];

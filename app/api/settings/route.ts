@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import {
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
         if (!settings) return notFound();
         return json(toPublicClubSettings(settings));
     } catch (error) {
-        console.error('Error reading app settings:', error);
+        logError('app.unhandled', 'Error reading app settings:', error);
         return json({ error: 'Failed to read settings' }, 500);
     }
 }
@@ -95,7 +96,7 @@ export async function PUT(request: NextRequest) {
         if (error instanceof RequestValidationError) {
             return json({ error: error.message, issues: error.issues }, 400);
         }
-        console.error('Error updating app settings:', error);
+        logError('app.unhandled', 'Error updating app settings:', error);
         return json({ error: 'Failed to update settings' }, 500);
     }
 }

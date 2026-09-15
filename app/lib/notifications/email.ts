@@ -1,3 +1,4 @@
+import { logError, logWarnForClub } from '@/lib/observability/log';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { getDb } from '@/lib/db';
 import { readAppSettings, getSmtpPassword } from '@/lib/settings-store';
@@ -67,9 +68,7 @@ async function getTransporterForClub(clubId: string): Promise<{ transporter: Tra
   }
 
   if (!resolved.transporter) {
-    console.warn(
-      `[email] SMTP désactivé ou incomplet pour le club « ${clubId} » — notifications email désactivées.`,
-    );
+    logWarnForClub('smtp.unconfigured', clubId);
   }
   transporterCache.set(clubId, resolved);
   return resolved;
@@ -88,8 +87,8 @@ export async function sendEmail(message: EmailMessage): Promise<boolean> {
       text: message.text,
     });
     return true;
-  } catch {
-    console.error('Error sending notification email');
+  } catch (error) {
+    logError('smtp.send_failed', error);
     return false;
   }
 }

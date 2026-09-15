@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, memo, useEffect } from 'react';
 import {
   Dialog,
@@ -286,7 +287,7 @@ export const AddEventDialog = memo(function AddEventDialog({
       onSuccess();
       handleClose();
     } catch (error) {
-      console.error('Error adding event:', error);
+      logError('app.unhandled', 'Error adding event:', error);
       toast.error('Erreur lors de l\'ajout de l\'événement');
     } finally {
       setIsLoading(false);
