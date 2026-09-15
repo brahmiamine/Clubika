@@ -112,7 +112,7 @@ Les migrations sont à sens unique et sans `down` automatisé. Stratégie :
 | `scraper_sync_runs` | `app/lib/scraper/runs.ts` | `0006` |
 | `planning_assignment_state` | `app/lib/planning/assignment-state-store.ts` | `0007` |
 | tables d'entités TypeORM (`users`, `clubs`, chat, …) | `DataSource.synchronize()` au boot | `0018` |
-| `account_closures` + colonnes `users.closedAt` / `closureRequestedAt` / `closedByUserId` | fermeture de compte (issue #11) | `0025` |
+| `account_closures` + colonnes `users.closedAt` / `closureRequestedAt` / `closedByUserId` | fermeture de compte (issue #11) | `0036` |
 
 ## Conversions de schéma encadrées
 
@@ -139,6 +139,13 @@ ensuite la colonne en NOT NULL et crée l'index tenant
 `(clubId, entityType, entityId, createdAt)`. Sur une base neuve, la table est
 absente au passage de `0009` : la migration n'a rien à remplir et `0018`
 crée directement la colonne NOT NULL.
+
+La migration `0027` ([`audit-sportcorico-data.ts`](../app/lib/db/migrations/audit-sportcorico-data.ts),
+issue #5) inventorie les payloads SportCorico déjà stockés. Par défaut elle
+n’écrit rien (dry-run, compteurs uniquement). La quarantaine réelle exige
+`SPORTCORICO_DATA_PURGE=apply` et se lance avec `pnpm run sportcorico:quarantine`
+après une sauvegarde — voir
+[`docs/sportcorico-data-quarantine.md`](./sportcorico-data-quarantine.md).
 
 Restent hors périmètre volontairement : les `ALTER TABLE` défensifs du
 `json-migrator` (migration de données héritées JSON → SQL, bornée par marqueur et

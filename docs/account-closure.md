@@ -58,13 +58,13 @@ Choix produit de cette PR, **soumis à revue juridique (#12)** :
 Ne jamais lancer cette opération sur une base de production contenant des données
 réelles depuis une pull request. Les tests n’utilisent que des fixtures synthétiques.
 
-## Migration 0025 `fermeture_compte_utilisateur`
+## Migration 0036 `fermeture_compte_utilisateur`
 
 - Dry-run : relire le SQL (colonnes nullables + `CREATE TABLE IF NOT EXISTS`) ;
   aucune donnée existante n’est réécrite.
 - Application : `pnpm run db:migrate` (ou démarrage applicatif).
 - Retour arrière : `ALTER TABLE users DROP COLUMN closedByUserId, DROP COLUMN closureRequestedAt, DROP COLUMN closedAt;`
-  puis `DROP TABLE account_closures;` et suppression de la ligne `0025` dans
+  puis `DROP TABLE account_closures;` et suppression de la ligne `0036` dans
   `schema_migrations` **uniquement si la migration n’a pas été fusionnée**.
 - Impact : DDL court, pas de backfill nominatif.
 

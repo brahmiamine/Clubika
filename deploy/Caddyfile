@@ -3,11 +3,17 @@
 }
 
 www.clubika.com {
+	# HSTS sur l’hôte de redirection aussi (sans includeSubDomains / preload).
+	header Strict-Transport-Security "max-age=86400"
 	redir https://clubika.com{uri} permanent
 }
 
 clubika.com {
 	encode gzip zstd
+
+	# HSTS progressif (issue #35) : 1 jour. includeSubDomains et preload
+	# uniquement après inventaire humain de tous les sous-domaines.
+	header Strict-Transport-Security "max-age=86400"
 
 	reverse_proxy app:3000 {
 		header_up X-Real-IP {remote_host}

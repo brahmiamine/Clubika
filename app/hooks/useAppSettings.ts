@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useCallback, useEffect, useState } from 'react';
 import { apiGet, apiPut } from '@/lib/utils/api';
 import {
@@ -45,7 +46,7 @@ export function useAppSettings() {
             const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des paramètres';
             setError(errorMessage);
             setSettings(DEFAULT_APP_SETTINGS);
-            console.error('Error loading app settings:', err);
+            logError('app.unhandled', 'Error loading app settings:', err);
         } finally {
             setIsLoading(false);
         }
@@ -77,9 +78,10 @@ export function useAppSettings() {
             ? { ...writable, smtp: { ...writable.smtp, password: smtpPassword } }
             : writable;
         const result = await apiPut<{ success: boolean; settings: AppSettings }>('/api/settings', body);
-        setSettings(result.settings);
-        window.dispatchEvent(new CustomEvent<AppSettings>(APP_SETTINGS_UPDATED_EVENT, { detail: result.settings }));
-        return result.settings;
+        const saved = normalizeAppSettings(result.settings);
+        setSettings(saved);
+        window.dispatchEvent(new CustomEvent<AppSettings>(APP_SETTINGS_UPDATED_EVENT, { detail: saved }));
+        return saved;
     }, [settings]);
 
     return {

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
     const sorted = Array.from(entries.values()).sort((a, b) => b.total - a.total);
     return NextResponse.json({ entries: sorted });
   } catch (error) {
-    console.error('Error building planning workload:', error);
+    logError('app.unhandled', 'Error building planning workload:', error);
     return NextResponse.json({ error: 'Impossible de calculer la charge des dirigeants' }, { status: 500 });
   }
 }

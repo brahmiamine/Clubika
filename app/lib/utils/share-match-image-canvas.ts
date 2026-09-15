@@ -1,3 +1,4 @@
+import { logWarn } from '@/lib/observability/client-log';
 import { Match } from '@/types/match';
 import { MatchExtras } from '@/hooks/useMatchExtras';
 import { buildShareCardModel, type ShareCardPalette } from './share-match-card-theme';
@@ -38,7 +39,7 @@ async function tryLoadImage(src?: string): Promise<HTMLImageElement | null> {
   try {
     return await loadImage(src);
   } catch (error) {
-    console.warn('Failed to load share-card image:', error);
+    logWarn('app.unhandled', 'Failed to load share-card image:', error);
     return null;
   }
 }

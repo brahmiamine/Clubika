@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json(await estimateTravelMinutes(from, to));
   } catch (error) {
-    console.error('Travel estimate failed:', error);
+    logError('app.unhandled', 'Travel estimate failed:', error);
     return NextResponse.json({ status: 'unavailable', reason: 'Calcul de trajet indisponible' });
   }
 }

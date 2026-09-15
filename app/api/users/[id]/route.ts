@@ -1,13 +1,15 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
 import { requireRole } from '@/lib/auth/require';
-import { hashPassword } from '@/lib/auth/password';
 import { normalizeAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
 import { revokeAllSessionsForUser } from '@/lib/auth/session';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { requireRecentClubAuth } from '@/lib/auth/recent-auth';
+import { recordPrivilegedAuthEvent } from '@/lib/auth/privileged-auth-journal';
 import { hasFuturePlanningAssignments } from '@/lib/planning/person-link';
-import { notifyAdmins } from '@/lib/notifications/service';
+import { notifyAdmins, createNotificationForUser } from '@/lib/notifications/service';
 import { readAppSettings } from '@/lib/settings-store';
 import {
   AccountClosureError,
@@ -64,7 +66,7 @@ type PutOutcome =
   | { kind: 'not-found' }
   | { kind: 'last-admin' }
   | { kind: 'closed' }
-  | { kind: 'ok'; userId: number; revokeSessions: boolean; notifyDeactivatedWithAssignments: boolean };
+  | { kind: 'ok'; userId: number; revokeSessions: boolean; notifyDeactivatedWithAssignments: boolean; roleChanged: boolean; previousRole: string; nextRole: string };
 
 export async function PUT(
   request: NextRequest,
@@ -83,11 +85,21 @@ export async function PUT(
 
     const body = await request.json();
     const { nom, active, telephone, password } = body;
-    if (typeof password === 'string' && password.length > 0 && password.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, { status: 400 });
+    if (typeof password === 'string' && password.length > 0) {
+      return NextResponse.json({
+        error: 'Un administrateur ne peut pas remplacer le mot de passe d\'un tiers. La personne doit utiliser la réinitialisation ou une invitation.',
+      }, { status: 400 });
     }
 
     const db = await getDb();
+    if (body.accessRole !== undefined) {
+      const existing = await getRepo(db).findOneBy({ id, clubId: auth.user.clubId });
+      if (existing && normalizeAccessRole(body.accessRole) !== normalizeAccessRole(existing.accessRole)) {
+        const recent = await requireRecentClubAuth(request, auth.user);
+        if ('error' in recent) return recent.error;
+      }
+    }
+
     const outcome: PutOutcome = await db.transaction(async (manager) => {
       const userRepo = manager.getRepository<UserEntity>('User');
       const locked = await lockTargetAndActiveAdmins(manager, auth.user.clubId, id);
@@ -95,13 +107,15 @@ export async function PUT(
       if (!user) return { kind: 'not-found' };
       if (isClosedAccount(user)) return { kind: 'closed' };
 
+      const previousRole = normalizeAccessRole(user.accessRole);
       const nextAccessRole = body.accessRole !== undefined
         ? normalizeAccessRole(body.accessRole)
-        : normalizeAccessRole(user.accessRole);
+        : previousRole;
       const nextFunctions = body.planningFunctions !== undefined
         ? normalizePlanningFunctions(body.planningFunctions)
         : normalizePlanningFunctions(user.planningFunctions);
       const nextActive = typeof active === 'boolean' ? active : user.active;
+      const roleChanged = previousRole !== nextAccessRole;
 
       const wasActive = user.active;
       const wasAdmin = user.accessRole === 'admin';
@@ -115,16 +129,18 @@ export async function PUT(
       user.planningFunctions = nextFunctions;
       user.active = nextActive;
       if (typeof telephone === 'string') user.telephone = telephone.trim() || null;
-      if (typeof password === 'string' && password.length > 0) {
-        user.passwordHash = await hashPassword(password);
-      }
       await userRepo.save(user);
 
       return {
-        kind: 'ok',
+        kind: 'ok' as const,
         userId: user.id,
-        revokeSessions: !user.active || (typeof password === 'string' && password.length > 0),
+        revokeSessions: !user.active
+          || (typeof password === 'string' && password.length > 0)
+          || roleChanged,
         notifyDeactivatedWithAssignments: wasActive && !user.active,
+        roleChanged,
+        previousRole,
+        nextRole: nextAccessRole,
       };
     });
 
@@ -145,6 +161,29 @@ export async function PUT(
       await revokeAllSessionsForUser(outcome.userId);
     }
 
+    if (outcome.roleChanged) {
+      const target = await getRepo(db).findOneBy({ id: outcome.userId });
+      await notifyAdmins(db, {
+        type: 'privileged-role-changed',
+        title: 'Changement de rôle d\'accès',
+        message: `${target?.nom ?? 'Un compte'} : ${outcome.previousRole} → ${outcome.nextRole}. Les sessions de ce compte ont été révoquées.`,
+      });
+      if (target) {
+        await createNotificationForUser(db, target, {
+          type: 'privileged-role-changed',
+          title: 'Votre rôle d\'accès a changé',
+          message: `Votre rôle est passé de ${outcome.previousRole} à ${outcome.nextRole}. Reconnectez-vous.`,
+        });
+      }
+      await recordPrivilegedAuthEvent(db, {
+        action: 'club-role-change',
+        actorType: 'club',
+        actorId: auth.user.id,
+        clubId: auth.user.clubId,
+        metadata: { targetUserId: outcome.userId, from: outcome.previousRole, to: outcome.nextRole },
+      });
+    }
+
     // Issue #206 : désactiver un dirigeant qui a des affectations à venir mérite une
     // alerte administrateur explicite, plutôt que de découvrir le trou de couverture
     // seulement au moment de publier.
@@ -163,7 +202,7 @@ export async function PUT(
     const users = await getRepo(db).find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
     return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
   } catch (error) {
-    console.error('Error updating user in DB:', error);
+    logError('app.unhandled', 'Error updating user in DB:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
@@ -234,7 +273,7 @@ export async function DELETE(
       data: { users: users.map(serializeUser) },
     });
   } catch (error) {
-    console.error('Error closing user account:', error);
+    logError('app.unhandled', 'Error closing user account:', error);
     return NextResponse.json({ error: 'Failed to close user account' }, { status: 500 });
   }
 }

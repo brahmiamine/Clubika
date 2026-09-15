@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
       items: attention,
     });
   } catch (error) {
-    console.error('Error building planning overview:', error);
+    logError('app.unhandled', 'Error building planning overview:', error);
     return NextResponse.json({ error: 'Impossible de contrôler le planning' }, { status: 500 });
   }
 }

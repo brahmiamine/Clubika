@@ -90,7 +90,7 @@ export function UsersManagementTab() {
         title="Utilisateurs"
         description="Gérez les comptes, leur rôle d'accès et leurs fonctions opérationnelles"
         actions={
-          <Button onClick={() => router.push('/club/utilisateurs/nouveau')} size="sm">
+          <Button onClick={() => router.push('/club/invitations')} size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Ajouter
           </Button>

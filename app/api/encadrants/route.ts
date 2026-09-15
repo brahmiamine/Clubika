@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest) {
     const all = await findAllEncadrants(db, auth.user.clubId, { activeOnly: true });
     return NextResponse.json({ encadrants: all.map(serialize) } satisfies EncadrantsData);
   } catch (error) {
-    console.error('Error reading encadrants from DB:', error);
+    logError('app.unhandled', 'Error reading encadrants from DB:', error);
     return NextResponse.json({ error: 'Failed to load encadrants' }, { status: 500 });
   }
 }
@@ -109,7 +110,7 @@ export async function PUT(request: NextRequest) {
     const all = await findAllEncadrants(db, clubId);
     return NextResponse.json({ success: true, data: { encadrants: all.map(serialize) } satisfies EncadrantsData });
   } catch (error) {
-    console.error('Error updating encadrants in DB:', error);
+    logError('app.unhandled', 'Error updating encadrants in DB:', error);
     return NextResponse.json({ error: 'Failed to update encadrants' }, { status: 500 });
   }
 }
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
     const all = await findAllEncadrants(db, clubId);
     return NextResponse.json({ success: true, data: { encadrants: all.map(serialize) } satisfies EncadrantsData });
   } catch (error) {
-    console.error('Error adding encadrant in DB:', error);
+    logError('app.unhandled', 'Error adding encadrant in DB:', error);
     return NextResponse.json({ error: 'Failed to add encadrant' }, { status: 500 });
   }
 }
@@ -192,7 +193,7 @@ export async function DELETE(request: NextRequest) {
     const all = await findAllEncadrants(db, clubId);
     return NextResponse.json({ success: true, data: { encadrants: all.map(serialize) } satisfies EncadrantsData });
   } catch (error) {
-    console.error('Error deleting encadrant in DB:', error);
+    logError('app.unhandled', 'Error deleting encadrant in DB:', error);
     return NextResponse.json({ error: 'Failed to delete encadrant' }, { status: 500 });
   }
 }

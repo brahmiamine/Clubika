@@ -23,6 +23,11 @@ import {
   type ClubIndisponibiliteFilters,
   type ClubIndisponibiliteRow,
 } from '@/lib/indisponibilites/club-listing';
+import {
+  INDISPO_REVIEW_CODE_LABELS,
+  INDISPO_REVIEW_CODES,
+  type IndispoReviewCode,
+} from '@/lib/indisponibilites/review';
 import type { IndispoReviewStatus, IndispoTemporalStatus } from '@/lib/utils/officiel-availability';
 import type { PlanningFunction } from '@/lib/auth/roles';
 
@@ -76,7 +81,7 @@ export function ClubIndisponibilitesList({
   reviewingId,
 }: {
   items: ClubIndisponibiliteRow[];
-  onReview?: (row: ClubIndisponibiliteRow, decision: 'accepted' | 'rejected', comment?: string) => void;
+  onReview?: (row: ClubIndisponibiliteRow, decision: 'accepted' | 'rejected', reviewCode?: IndispoReviewCode) => void;
   reviewingId?: string | null;
 }) {
   const [query, setQuery] = useState('');
@@ -85,7 +90,7 @@ export function ClubIndisponibilitesList({
   const [reviewStatus, setReviewStatus] = useState<ClubIndisponibiliteFilters['reviewStatus']>('all');
   const [sort, setSort] = useState<ClubIndisponibiliteFilters['sort']>('chrono-asc');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [rejectComment, setRejectComment] = useState('');
+  const [rejectCode, setRejectCode] = useState<IndispoReviewCode>('schedule_too_broad');
 
   const visible = useMemo(
     () => filterClubIndisponibilites(items, { query, planningFunction, temporalStatus, reviewStatus, sort }),
@@ -204,7 +209,7 @@ export function ClubIndisponibilitesList({
                       disabled={reviewingId === row.id}
                       onClick={() => {
                         setRejectingId(row.id);
-                        setRejectComment('');
+                        setRejectCode('schedule_too_broad');
                       }}
                     >
                       Refuser
@@ -213,18 +218,22 @@ export function ClubIndisponibilitesList({
                   {rejectingId === row.id && (
                     <div className="space-y-2">
                       <Label htmlFor={`reject-${row.id}`}>Motif du refus</Label>
-                      <Input
+                      <select
                         id={`reject-${row.id}`}
-                        value={rejectComment}
-                        onChange={(event) => setRejectComment(event.target.value)}
-                        placeholder="Motif visible par le dirigeant"
-                      />
+                        className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={rejectCode}
+                        onChange={(event) => setRejectCode(event.target.value as IndispoReviewCode)}
+                      >
+                        {INDISPO_REVIEW_CODES.map((code) => (
+                          <option key={code} value={code}>{INDISPO_REVIEW_CODE_LABELS[code]}</option>
+                        ))}
+                      </select>
                       <Button
                         size="sm"
                         variant="destructive"
-                        disabled={!rejectComment.trim() || reviewingId === row.id}
+                        disabled={reviewingId === row.id}
                         onClick={() => {
-                          onReview(row, 'rejected', rejectComment.trim());
+                          onReview(row, 'rejected', rejectCode);
                           setRejectingId(null);
                         }}
                       >

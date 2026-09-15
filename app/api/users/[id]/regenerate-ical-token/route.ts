@@ -1,9 +1,11 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
 import { requireAuth } from '@/lib/auth/require';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { resolveCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
 import { buildIcalFeedUrl } from '@/lib/planning/ical-link';
 
 export async function POST(
@@ -37,13 +39,16 @@ export async function POST(
     user.icalToken = randomBytes(24).toString('hex');
     await repo.save(user);
 
-    const origin = process.env.APP_BASE_URL?.replace(/\/$/, '') || new URL(request.url).origin;
+    const origin = resolveCanonicalPublicOrigin() ?? (process.env.NODE_ENV === 'production' ? null : 'http://localhost:3000');
+    if (!origin) {
+      return NextResponse.json({ error: 'APP_BASE_URL est requis pour générer un lien iCal' }, { status: 503 });
+    }
     return NextResponse.json({
       success: true,
       feedUrl: buildIcalFeedUrl(origin, user.icalToken),
     });
   } catch (error) {
-    console.error('Error regenerating ical token:', error);
+    logError('app.unhandled', 'Error regenerating ical token:', error);
     return NextResponse.json({ error: 'Failed to regenerate token' }, { status: 500 });
   }
 }
