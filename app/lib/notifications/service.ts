@@ -12,7 +12,7 @@ import { getPlanningRecord } from '@/lib/planning/records';
 import { emitNotificationsChanged } from '@/lib/realtime/hub';
 import { CHAT_INBOX_EXCLUDED_TYPES } from './inbox';
 import { sendEmail } from './email';
-import { sendWhatsAppNotification } from './whatsapp';
+import { sendWhatsAppNotification, isWhatsAppGloballyEnabled } from './whatsapp';
 import { notificationDestinationHref } from './destinations';
 import {
   normalizeNotificationPreferences,
@@ -39,7 +39,10 @@ export interface NotificationInput {
   urgency?: NotificationUrgency;
 }
 
-async function deliverWhatsApp(_db: DataSource, user: UserEntity, input: NotificationInput): Promise<void> {
+async function deliverWhatsApp(db: DataSource, user: UserEntity, input: NotificationInput): Promise<void> {
+  if (!isWhatsAppGloballyEnabled()) return;
+  const preferenceRecord = await getPlanningRecord(db, `notification-preferences:${user.id}`);
+  if (!normalizeNotificationPreferences(preferenceRecord?.payload).whatsapp) return;
   const phone = user.telephone?.trim() || null;
   if (!phone) return;
   await sendWhatsAppNotification({
@@ -137,6 +140,7 @@ async function enqueueChannelsForUser(
   for (const channel of channels) {
     if (!selected.includes(channel)) continue;
     if (channel === 'email' && !user.email) continue;
+    if (channel === 'whatsapp' && (!isWhatsAppGloballyEnabled() || !user.telephone?.trim())) continue;
     try {
       const item = await enqueueNotificationDelivery(
         db,

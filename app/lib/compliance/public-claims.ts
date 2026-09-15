@@ -92,7 +92,7 @@ export const LANDING_FEATURES: LandingFeature[] = [
   {
     num: '04',
     title: 'Notifications',
-    copy: "In-app et Web Push via la PWA. L'e-mail n'est envoyé que si un serveur SMTP est configuré. Les canaux externes supplémentaires (dont WhatsApp) restent désactivés tant qu'ils ne sont pas explicitement activés.",
+    copy: "In-app et Web Push via la PWA. L'e-mail n'est envoyé que si un serveur SMTP est configuré. WhatsApp n'est jamais activé par défaut : il exige WHATSAPP_PROVIDER, un contrat prestataire et un opt-in utilisateur. Les autres canaux externes restent désactivés tant qu'ils ne sont pas explicitement activés.",
   },
 ];
 
@@ -167,7 +167,7 @@ export const LANDING_FAQ_ITEMS: LandingFaqItem[] = [
   },
   {
     q: 'Quelles notifications reçoivent les utilisateurs ?',
-    a: "In-app et Web Push via la PWA. L'e-mail dépend d'une configuration SMTP. WhatsApp et les autres destinations externes restent désactivés tant qu'ils ne sont pas explicitement activés.",
+    a: "In-app et Web Push via la PWA. L'e-mail dépend d'une configuration SMTP. WhatsApp n'est envoyé que si un prestataire explicite est activé et que l'utilisateur a consenti dans ses notifications. WhatsApp et les autres destinations externes restent désactivés tant qu'ils ne sont pas explicitement activés.",
   },
 ];
 
@@ -221,7 +221,7 @@ export const RETAINED_PUBLIC_CLAIMS: RetainedPublicClaim[] = [
     id: 'whatsapp-off-default',
     surface: 'landing-faq + README',
     statement: 'WhatsApp désactivé en l’absence de configuration explicite.',
-    proof: 'README.md section WhatsApp optionnel ; tests notifications destinations',
-    reviewOwner: 'engineering — activation bloquée jusqu’à #17 / #30',
+    proof: 'docs/whatsapp-activation.md ; tests notifications destinations ; issue #17',
+    reviewOwner: 'engineering — activation prestataire encore soumise à #30',
   },
 ];
