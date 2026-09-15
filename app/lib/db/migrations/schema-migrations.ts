@@ -14,6 +14,7 @@ import { migrateHealthDataFields } from './remove-health-data';
 import { runSportCoricoDataAudit } from './audit-sportcorico-data';
 import { purgeOutboxLastError } from './purge-outbox-last-error';
 import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed-sessions';
+import { redactHistoricalReportAudits } from './redact-report-audit';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -63,12 +64,22 @@ import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
+ * La migration 0025 (issue #4) désactive le scraper SportCorico sur tous les clubs.
+ * La migration 0026 (issue #7) retire les champs de santé structurés.
+ * La migration 0027 (issue #5) inventorie / quarantaine les payloads SportCorico.
+ * La migration 0028 (issue #31) purge les messages d'erreur outbox.
+ * La migration 0029 (issue #34) ajoute le contexte de validation d'invitation.
+ * La migration 0030 (issue #35) crée `csp_reports` (hôtes uniquement).
+ * La migration 0031 (issue #23) ajoute `scan_status` aux pièces jointes.
  * La migration 0032 (issue #29) ajoute le condensat HMAC des jetons de session
  * (`tokenHash`) et les TTL idle/absolu, puis révoque le stockage en clair.
  *
  * La migration 0033 (issue #32) durcit les comptes privilégiés : colonnes MFA
  * plateforme, preuves d'authentification récente, journal d'événements, et
  * invitations émises sans compte club (createdByUserId nullable).
+ *
+ * La migration 0034 (issue #8) expurge le texte des anciennes entrées d'audit
+ * `action = report` (PlanningCollaboration) : plus de copie du payload métier.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -600,5 +611,14 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_privileged_auth_events_created (createdAt)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0034',
+    name: 'expurger_audit_rapports_post_evenement',
+    statements: [],
+    logic: readMigrationLogicFile('redact-report-audit.ts'),
+    up: async (db) => {
+      await redactHistoricalReportAudits(db);
+    },
   },
 ];

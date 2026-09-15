@@ -120,6 +120,14 @@ football pouvant compter des mineurs dans ses effectifs :
   au-delà de la modération admin ci-dessus. À revisiter si une politique de rétention
   légale ou contractuelle l'exige.
 
+**Rapports post-événement (issue #8).** Le journal d’audit ne recopie plus le texte du
+rapport : uniquement l’identifiant, l’acteur, la date, l’événement et la catégorie.
+L’auteur ou un administrateur du club peut supprimer un rapport (`DELETE .../reports?id=`).
+Durée opérationnelle : `POST_EVENT_REPORT_RETENTION_DAYS` (365 jours par défaut) ; les
+rapports expirés sont purgés à la lecture, avec une trace d’audit minimale sans le
+contenu. La base légale et la politique globale de rétention restent l’issue #9 — cette
+durée n’est pas une décision CNIL.
+
 Notifications disponibles :
 
 - in-app ;
