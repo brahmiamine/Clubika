@@ -1,7 +1,10 @@
 import { createServer } from 'node:http';
 import next from 'next';
+import { loadSecretFilesFromEnv } from './app/lib/ops/load-secret-files';
 import { attachChatSocketServer } from './app/lib/chat/socket-server';
 import { assertEncryptionConfiguredForProduction } from './app/lib/crypto/secret-box';
+
+loadSecretFilesFromEnv();
 
 // Refuse un démarrage en production sans APP_ENCRYPTION_KEY plutôt que de dégrader
 // silencieusement le chiffrement des messages de chat et des mots de passe SMTP (issue #212).

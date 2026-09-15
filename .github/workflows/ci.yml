@@ -46,7 +46,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mariadb:
-        image: mariadb:latest
+        image: mariadb:11.4.13@sha256:80494b9810694179889f7281ec44ca928241df577159c0356a1070e2e94616a1
         env:
           MARIADB_DATABASE: clubika
           MARIADB_USER: clubika_user
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       mariadb:
-        image: mariadb:latest
+        image: mariadb:11.4.13@sha256:80494b9810694179889f7281ec44ca928241df577159c0356a1070e2e94616a1
         env:
           MARIADB_DATABASE: clubika
           MARIADB_USER: clubika_user
@@ -116,3 +116,13 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm run db:migrate
       - run: pnpm run e2e
+
+  runtime-harden:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -t clubika:ci .
+      - name: Assert non-root read-only drop-caps
+        run: bash deploy/scripts/assert-runtime-hardening.sh clubika:ci
