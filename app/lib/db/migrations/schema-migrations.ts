@@ -13,6 +13,7 @@ import { disableScraperSyncOnAllClubs } from './disable-sportcorico-sync';
 import { migrateHealthDataFields } from './remove-health-data';
 import { runSportCoricoDataAudit } from './audit-sportcorico-data';
 import { purgeOutboxLastError } from './purge-outbox-last-error';
+import { finalizeHashedSessionSchema, hashExistingSessionTokens } from './hashed-sessions';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -62,12 +63,32 @@ import { purgeOutboxLastError } from './purge-outbox-last-error';
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
  *
+ * La migration 0025 (issue #4) désactive `scraperSync` sur tous les clubs existants.
+ *
+ * La migration 0026 (issue #7) recale les motifs de refus `injury` vers `personal`
+ * et compte les commentaires libres ; la purge des commentaires n’a lieu que si
+ * `HEALTH_COMMENT_PURGE=apply`.
+ *
+ * La migration 0027 (issue #5) inventorie les données SportCorico déjà importées
+ * (dry-run par défaut). La quarantaine n'écrit que si `SPORTCORICO_DATA_PURGE=apply`
+ * au moment de l'exécution, ou via `pnpm run sportcorico:quarantine` après sauvegarde.
+ *
+ * La migration 0028 (issue #31) purge `planning_notification_outbox.last_error`
+ * des anciens `error.message` fournisseur ; les nouvelles valeurs sont
+ * `{"code","retryable"}`. Dry-run : `MIGRATION_DRY_RUN=1`.
+ *
+ * La migration 0029 (issue #34) ajoute le contexte d'échange court des invitations
+ * publiques (cookie httpOnly).
+ *
  * La migration 0030 (issue #35) stocke les rapports CSP sanitizés (hôtes + directive,
  * jamais d'URI complète). Rétention 7 jours, purge à l'écriture.
  *
  * La migration 0031 (issue #23) ajoute `scan_status` aux pièces jointes chat/planning :
  * seuls les fichiers `clean` sont téléchargeables. Les lignes existantes sont marquées
  * `clean` (DEFAULT) ; les nouveaux uploads passent par l’inspection avant INSERT.
+ *
+ * La migration 0032 (issue #29) ajoute le condensat HMAC des jetons de session
+ * (`tokenHash`) et les TTL idle/absolu, puis révoque le stockage en clair.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -530,5 +551,28 @@ export const schemaMigrations: readonly SchemaMigration[] = [
       "ALTER TABLE chat_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
       "ALTER TABLE planning_attachments ADD COLUMN IF NOT EXISTS scan_status VARCHAR(16) NOT NULL DEFAULT 'clean'",
     ],
+  },
+  {
+    version: '0032',
+    name: 'sessions_token_hash_et_ttl',
+    statements: [
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS tokenHash VARCHAR(96) NULL AFTER id',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS lastSeenAt DATETIME(6) NULL AFTER createdAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS idleTtlSeconds INT NOT NULL DEFAULT 604800 AFTER expiresAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS absoluteTtlSeconds INT NOT NULL DEFAULT 2592000 AFTER idleTtlSeconds',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS clientHint VARCHAR(32) NULL AFTER revokedAt',
+      'ALTER TABLE user_sessions ADD COLUMN IF NOT EXISTS networkHint VARCHAR(16) NULL AFTER clientHint',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS tokenHash VARCHAR(96) NULL AFTER id',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS lastSeenAt DATETIME(6) NULL AFTER createdAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS idleTtlSeconds INT NOT NULL DEFAULT 14400 AFTER expiresAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS absoluteTtlSeconds INT NOT NULL DEFAULT 43200 AFTER idleTtlSeconds',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS clientHint VARCHAR(32) NULL AFTER revokedAt',
+      'ALTER TABLE platform_sessions ADD COLUMN IF NOT EXISTS networkHint VARCHAR(16) NULL AFTER clientHint',
+    ],
+    logic: readMigrationLogicFile('hashed-sessions.ts'),
+    up: async (db) => {
+      await hashExistingSessionTokens(db);
+      await finalizeHashedSessionSchema(db);
+    },
   },
 ];

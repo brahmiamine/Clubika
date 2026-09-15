@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { isDbAvailable } from '@/lib/db/test-utils';
 import { getDb } from '@/lib/db';
 import { hashBucketComponent } from '@/lib/auth/login-rate-limit';
+import { enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import { savePlanningRecord } from '@/lib/planning/records';
 import { hashShareToken, newShareToken, type PublicShareScope } from '@/lib/planning/public-share';
 import type { PlanningEventSnapshot } from '@/lib/planning/event-store';
@@ -16,7 +17,7 @@ const dbAvailable = await isDbAvailable();
 // `pnpm test` contre sa base locale documentée (cf. TESTING.md).
 const CLUB_ID = `test-club-${randomBytes(6).toString('hex')}`;
 
-function publicShareRequest(token: string, ip = randomBytes(8).toString('hex')) {
+function publicShareRequest(token: string, ip = uniqueTestIp()) {
   return new NextRequest(`http://localhost/api/public/planning/${token}`, {
     headers: { 'x-forwarded-for': ip },
   });
@@ -42,8 +43,14 @@ function snapshot(overrides: Partial<PlanningEventSnapshot>): PlanningEventSnaps
 describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] — limitation de débit (issue #381)', () => {
   const cleanupIps: string[] = [];
   const cleanupTokens: string[] = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     for (const ip of cleanupIps.splice(0)) {
       await db.query('DELETE FROM login_rate_limits WHERE bucket_key = ?', [`public-share:ip:${hashBucketComponent(ip)}`]);
@@ -54,7 +61,7 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] — limitation d
   });
 
   it('renvoie 429 après 5 sondes sur un jeton invalide depuis la même IP', async () => {
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     cleanupIps.push(ip);
     const token = `invalid-probe-${randomBytes(8).toString('hex')}`;
 
@@ -166,7 +173,7 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] (integration)', 
     await db.getRepository('ClubTenant').save({ id: CLUB_ID, name: 'Club test désactivé', active: false });
 
     try {
-      const ip = randomBytes(8).toString('hex');
+      const ip = uniqueTestIp();
       const response = await GET(
         publicShareRequest(token, ip) as never,
         { params: Promise.resolve({ token }) },

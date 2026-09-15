@@ -17,6 +17,8 @@ import {
 } from '@/lib/auth/roles';
 import { hasAccountAccess } from '@/lib/auth/placeholder-account';
 import { createSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { sessionCookieSetOptions } from '@/lib/auth/session-cookie';
+import { getClientIp } from '@/lib/auth/client-ip';
 import { isClubTenantActive } from '@/lib/db/club-tenants';
 import {
   checkCapabilityIpRateLimit,
@@ -255,18 +257,12 @@ export async function handleInvitationAccept(
 
     const { token: sessionToken, expiresAt } = await createSession(user.id, {
       userAgent: request.headers.get('user-agent'),
-      ipAddress: request.headers.get('x-forwarded-for'),
+      ipAddress: getClientIp(request),
     });
 
     const response = acceptJson({ success: true, redirectTo }, 200);
     clearInvitationContextCookie(response);
-    response.cookies.set(SESSION_COOKIE_NAME, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: expiresAt,
-      path: '/',
-    });
+    response.cookies.set(SESSION_COOKIE_NAME, sessionToken, sessionCookieSetOptions(expiresAt));
     return response;
   } catch (error) {
     if (error instanceof InvitationAcceptError) {

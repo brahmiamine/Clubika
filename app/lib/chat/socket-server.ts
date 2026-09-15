@@ -2,7 +2,7 @@ import { logError, logWarn } from '@/lib/observability/log';
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/constants';
-import { getSessionUser, onSessionRevocation, type SessionUser } from '@/lib/auth/session';
+import { onSessionRevocation, resolveClubSession, type SessionUser } from '@/lib/auth/session';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { getDb } from '@/lib/db';
 import {
@@ -93,6 +93,7 @@ interface ServerToClientEvents {
 interface SocketData {
   user: SessionUser;
   sessionToken: string;
+  sessionId: string;
 }
 
 export interface ChatSocketServerHandle {
@@ -254,10 +255,11 @@ export function attachChatSocketServer(httpServer: HttpServer): ChatSocketServer
   io.use(async (socket, nextMiddleware) => {
     try {
       const token = cookieValue(socket.handshake.headers.cookie, SESSION_COOKIE_NAME);
-      const user = await getSessionUser(token);
-      if (!user) return nextMiddleware(new Error('Non authentifié'));
-      socket.data.user = user;
+      const resolved = await resolveClubSession(token);
+      if (!resolved) return nextMiddleware(new Error('Non authentifié'));
+      socket.data.user = resolved.user;
       socket.data.sessionToken = token!;
+      socket.data.sessionId = resolved.session.id;
       nextMiddleware();
     } catch {
       nextMiddleware(new Error('Non authentifié'));
@@ -276,7 +278,8 @@ export function attachChatSocketServer(httpServer: HttpServer): ChatSocketServer
     const joinedRoomChannels = new Set<string>();
 
     const revalidateSession = async () => {
-      const activeUser = await getSessionUser(socket.data.sessionToken);
+      const active = await resolveClubSession(socket.data.sessionToken);
+      const activeUser = active?.user;
       if (!activeUser || activeUser.id !== user.id) {
         socket.disconnect(true);
         throw new Error('Session expirée');
@@ -293,6 +296,7 @@ export function attachChatSocketServer(httpServer: HttpServer): ChatSocketServer
       }
       user = activeUser;
       socket.data.user = activeUser;
+      if (active) socket.data.sessionId = active.session.id;
       return activeUser;
     };
     const sessionCheck = setInterval(() => {
@@ -495,6 +499,8 @@ export function attachChatSocketServer(httpServer: HttpServer): ChatSocketServer
   const stopSessionRevocationListener = onSessionRevocation((event) => {
     for (const socket of io.sockets.sockets.values()) {
       if (socket.data.user.id !== event.userId) continue;
+      if (event.exceptSessionId && socket.data.sessionId === event.exceptSessionId) continue;
+      if (event.sessionId && socket.data.sessionId !== event.sessionId) continue;
       if (event.sessionToken && socket.data.sessionToken !== event.sessionToken) continue;
       socket.disconnect(true);
     }

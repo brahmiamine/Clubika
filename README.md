@@ -220,6 +220,13 @@ APP_ENCRYPTION_KEY=change-me
 BOOTSTRAP_SUPERADMIN_EMAIL=admin@exemple.fr
 BOOTSTRAP_SUPERADMIN_PASSWORD=change-me
 SESSION_TTL_DAYS=30
+SESSION_IDLE_TTL_HOURS=168
+SESSION_ADMIN_IDLE_TTL_HOURS=12
+SESSION_ADMIN_ABSOLUTE_TTL_DAYS=7
+PLATFORM_SESSION_IDLE_TTL_HOURS=4
+PLATFORM_SESSION_ABSOLUTE_TTL_HOURS=12
+# TRUST_PROXY_HEADERS=true et TRUSTED_PROXY_COUNT=1 uniquement derrière Caddy/nginx.
+# Sans TRUST_PROXY_HEADERS=true, X-Forwarded-For et X-Real-IP sont ignorés.
 
 CRON_SECRET=change-me
 APP_BASE_URL=https://planning.exemple.fr
@@ -229,6 +236,14 @@ APP_BASE_URL=https://planning.exemple.fr
 # de débit du chat sont en mémoire par instance et ne sont correctes qu'en mono-instance.
 CHAT_INSTANCE_COUNT=1
 ```
+
+Les jetons de session (club et plateforme) ne sont plus stockés en clair : le cookie
+porte le secret, la base un HMAC versionné (`SESSION_TOKEN_PEPPER` ou, à défaut,
+`APP_ENCRYPTION_KEY`). Les durées idle et absolue sont distinctes ; les sessions
+administrateur de club et plateforme sont plus courtes. Derrière un reverse-proxy,
+`TRUST_PROXY_HEADERS=true` est obligatoire pour honorer `X-Forwarded-For` — sinon
+l'en-tête est ignoré. Le profil (`Sessions actives`) permet de révoquer une session
+ou toutes les autres.
 
 Les variables bootstrap servent uniquement à créer le premier administrateur lorsque la base ne contient aucun utilisateur. Retirez-les après la première connexion.
 

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE_NAME, PLATFORM_SESSION_COOKIE_NAME } from '@/lib/auth/constants';
 import { getSessionUser } from '@/lib/auth/session';
+import { isPlausibleSessionToken } from '@/lib/auth/session-token';
+import { sessionCookieClearOptions } from '@/lib/auth/session-cookie';
 import { canEdit, homePathForAccessRole } from '@/lib/auth/roles';
 import { PWA_CLUB_ID_HEADER, normalizePwaClubId } from '@/lib/pwa/icons';
 import { enforceCsrf } from '@/lib/security/csrf';
@@ -32,10 +34,6 @@ const PUBLIC_API_PREFIXES_WITH_TRAILING_SEGMENT = ['/api/invitations/'];
 
 const PLATFORM_LOGIN_PAGE = '/plateforme/login';
 const PLATFORM_LOGIN_API = '/api/plateforme/login';
-
-function isPlausibleSessionToken(value: string | undefined): boolean {
-    return !!value && /^[a-f0-9]{64}$/.test(value);
-}
 
 /** true pour tout ce qui vit sous /club/... (espace admin, séparé de /mon-planning). */
 function isAdminOnlyPage(pathname: string): boolean {
@@ -121,7 +119,7 @@ function homeForUser(user: Awaited<ReturnType<typeof getSessionUser>>): string {
  * `/login` ↔ `/mon-planning`.
  */
 function clearStaleSession(response: NextResponse): NextResponse {
-    response.cookies.delete(SESSION_COOKIE_NAME);
+    response.cookies.set(SESSION_COOKIE_NAME, '', sessionCookieClearOptions());
     return response;
 }
 
