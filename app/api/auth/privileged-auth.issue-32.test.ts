@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
@@ -15,9 +15,7 @@ function hashToken(token: string): string {
 }
 
 describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et replay (issue #32)', () => {
-  const previousBase = process.env.APP_BASE_URL;
   const previousWebhook = process.env.PASSWORD_RESET_WEBHOOK_URL;
-  const previousNodeEnv = process.env.NODE_ENV;
   const cleanups: Array<() => Promise<void>> = [];
   let restoreProxy: (() => void) | undefined;
 
@@ -27,9 +25,7 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
 
   afterEach(async () => {
     restoreProxy?.();
-    process.env.NODE_ENV = previousNodeEnv;
-    if (previousBase === undefined) delete process.env.APP_BASE_URL;
-    else process.env.APP_BASE_URL = previousBase;
+    vi.unstubAllEnvs();
     if (previousWebhook === undefined) delete process.env.PASSWORD_RESET_WEBHOOK_URL;
     else process.env.PASSWORD_RESET_WEBHOOK_URL = previousWebhook;
     while (cleanups.length) {
@@ -47,8 +43,8 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
 
     // SMTP off + NODE_ENV=test exposerait `resetUrl` en repli local. La garantie
     // issue #32/#30 porte sur la prod : pas de webhook, pas de secret dans le JSON.
-    process.env.NODE_ENV = 'production';
-    process.env.APP_BASE_URL = 'https://app.example.com';
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_BASE_URL', 'https://app.example.com');
     const payloads: unknown[] = [];
     process.env.PASSWORD_RESET_WEBHOOK_URL = 'http://127.0.0.1:9/never-used';
     const originalFetch = globalThis.fetch;
@@ -79,7 +75,6 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
       expect(payloads).toEqual([]);
     } finally {
       globalThis.fetch = originalFetch;
-      process.env.NODE_ENV = previousNodeEnv;
     }
   });
 
