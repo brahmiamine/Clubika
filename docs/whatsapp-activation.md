@@ -65,6 +65,7 @@ webhook en place ne réactive pas le canal.
 
 Tant que le canal est désactivé, aucun traitement WhatsApp n’a lieu.
 En cas d’activation Meta, Meta est un prestataire ultérieur ; le responsable
-du traitement (club et/ou éditeur, selon le modèle retenu dans #12) doit
+du traitement (club et/ou éditeur, selon le modèle encore non tranché —
+voir `docs/governance/roles-responsabilites.md`) doit
 documenter finalité, base (consentement de l’opt-in), localisation et
 transferts. Ce fichier ne constitue pas une analyse juridique.

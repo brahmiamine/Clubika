@@ -90,6 +90,7 @@ export default function DroitsSansComptePage() {
           </>
         )}
         <Button variant="ghost" asChild className="w-full"><Link href="/login">Retour à la connexion</Link></Button>
+        <Button variant="ghost" asChild className="w-full"><Link href="/confidentialite">Confidentialité</Link></Button>
       </CardContent>
     </AuthShell>
   );

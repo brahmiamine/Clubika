@@ -21,6 +21,9 @@ describe('canOfferPwaInstall', () => {
     expect(canOfferPwaInstall('/mot-de-passe-oublie', 'admin')).toBe(false);
     expect(canOfferPwaInstall('/inscription/abc', 'dirigeant')).toBe(false);
     expect(canOfferPwaInstall('/inscription', 'dirigeant')).toBe(false);
+    expect(canOfferPwaInstall('/mentions-legales', 'admin')).toBe(false);
+    expect(canOfferPwaInstall('/confidentialite', 'admin')).toBe(false);
+    expect(canOfferPwaInstall('/cgu', 'admin')).toBe(false);
   });
 
   it('refuse l’installation sur l’espace plateforme', () => {
