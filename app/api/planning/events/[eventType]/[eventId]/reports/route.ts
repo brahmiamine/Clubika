@@ -81,7 +81,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       createdAt: new Date().toISOString(),
     };
     await savePlanningRecord(ctx.db, { id, kind: 'post-event-report', eventType: ctx.eventType, eventId: ctx.eventId, ownerUserId: ctx.auth.user.id, payload });
-    await logAuditEntry(ctx.db, { user: ctx.auth.user, entityType: 'PlanningCollaboration', entityId: id, action: 'report', before: null, after: payload as unknown as Record<string, unknown> });
+    await logAuditEntry(ctx.db, {
+      user: ctx.auth.user,
+      entityType: 'PlanningCollaboration',
+      entityId: id,
+      action: 'report',
+      before: null,
+      after: { category, reportId: id },
+    });
     await notifyAdmins(ctx.db, {
       type: 'post-event-report',
       title: 'Nouveau rapport post-événement',

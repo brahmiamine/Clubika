@@ -18,7 +18,10 @@ export interface OfficielIndisponibilite {
     createdAt?: string;
     reviewedAt?: string;
     reviewedByUserId?: number;
+    /** Texte libre historique — ne plus écrire ni exposer (issue #7). */
     reviewComment?: string;
+    /** Motif de refus administratif structuré, non médical (issue #7). */
+    reviewCode?: 'schedule_too_broad' | 'conflict' | 'insufficient_notice' | 'other';
 }
 
 export interface OfficielWithDisponibilites {
@@ -149,6 +152,14 @@ function reviewFieldsFromCandidate(candidate: Partial<OfficielIndisponibilite>):
     }
     if (typeof candidate.reviewComment === 'string' && candidate.reviewComment.trim()) {
         fields.reviewComment = candidate.reviewComment.trim();
+    }
+    if (
+      candidate.reviewCode === 'schedule_too_broad'
+      || candidate.reviewCode === 'conflict'
+      || candidate.reviewCode === 'insufficient_notice'
+      || candidate.reviewCode === 'other'
+    ) {
+        fields.reviewCode = candidate.reviewCode;
     }
     return fields;
 }
