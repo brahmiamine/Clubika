@@ -100,6 +100,21 @@ describe('createNotificationForUser', () => {
     expect(emailCalls).toHaveLength(1);
   });
 
+  it('bloque les notifications non essentielles quand une restriction ou opposition est posée (issue #22)', async () => {
+    const db = fakeDb();
+    const user = fakeUser({ processingRestrictedAt: new Date() });
+    await createNotificationForUser(db, user, { type: 'assignment', title: 'Affectation', message: 'Vous êtes affecté' });
+    expect(saveNotification).not.toHaveBeenCalled();
+    expect(enqueueNotificationDelivery).not.toHaveBeenCalled();
+  });
+
+  it('laisse passer un avis de sécurité lié aux droits même sous restriction (issue #22)', async () => {
+    const db = fakeDb();
+    const user = fakeUser({ processingOpposedAt: new Date() });
+    await createNotificationForUser(db, user, { type: 'privacy-security', title: 'Email modifié', message: 'Reconnectez-vous' });
+    expect(saveNotification).toHaveBeenCalledTimes(1);
+  });
+
   it('respects an explicit granular preference disabling in-app and push', async () => {
     preferenceRecord = { payload: { inApp: false, push: false, email: true, whatsapp: false } };
     const db = fakeDb();

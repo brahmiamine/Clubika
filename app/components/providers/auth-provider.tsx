@@ -32,7 +32,7 @@ export const AuthContext = createContext<AuthContextValue | null>(null);
 // `/plateforme` is the platform-admin area: it authenticates independently
 // via its own `platform_session_token` cookie (see app/lib/auth/platform-*)
 // and must never be redirected by the club-user auth flow below.
-const PUBLIC_PREFIXES = ['/login', '/inscription/', '/mot-de-passe-oublie', '/reinitialiser/', '/plateforme', '/partage/'];
+const PUBLIC_PREFIXES = ['/login', '/inscription/', '/mot-de-passe-oublie', '/reinitialiser/', '/plateforme', '/partage/', '/exercice-des-droits', '/confirmer-email/'];
 // "/" est la landing page publique (app/page.tsx) : comparée en exact, pas en préfixe,
 // pour ne pas rendre publiques toutes les routes.
 const PUBLIC_EXACT_PATHS = ['/'];

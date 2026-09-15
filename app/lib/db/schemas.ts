@@ -257,6 +257,10 @@ export interface UserEntity {
   indisponibilites: OfficielIndisponibilite[] | null;
   icalToken: string;
   notifyChannel: string;
+  /** Restriction de traitements non essentiels (issue #22). */
+  processingRestrictedAt?: Date | null;
+  /** Opposition aux traitements non essentiels (issue #22). */
+  processingOpposedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -289,6 +293,8 @@ export const UserSchema = new EntitySchema<UserEntity>({
     indisponibilites: { type: 'simple-json', nullable: true },
     icalToken: { type: String, unique: true },
     notifyChannel: { type: String, default: 'push' },
+    processingRestrictedAt: { type: 'datetime', nullable: true },
+    processingOpposedAt: { type: 'datetime', nullable: true },
     createdAt: { type: 'datetime', createDate: true },
     updatedAt: { type: 'datetime', updateDate: true },
   },
@@ -829,6 +835,99 @@ export const PrivilegedAuthEventSchema = new EntitySchema<PrivilegedAuthEventEnt
   },
 });
 
+export interface PrivacyRequestEntity {
+  id: string;
+  clubId: string;
+  type: string;
+  status: string;
+  subjectUserId: number | null;
+  subjectEmailHash: string | null;
+  identityVerifiedAt: Date | null;
+  dueAt: Date | null;
+  assigneeUserId: number | null;
+  decisionCode: string | null;
+  responseProof: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt: Date | null;
+}
+
+export const PrivacyRequestSchema = new EntitySchema<PrivacyRequestEntity>({
+  name: 'PrivacyRequest',
+  tableName: 'privacy_requests',
+  indices: [
+    { name: 'idx_privacy_requests_club', columns: ['clubId', 'createdAt'] },
+    { name: 'idx_privacy_requests_subject', columns: ['clubId', 'subjectUserId'] },
+  ],
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    type: { type: String },
+    status: { type: String },
+    subjectUserId: { type: Number, nullable: true },
+    subjectEmailHash: { type: String, nullable: true },
+    identityVerifiedAt: { type: 'datetime', nullable: true },
+    dueAt: { type: 'datetime', nullable: true },
+    assigneeUserId: { type: Number, nullable: true },
+    decisionCode: { type: String, nullable: true },
+    responseProof: { type: String, nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+    updatedAt: { type: 'datetime', updateDate: true },
+    completedAt: { type: 'datetime', nullable: true },
+  },
+});
+
+export interface PrivacyExportTokenEntity {
+  id: string;
+  clubId: string;
+  userId: number;
+  requestId: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  downloadedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PrivacyExportTokenSchema = new EntitySchema<PrivacyExportTokenEntity>({
+  name: 'PrivacyExportToken',
+  tableName: 'privacy_export_tokens',
+  indices: [{ name: 'idx_privacy_export_tokens_user', columns: ['clubId', 'userId'] }],
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    userId: { type: Number },
+    requestId: { type: String },
+    expiresAt: { type: 'datetime' },
+    revokedAt: { type: 'datetime', nullable: true },
+    downloadedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface PrivacyContactChangeEntity {
+  id: string;
+  clubId: string;
+  userId: number;
+  newEmail: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PrivacyContactChangeSchema = new EntitySchema<PrivacyContactChangeEntity>({
+  name: 'PrivacyContactChange',
+  tableName: 'privacy_contact_changes',
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    userId: { type: Number },
+    newEmail: { type: String },
+    expiresAt: { type: 'datetime' },
+    usedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
 export const allSchemas = [
   ClubSchema,
   CategorieSchema,
@@ -856,4 +955,7 @@ export const allSchemas = [
   PlatformMfaChallengeSchema,
   PlatformMfaRecoveryCodeSchema,
   PrivilegedAuthEventSchema,
+  PrivacyRequestSchema,
+  PrivacyExportTokenSchema,
+  PrivacyContactChangeSchema,
 ];

@@ -67,10 +67,8 @@ appliqué, et **sans** `synchronize` en production), donc un oubli de l'étape
 explicite ne laisse pas le schéma à la traîne — mais l'étape `db:migrate` permet de
 faire échouer le déploiement **avant** la mise en service.
 
-Une base existante (schéma déjà créé par d'anciens `synchronize`) reçoit `0018`
-comme un no-op des `CREATE TABLE IF NOT EXISTS` plus les durcissements
-idempotents (retrait des colonnes héritées `roles` / `role`, `clubId` NOT NULL sur
-`match_audit_log`).
+La migration `0038` (issue #22) crée les tables d’exercice des droits et ajoute
+les drapeaux de restriction/opposition sur `users`. Idempotente.
 
 La migration `0037` (issue #20) n'ajoute pas de colonne : elle inventorie puis
 assainit les lignes de `match_audit_log` (voir [`docs/audit-log.md`](audit-log.md)).

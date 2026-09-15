@@ -245,6 +245,8 @@ export function LandingPage() {
           <Image src="/branding/clubika-icon.png" alt="" width={18} height={18} className={styles.footerMark} />
           Clubika — planning, affectations et communication pour les clubs de football
           amateurs. {LANDING_FOOTER_NOTE}
+          {' '}
+          <Link href="/exercice-des-droits">Exercer vos droits</Link>
         </div>
       </footer>
     </div>
