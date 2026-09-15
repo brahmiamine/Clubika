@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -100,7 +101,7 @@ export async function POST(
     });
     return NextResponse.json({ success: true, attachment });
   } catch (error) {
-    console.error('Attachment upload failed:', error);
+    logError('app.unhandled', 'Attachment upload failed:', error);
     return NextResponse.json({ error: 'Impossible d’ajouter le document' }, { status: 500 });
   }
 }

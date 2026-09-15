@@ -1,3 +1,4 @@
+import { logError, logWarn } from '@/lib/observability/client-log';
 import html2canvas from 'html2canvas';
 import { createRoot } from 'react-dom/client';
 import React from 'react';
@@ -47,7 +48,7 @@ export async function generateMatchShareImage({
       secondaryColor,
     });
   } catch (error) {
-    console.error('Erreur avec la version Canvas, tentative avec iframe:', error);
+    logError('app.unhandled', 'Erreur avec la version Canvas, tentative avec iframe:', error);
     try {
       return await generateMatchShareImageSimple({
         match,
@@ -61,7 +62,7 @@ export async function generateMatchShareImage({
         secondaryColor,
       });
     } catch (error2) {
-      console.error('Erreur avec la version iframe, tentative avec React:', error2);
+      logError('app.unhandled', 'Erreur avec la version iframe, tentative avec React:', error2);
       return generateMatchShareImageReact({
         match,
         extras,
@@ -149,7 +150,7 @@ async function generateMatchShareImageReact({
             new Promise<void>((resolve) => {
               // Timeout après 5 secondes par image
               const timeout = setTimeout(() => {
-                console.warn('Image loading timeout, continuing anyway');
+                logWarn('app.unhandled', 'Image loading timeout, continuing anyway');
                 resolve();
               }, 5000);
 
@@ -163,7 +164,7 @@ async function generateMatchShareImageReact({
                 };
                 img.onerror = () => {
                   clearTimeout(timeout);
-                  console.warn('Image failed to load, continuing anyway');
+                  logWarn('app.unhandled', 'Image failed to load, continuing anyway');
                   resolve(); // Continue même si l'image échoue
                 };
               }
@@ -215,7 +216,7 @@ async function generateMatchShareImageReact({
       );
     });
   } catch (error) {
-    console.error('Erreur détaillée lors de la génération:', error);
+    logError('app.unhandled', 'Erreur détaillée lors de la génération:', error);
     throw error;
   } finally {
     // Nettoyer
@@ -223,14 +224,14 @@ async function generateMatchShareImageReact({
       try {
         root.unmount();
       } catch (e) {
-        console.warn('Erreur lors du unmount:', e);
+        logWarn('app.unhandled', 'Erreur lors du unmount:', e);
       }
     }
     if (container && document.body.contains(container)) {
       try {
         document.body.removeChild(container);
       } catch (e) {
-        console.warn('Erreur lors de la suppression du conteneur:', e);
+        logWarn('app.unhandled', 'Erreur lors de la suppression du conteneur:', e);
       }
     }
   }
@@ -270,7 +271,7 @@ export async function shareMatchImage(blob: Blob, match: Match): Promise<void> {
       } catch (error) {
         // L'utilisateur a annulé ou une erreur s'est produite
         if ((error as Error).name !== 'AbortError') {
-          console.error('Error sharing:', error);
+          logError('app.unhandled', 'Error sharing:', error);
         }
       }
     }

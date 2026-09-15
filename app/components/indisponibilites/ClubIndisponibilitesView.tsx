@@ -23,14 +23,14 @@ export function ClubIndisponibilitesView() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const onReview = async (row: ClubIndisponibiliteRow, decision: 'accepted' | 'rejected', comment?: string) => {
+  const onReview = async (row: ClubIndisponibiliteRow, decision: 'accepted' | 'rejected', reviewCode?: string) => {
     setReviewingId(row.id);
     try {
       await apiPost('/api/club/indisponibilites/review', {
         userId: row.userId,
         indisponibiliteId: row.indisponibiliteId,
         decision,
-        comment: comment ?? null,
+        reviewCode: reviewCode ?? null,
       });
       toast.success(decision === 'accepted' ? 'Indisponibilité acceptée' : 'Indisponibilité refusée');
       await load();

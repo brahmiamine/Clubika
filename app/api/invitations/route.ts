@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { IsNull, MoreThan } from 'typeorm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ invitations: invitations.map(serializeInvitation) });
   } catch (error) {
-    console.error('Error reading invitations from DB:', error);
+    logError('app.unhandled', 'Error reading invitations from DB:', error);
     return NextResponse.json({ error: 'Failed to load invitations' }, { status: 500 });
   }
 }
@@ -229,7 +230,7 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
-    console.error('Error creating invitation in DB:', error);
+    logError('app.unhandled', 'Error creating invitation in DB:', error);
     return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
   }
 }

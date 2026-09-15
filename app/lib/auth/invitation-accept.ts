@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { IsNull, type EntityManager } from 'typeorm';
+import { logError } from '@/lib/observability/log';
 import { getDb } from '@/lib/db';
 import { InvitationEntity, UserEntity } from '@/lib/db/schemas';
 import { hashPassword } from '@/lib/auth/password';
@@ -278,7 +279,7 @@ export async function handleInvitationAccept(
       }
       return acceptJson({ error: error.message }, error.status);
     }
-    console.error('Error accepting invitation');
+    logError('app.unhandled', 'Error accepting invitation');
     return acceptJson({ error: 'Une erreur est survenue' }, 500);
   }
 }

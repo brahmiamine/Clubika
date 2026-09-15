@@ -33,9 +33,7 @@ const nextConfig: NextConfig = {
   // Optimisations de compilation
   compiler: {
     // Supprimer les console.log en production
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+    removeConsole: process.env.NODE_ENV === 'production',
   },
 
   // Compression (activée par défaut en production)

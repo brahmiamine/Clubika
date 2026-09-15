@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import type { DataSource, EntityManager } from 'typeorm';
+import { logError } from '@/lib/observability/log';
 import { INVITATION_CONTEXT_COOKIE } from '@/lib/auth/constants';
 import {
   hashInvitationContextToken,
@@ -148,7 +149,7 @@ export async function validateInvitationFromUrlToken(
     setInvitationContextCookie(response, context.rawToken, context.expiresAt);
     return response;
   } catch {
-    console.error('Error validating invitation');
+    logError('app.unhandled', 'Error validating invitation');
     return invitationPublicJson({ valid: false }, 500);
   } finally {
     await padToMinimumDuration(startedAtMs);
@@ -193,7 +194,7 @@ export async function validateInvitationFromContextCookie(request: NextRequest):
     const payload = await toPublicPayload(db, invitation);
     return invitationPublicJson(payload, 200);
   } catch {
-    console.error('Error validating invitation context');
+    logError('app.unhandled', 'Error validating invitation context');
     return invitationPublicJson({ valid: false }, 500);
   } finally {
     await padToMinimumDuration(startedAtMs);

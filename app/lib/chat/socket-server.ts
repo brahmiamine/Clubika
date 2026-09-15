@@ -1,3 +1,4 @@
+import { logError, logWarn } from '@/lib/observability/log';
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/constants';
@@ -195,7 +196,7 @@ function warnIfMultiInstanceWithoutSharedRateLimits(): void {
   if (!raw) return;
   const count = Number(raw);
   if (Number.isFinite(count) && count > 1) {
-    console.warn(
+    logWarn('app.unhandled', 
       `[chat] CHAT_INSTANCE_COUNT=${raw} : les limites handshake/messages/actions sont partagées `
       + 'via MariaDB (migration 0020). Vérifiez que `pnpm db:migrate` a été exécuté sur toutes les instances.',
     );
@@ -369,7 +370,7 @@ export function attachChatSocketServer(httpServer: HttpServer): ChatSocketServer
         acknowledgeSafely(acknowledge, { ok: true, message: result.message });
         if (!result.duplicate) {
           void notifyChatMessage(db, user, result, command.mentionedUserIds ?? []).catch((error) => {
-            console.error('[chat] Échec de notification après envoi :', error);
+            logError('app.unhandled', '[chat] Échec de notification après envoi :', error);
           });
         }
       } catch (error) {
@@ -485,7 +486,7 @@ export function attachChatSocketServer(httpServer: HttpServer): ChatSocketServer
         acknowledgeSafely(acknowledge, { ok: true, reactions: result.reactions });
         if (result.added) {
           void notifyChatReaction(db, user, result, command.emoji).catch((error) => {
-            console.error('[chat] Échec de notification après réaction :', error);
+            logError('app.unhandled', '[chat] Échec de notification après réaction :', error);
           });
         }
       } catch (error) {

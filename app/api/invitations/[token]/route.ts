@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { InvitationEntity } from '@/lib/db/schemas';
@@ -39,8 +40,8 @@ export async function DELETE(
     await repo.remove(invitation);
 
     return NextResponse.json({ success: true });
-  } catch {
-    console.error('Error revoking invitation');
+  } catch (error) {
+    logError('app.unhandled', 'Error revoking invitation:', error);
     return NextResponse.json({ error: 'Failed to revoke invitation' }, { status: 500 });
   }
 }
