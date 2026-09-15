@@ -115,10 +115,13 @@ football pouvant compter des mineurs dans ses effectifs :
   contenu des messages reste visible pour les autres participants (l'historique d'une
   conversation de groupe ou d'événement n'est pas retiré aux autres membres), seule
   l'attribution nominative disparaît.
-- Aucune purge automatique par ancienneté n'est implémentée à ce stade (pas de politique
-  de rétention par durée) : les messages et pièces jointes sont conservés indéfiniment,
-  au-delà de la modération admin ci-dessus. À revisiter si une politique de rétention
-  légale ou contractuelle l'exige.
+- La conservation dans le temps est gouvernée par la matrice issue #9
+  (`docs/retention.md`, `POST /api/cron/retention-purge`). Valeurs **produit**
+  configurables (`RETENTION_*_DAYS`), pas une obligation légale. Le job purge
+  chat, pièces jointes (blob + métadonnées), rapports, audits, sessions
+  expirées/révoquées, notifications, invitations, push, journaux scrape, outbox
+  et partages publics. Dry-run : `?dryRun=true`. Aucun archivage intermédiaire
+  des données personnelles (pas de base légale fournie).
 
 Notifications disponibles :
 
