@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { runScraperAndPersistToDb } from '@/lib/scraper/run-scraper';
 import { getDb } from '@/lib/db';
 import { planningFeatureGuard } from '@/lib/planning/feature-guard';
-import { isExternalServiceEnabled } from '@/lib/compliance/external-services';
 import { runWithClubId } from '@/lib/auth/club-context';
 import { listActiveClubIds } from '@/lib/db/club-tenants';
+import { isSportCoricoSyncEnabled, SPORTCORICO_SYNC_DISABLED_MESSAGE } from '@/lib/scraper/sync-gate';
 
 function safeSecretEquals(provided: string, expected: string): boolean {
   const providedBuffer = Buffer.from(provided, 'utf8');
@@ -30,8 +30,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    if (!isExternalServiceEnabled('sportcorico')) {
-      return NextResponse.json({ error: 'Cette intégration est désactivée.', service: 'sportcorico' }, { status: 409 });
+    if (!isSportCoricoSyncEnabled()) {
+      return NextResponse.json({
+        success: true,
+        disabled: true,
+        message: SPORTCORICO_SYNC_DISABLED_MESSAGE,
+        results: [],
+      });
     }
 
     const db = await getDb();

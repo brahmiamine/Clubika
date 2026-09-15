@@ -58,7 +58,7 @@ export const DEFAULT_PLANNING_FEATURES: PlanningFeatureFlags = {
     attendanceTracking: true,
     recurringEvents: true,
     publicSharing: true,
-    scraperSync: true,
+    scraperSync: false,
     officialMatchesCurrentWeekendOnly: true,
     eventChat: true,
     travelAndWeather: false,

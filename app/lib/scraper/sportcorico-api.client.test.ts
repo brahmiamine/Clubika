@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   collectClubWindowMatches,
   fetchSportCoricoClub,
@@ -8,6 +8,11 @@ import {
   sportCoricoClubApiUrl,
   sportCoricoMatchApiUrl,
 } from './sportcorico-api.client';
+import { SPORTCORICO_SYNC_DISABLED_MESSAGE } from './sync-gate';
+
+function enableLicensedSync() {
+  process.env.SPORTCORICO_SYNC_ENABLED = 'true';
+}
 
 describe('parseSportCoricoMatchApiResponse', () => {
   it('refuse un JSON sans objet match', () => {
@@ -21,10 +26,23 @@ describe('parseSportCoricoMatchApiResponse', () => {
 });
 
 describe('fetchSportCoricoMatch', () => {
-  beforeEach(() => {
-    vi.stubEnv('SPORTCORICO_SYNC_ENABLED', 'true');
+  const previous = process.env.SPORTCORICO_SYNC_ENABLED;
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.SPORTCORICO_SYNC_ENABLED;
+    else process.env.SPORTCORICO_SYNC_ENABLED = previous;
+  });
+
+  it('n’appelle pas fetch lorsque le kill switch global est fermé', async () => {
+    delete process.env.SPORTCORICO_SYNC_ENABLED;
+    const fetchImpl: typeof fetch = vi.fn(async () => new Response('nope', { status: 200 }));
+    await expect(fetchSportCoricoMatch('demo-slug', fetchImpl)).rejects.toThrow(
+      SPORTCORICO_SYNC_DISABLED_MESSAGE,
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
   it('retourne le match API quand la réponse est valide', async () => {
+    enableLicensedSync();
     const fetchImpl: typeof fetch = vi.fn(async () => new Response(JSON.stringify({
       success: true,
       match: {
@@ -45,6 +63,7 @@ describe('fetchSportCoricoMatch', () => {
   });
 
   it('signale une erreur explicite sur un 404', async () => {
+    enableLicensedSync();
     const fetchImpl: typeof fetch = vi.fn(async () => new Response('missing', { status: 404 }));
     await expect(fetchSportCoricoMatch('missing-slug', fetchImpl)).rejects.toThrow(
       'SportCorico API 404 pour missing-slug',
@@ -52,6 +71,7 @@ describe('fetchSportCoricoMatch', () => {
   });
 
   it('signale une erreur explicite quand le JSON est invalide', async () => {
+    enableLicensedSync();
     const fetchImpl: typeof fetch = vi.fn(async () => new Response('{', {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -119,10 +139,23 @@ describe('collectClubWindowMatches', () => {
 });
 
 describe('fetchSportCoricoClub', () => {
-  beforeEach(() => {
-    vi.stubEnv('SPORTCORICO_SYNC_ENABLED', 'true');
+  const previous = process.env.SPORTCORICO_SYNC_ENABLED;
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.SPORTCORICO_SYNC_ENABLED;
+    else process.env.SPORTCORICO_SYNC_ENABLED = previous;
+  });
+
+  it('n’appelle pas fetch lorsque le kill switch global est fermé', async () => {
+    delete process.env.SPORTCORICO_SYNC_ENABLED;
+    const fetchImpl: typeof fetch = vi.fn(async () => new Response('nope', { status: 200 }));
+    await expect(fetchSportCoricoClub('chambourcy-asm', fetchImpl)).rejects.toThrow(
+      SPORTCORICO_SYNC_DISABLED_MESSAGE,
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
   it('retourne le club API quand la réponse est valide', async () => {
+    enableLicensedSync();
     const fetchImpl: typeof fetch = vi.fn(async () => new Response(JSON.stringify({
       success: true,
       club: {
@@ -144,6 +177,7 @@ describe('fetchSportCoricoClub', () => {
   });
 
   it('signale une erreur explicite sur un 404 club', async () => {
+    enableLicensedSync();
     const fetchImpl: typeof fetch = vi.fn(async () => new Response('missing', { status: 404 }));
     await expect(fetchSportCoricoClub('inconnu', fetchImpl)).rejects.toThrow(
       'SportCorico API 404 pour le club inconnu',

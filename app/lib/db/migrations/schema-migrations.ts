@@ -9,6 +9,9 @@ import { hardenTypeormEntityTables, TYPEORM_ENTITY_TABLE_STATEMENTS } from './ty
 import { enforceCriticalReferentialIntegrity } from './referential-integrity';
 import { enforceDataUniques } from './data-uniques';
 import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase2';
+import { disableScraperSyncOnAllClubs } from './disable-sportcorico-sync';
+import { migrateHealthDataFields } from './remove-health-data';
+import { runSportCoricoDataAudit } from './audit-sportcorico-data';
 
 /**
  * Registre des migrations de schéma versionnées (issue #129).
@@ -57,6 +60,16 @@ import { enforcePhase2ReferentialIntegrity } from './referential-integrity-phase
  * `chat_messages`.
  *
  * La migration 0024 crée `chat_message_reactions` (réactions emoji sur les messages).
+ *
+ * La migration 0025 (issue #4) désactive `scraperSync` sur tous les clubs existants.
+ *
+ * La migration 0026 (issue #7) recale les motifs de refus `injury` vers `personal`
+ * et compte les commentaires libres ; la purge des commentaires n’a lieu que si
+ * `HEALTH_COMMENT_PURGE=apply`.
+ *
+ * La migration 0027 (issue #5) inventorie les données SportCorico déjà importées
+ * (dry-run par défaut). La quarantaine n'écrit que si `SPORTCORICO_DATA_PURGE=apply`
+ * au moment de l'exécution, ou via `pnpm run sportcorico:quarantine` après sauvegarde.
  *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
@@ -447,5 +460,32 @@ export const schemaMigrations: readonly SchemaMigration[] = [
         INDEX idx_chat_message_reactions_message (messageId)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
+  },
+  {
+    version: '0025',
+    name: 'desactiver_scraper_sync_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('disable-sportcorico-sync.ts'),
+    up: async (db) => {
+      await disableScraperSyncOnAllClubs(db);
+    },
+  },
+  {
+    version: '0026',
+    name: 'retirer_donnees_sante_structurees',
+    statements: [],
+    logic: readMigrationLogicFile('remove-health-data.ts'),
+    up: async (db) => {
+      await migrateHealthDataFields(db);
+    },
+  },
+  {
+    version: '0027',
+    name: 'audit_quarantaine_sportcorico',
+    statements: [],
+    logic: readMigrationLogicFile('audit-sportcorico-data.ts'),
+    up: async (db) => {
+      await runSportCoricoDataAudit(db);
+    },
   },
 ];

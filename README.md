@@ -14,7 +14,7 @@ chaque release (voir critère d'acceptation de cette issue).
 
 | Fonction | Statut | Détail / parcours |
 |---|---|---|
-| Matchs officiels (scraping), amicaux, entraînements, plateaux | Disponible | `/club`, `/club/planning`, scraper (`ScraperButton`, `pnpm scrape`) |
+| Matchs officiels, amicaux, entraînements, plateaux | Disponible | `/club`, `/club/planning`. La synchro d’un calendrier externe (scraper) est **désactivée par défaut** jusqu’à licence écrite (`SPORTCORICO_SYNC_ENABLED`, issue #4) |
 | Vues carte, liste et calendrier | Disponible | `ViewToggle` sur `/club` et `/club/planning` |
 | Événements récurrents | Disponible | `/club/planning/recurrent`, `app/api/recurring-events` |
 | Duplication d'un événement | Disponible | `EventCardDrag` (action « Dupliquer », copie en `draft`) |
@@ -84,7 +84,7 @@ distincte) crée/active/désactive les clubs et leurs administrateurs — voir
 - plusieurs canaux de groupe créés par un administrateur, avec liste de participants explicite ;
 - messages persistés et ordonnés côté serveur, reprise après reconnexion et déduplication par identifiant client ;
 - interface façon messagerie mobile : séparateurs de date, accusés de lecture (un ✓ envoyé, deux ✓ lu), emoji, envoi d'images/GIF/vidéos/audio ;
-- messages chiffrés au repos (AES-256-GCM, voir `APP_ENCRYPTION_KEY`) ;
+- texte des messages chiffré en AES-256-GCM lorsque `APP_ENCRYPTION_KEY` est défini (obligatoire en production) ; les pièces jointes, sauvegardes et autres champs ne sont **pas** chiffrés par ce mécanisme ;
 - isolation par `clubId`, contrôle d’accès à chaque lecture/envoi, limite de débit et authentification Socket.IO par la session existante.
 
 ⚠️ Les limites de débit du chat (connexions, actions, messages, handshakes) sont des
@@ -132,7 +132,7 @@ Notifications disponibles :
 
 - liens publics temporaires de 1 à 90 jours ;
 - seul le SHA-256 du token de partage est enregistré ;
-- partage public limité aux données de calendrier, sans téléphone, `personId`, commentaires, rapports ni audit ;
+- le DTO public est une liste blanche calendrier (type, horaires, catégorie, compétition, équipes, stade officiel, météo) ; pas de noms, téléphones, `personId`, commentaires, rapports ni audit ;
 - export CSV UTF-8 protégé contre l'injection de formules tableur ;
 - vue imprimable HTML et export PDF ;
 - abonnement iCal personnel et raccourcis `webcal://`, Google Calendar et Outlook.
@@ -210,8 +210,9 @@ DB_PASSWORD=clubika_password
 # pour les tâches sans contexte de requête (migration JSON initiale, etc.).
 APP_CLUB_ID=afp
 
-# Clé de chiffrement (AES-256-GCM) des messages de chat et des mots de passe SMTP par club
-# enregistrés en base. Obligatoire en production — l'application refuse de démarrer sans elle.
+# Clé de chiffrement (AES-256-GCM) du texte des messages de chat et des mots de passe SMTP
+# par club, enregistrés en base. Ne couvre pas les pièces jointes ni les sauvegardes.
+# Obligatoire en production — l'application refuse de démarrer sans elle.
 # En développement uniquement, son absence dégrade en clair avec un avertissement loggé au
 # démarrage. Générez-la par exemple avec `openssl rand -hex 32`.
 APP_ENCRYPTION_KEY=change-me
@@ -286,17 +287,23 @@ chiffré en base avec `APP_ENCRYPTION_KEY`. Sans SMTP (ni global ni par club), l
 continue de fonctionner avec les notifications in-app et les autres canaux configurés.
 
 **`APP_ENCRYPTION_KEY` en développement et en production.** Cette clé chiffre en base (AES-256-GCM)
-les messages de chat et les mots de passe SMTP par club. En développement, son absence dégrade
+le **texte** des messages de chat et les mots de passe SMTP par club. Elle ne couvre pas les
+pièces jointes, les dumps de sauvegarde ni les autres colonnes. En développement, son absence dégrade
 silencieusement vers un stockage en clair (pratique pour démarrer sans configuration, avec un
 avertissement dans les logs serveur). **En production (`NODE_ENV=production`), cette dégradation
 n'est plus tolérée : l'application refuse de démarrer sans `APP_ENCRYPTION_KEY`.** Tant qu'elle
 n'est pas définie, un bandeau d'alerte s'affiche aussi dans le tableau de bord plateforme
 (`/plateforme`).
 
-### WhatsApp optionnel
+### WhatsApp optionnel (désactivé par défaut)
 
-Aucun secret WhatsApp n'est présent dans le dépôt. Sans `WHATSAPP_PROVIDER=meta` ou
-`webhook`, le canal reste désactivé (les secrets seuls ne l’allument pas).
+Aucun secret WhatsApp n'est présent dans le dépôt. **Le canal reste désactivé** tant que
+`WHATSAPP_PROVIDER` n'est pas posé explicitement à `meta` ou `webhook`. La présence des
+identifiants Meta ou d'une URL de webhook **n'active rien**. Chaque utilisateur doit
+encore consentir dans **Notifications**. Voir [`docs/whatsapp-activation.md`](docs/whatsapp-activation.md)
+(revue contractuelle / #12 / #40 avant toute activation réelle).
+
+Désactivation globale immédiate : vider `WHATSAPP_PROVIDER` et redémarrer.
 
 #### Meta WhatsApp Cloud API
 
@@ -314,12 +321,13 @@ WHATSAPP_META_TEMPLATE_LANGUAGE=fr
 
 Le template Meta attendu reçoit deux paramètres de corps : le titre puis le message. Il doit être créé et approuvé dans WhatsApp Business Manager avant activation. Si aucun template n'est configuré, l'adaptateur envoie un message texte, utilisable uniquement lorsque les règles de la fenêtre de conversation Meta le permettent.
 
-#### Webhook générique conservé
+#### Webhook générique
 
 ```env
 WHATSAPP_PROVIDER=webhook
 NOTIFICATION_WHATSAPP_WEBHOOK_URL=https://provider.example/whatsapp
 NOTIFICATION_WHATSAPP_WEBHOOK_TOKEN=change-me
+# WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT=true  # seulement si le prestataire a besoin d'identifiants d'événement
 ```
 
 ### PWA / Web Push
@@ -381,7 +389,7 @@ dans [`docs/decisions/json-payloads-cartography.md`](docs/decisions/json-payload
 
 Le chemin prévu pour un VPS (OVH, Debian, domaine `clubika.com`) est décrit dans
 [`deploy/README.md`](deploy/README.md) : Docker Compose (une instance de l'app + MariaDB),
-Caddy en HTTPS, cron local (relances, scraper, dumps). Copiez
+Caddy en HTTPS, cron local (relances, scraper no-op tant que la synchro externe n'est pas licenciée, dumps). Copiez
 `deploy/.env.production.example` vers `deploy/.env` et remplissez les secrets
 **avant** le premier `docker compose up`.
 
