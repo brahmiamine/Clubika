@@ -65,7 +65,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "tsx": "^4.23.12",
-    "typeorm": "^0.3.31",
+    "typeorm": "^1.1.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
