@@ -1,3 +1,4 @@
+import { logWarn } from '@/lib/observability/log';
 import type { DataSource } from 'typeorm';
 
 function defaultClubId(): string {
@@ -47,7 +48,7 @@ export async function backfillAuditLogClubId(
   const joined = Number(joinedRows?.affectedRows ?? 0);
   const fallback = Number(fallbackRows?.affectedRows ?? 0);
   if (fallback > 0) {
-    console.warn(
+    logWarn('app.unhandled', 
       `[migration 0009] ${fallback} entrée(s) d'audit sans auteur résolu rattachée(s) au club par défaut`,
     );
   }

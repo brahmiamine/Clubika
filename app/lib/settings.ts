@@ -60,10 +60,10 @@ export const DEFAULT_PLANNING_FEATURES: PlanningFeatureFlags = {
     attendanceTracking: true,
     recurringEvents: true,
     publicSharing: true,
-    scraperSync: true,
+    scraperSync: false,
     officialMatchesCurrentWeekendOnly: true,
     eventChat: true,
-    travelAndWeather: true,
+    travelAndWeather: false,
     calendarExport: true,
     collaboration: true,
     requireArbitreForPublication: true,
@@ -232,7 +232,7 @@ function normalizeSmtp(input: unknown, fallback: SmtpSettings): SmtpSettings {
         user: toStringValue(candidate.user, fallback.user || ''),
         fromEmail: toStringValue(candidate.fromEmail, fallback.fromEmail || ''),
         fromName: toStringValue(candidate.fromName, fallback.fromName || ''),
-        passwordSet: fallback.passwordSet,
+        passwordSet: typeof candidate.passwordSet === 'boolean' ? candidate.passwordSet : fallback.passwordSet,
     };
 }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '@/lib/utils/api';
 
@@ -27,7 +28,7 @@ export function useStades() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des stades';
       setError(errorMessage);
-      console.error('Error loading stades:', err);
+      logError('app.unhandled', 'Error loading stades:', err);
     } finally {
       setIsLoading(false);
     }

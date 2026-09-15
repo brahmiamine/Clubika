@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
@@ -5,7 +6,7 @@ import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { normalizeIndisponibilites } from '@/lib/utils/officiel-availability';
-import { applyIndispoReview } from '@/lib/indisponibilites/review';
+import { applyIndispoReview, isIndispoReviewCode } from '@/lib/indisponibilites/review';
 import { logAuditEntry } from '@/lib/db/audit-log';
 import {
   enqueueUserNotificationIntents,
@@ -31,13 +32,13 @@ export async function POST(request: NextRequest) {
   const userId = typeof body.userId === 'number' ? body.userId : Number.parseInt(String(body.userId ?? ''), 10);
   const indisponibiliteId = typeof body.indisponibiliteId === 'string' ? body.indisponibiliteId.trim() : '';
   const decision = parseDecision(body.decision);
-  const comment = typeof body.comment === 'string' ? body.comment : null;
+  const reviewCode = isIndispoReviewCode(body.reviewCode) ? body.reviewCode : null;
 
   if (!Number.isInteger(userId) || userId <= 0 || !indisponibiliteId || !decision) {
     return NextResponse.json({ error: 'Décision invalide' }, { status: 400 });
   }
-  if (decision === 'rejected' && !(comment ?? '').trim()) {
-    return NextResponse.json({ error: 'Un motif est requis pour refuser' }, { status: 400 });
+  if (decision === 'rejected' && !reviewCode) {
+    return NextResponse.json({ error: 'Un motif structuré est requis pour refuser' }, { status: 400 });
   }
 
   try {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       }
 
       const current = normalizeIndisponibilites(user.indisponibilites);
-      const applied = applyIndispoReview(current, indisponibiliteId, decision, auth.user.id, comment);
+      const applied = applyIndispoReview(current, indisponibiliteId, decision, auth.user.id, reviewCode);
       if (!applied.ok) {
         return { kind: 'apply' as const, applied };
       }
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
           before: { status: 'pending' },
           after: {
             status: applied.reviewed.status,
-            reviewComment: applied.reviewed.reviewComment ?? null,
+            reviewCode: applied.reviewed.reviewCode ?? null,
           },
         });
       }
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
       const title = decision === 'accepted' ? 'Indisponibilité acceptée' : 'Indisponibilité refusée';
       const message = decision === 'accepted'
         ? 'Un administrateur a accepté votre indisponibilité.'
-        : `Un administrateur a refusé votre indisponibilité${result.reviewed.reviewComment ? ` : ${result.reviewed.reviewComment}` : '.'}`;
+        : 'Un administrateur a refusé votre indisponibilité.';
       const enqueued = await enqueueUserNotificationIntents(
         db,
         result.owner,
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
       indisponibilite: result.reviewed,
     });
   } catch (error) {
-    console.error('Error reviewing club indisponibilite:', error);
+    logError('app.unhandled', 'Error reviewing club indisponibilite:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer la décision' }, { status: 500 });
   }
 }

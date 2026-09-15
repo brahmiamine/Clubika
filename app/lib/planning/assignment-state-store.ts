@@ -9,6 +9,7 @@ import type {
 import { getCurrentClubId } from '@/lib/auth/club-context';
 import { assignmentStatus } from './p0-rules';
 import type { PlanningEventSnapshot, PlanningEventType, PlanningRole } from './event-store';
+import { sanitizeAssignmentOperationalFields } from '@/lib/privacy/health-data';
 
 type Queryable = DataSource | EntityManager;
 
@@ -73,12 +74,12 @@ export function assignmentStatePersonKey(contact: Pick<AssignmentContact, 'nom' 
 
 /** Extrait l'état opérationnel d'un contact de snapshot (champs structurels exclus). */
 export function operationalStateFromContact(contact: AssignmentContact): AssignmentOperationalState {
+  const sanitized = sanitizeAssignmentOperationalFields(contact);
   return {
     status: assignmentStatus(contact),
     assignedAt: contact.assignedAt,
     respondedAt: contact.respondedAt,
-    declineReason: contact.declineReason,
-    declineComment: contact.declineComment,
+    declineReason: sanitized.declineReason,
     remindersSent: contact.remindersSent ?? [],
     lastReminderAt: contact.lastReminderAt,
     reminderCount: contact.reminderCount ?? 0,
@@ -95,19 +96,25 @@ export function applyOperationalStateToContact(
   contact: AssignmentContact,
   state: AssignmentOperationalState,
 ): AssignmentContact {
-  return {
+  const sanitized = sanitizeAssignmentOperationalFields({
+    ...contact,
+    declineReason: state.declineReason,
+    declineComment: state.declineComment,
+  });
+  const next: AssignmentContact = {
     ...contact,
     status: state.status,
     assignedAt: state.assignedAt ?? contact.assignedAt,
     respondedAt: state.respondedAt,
-    declineReason: state.declineReason,
-    declineComment: state.declineComment,
+    declineReason: sanitized.declineReason,
     remindersSent: state.remindersSent,
     lastReminderAt: state.lastReminderAt,
     reminderCount: state.reminderCount,
     attendanceStatus: state.attendanceStatus,
     attendanceUpdatedAt: state.attendanceUpdatedAt,
   };
+  delete next.declineComment;
+  return next;
 }
 
 interface UpsertRow {

@@ -1,3 +1,4 @@
+import { logWarn } from '@/lib/observability/log';
 import { DataSource } from 'typeorm';
 import { PlatformAdminEntity } from './schemas';
 import { hashPassword } from '@/lib/auth/password';
@@ -18,7 +19,7 @@ export async function ensurePlatformAdminBootstrap(dataSource: DataSource): Prom
   const email = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.PLATFORM_ADMIN_PASSWORD;
   if (!email || !password) {
-    console.warn(
+    logWarn('app.unhandled', 
       '[bootstrap] Aucun administrateur de plateforme en base et PLATFORM_ADMIN_EMAIL/PLATFORM_ADMIN_PASSWORD ne sont pas définis — personne ne peut se connecter à /plateforme.',
     );
     return;
@@ -42,7 +43,7 @@ export async function ensurePlatformAdminBootstrap(dataSource: DataSource): Prom
     throw error;
   }
 
-  console.warn(
+  logWarn('app.unhandled', 
     '[bootstrap] Administrateur de plateforme initial créé depuis PLATFORM_ADMIN_EMAIL. Pensez à retirer ces variables une fois la première connexion effectuée.',
   );
 }

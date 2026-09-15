@@ -1,3 +1,4 @@
+import { logWarn } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { UserEntity } from './schemas';
@@ -20,7 +21,7 @@ function readBootstrapCredentials(): { email: string; password: string } | null 
   const email = (process.env.BOOTSTRAP_SUPERADMIN_EMAIL ?? process.env.BOOTSTRAP_ADMIN_EMAIL)?.trim().toLowerCase();
   const password = process.env.BOOTSTRAP_SUPERADMIN_PASSWORD ?? process.env.BOOTSTRAP_ADMIN_PASSWORD;
   if (!process.env.BOOTSTRAP_SUPERADMIN_EMAIL && process.env.BOOTSTRAP_ADMIN_EMAIL) {
-    console.warn(
+    logWarn('app.unhandled', 
       '[bootstrap] BOOTSTRAP_ADMIN_EMAIL/BOOTSTRAP_ADMIN_PASSWORD sont dépréciés : '
       + 'renommez-les en BOOTSTRAP_SUPERADMIN_EMAIL/BOOTSTRAP_SUPERADMIN_PASSWORD.',
     );
@@ -35,7 +36,7 @@ export async function ensureAdminBootstrap(dataSource: DataSource): Promise<void
 
   const credentials = readBootstrapCredentials();
   if (!credentials) {
-    console.warn(
+    logWarn('app.unhandled', 
       '[bootstrap] Aucun utilisateur en base et BOOTSTRAP_SUPERADMIN_EMAIL/BOOTSTRAP_SUPERADMIN_PASSWORD ne sont pas définis — personne ne peut se connecter.',
     );
     return;
@@ -66,7 +67,7 @@ export async function ensureAdminBootstrap(dataSource: DataSource): Promise<void
     throw error;
   }
 
-  console.warn(
+  logWarn('app.unhandled', 
     '[bootstrap] Administrateur initial créé depuis BOOTSTRAP_SUPERADMIN_EMAIL. Pensez à retirer ces variables une fois la première connexion effectuée.',
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '@/lib/utils/api';
 
@@ -26,7 +27,7 @@ export function useClubs() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des clubs';
       setError(errorMessage);
-      console.error('Error loading clubs:', err);
+      logError('app.unhandled', 'Error loading clubs:', err);
     } finally {
       setIsLoading(false);
     }

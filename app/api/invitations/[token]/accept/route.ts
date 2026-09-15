@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { IsNull, type EntityManager } from 'typeorm';
@@ -193,7 +194,7 @@ export async function POST(
       }
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error('Error accepting invitation:', error);
+    logError('app.unhandled', 'Error accepting invitation:', error);
     return NextResponse.json({ error: 'Une erreur est survenue' }, { status: 500 });
   }
 }

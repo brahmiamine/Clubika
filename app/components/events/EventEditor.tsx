@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, memo, useCallback } from 'react';
 import { Match, Entrainement, Plateau } from '@/types/match';
 import { useMatchExtras, MatchExtras, ContactOfficiel } from '@/hooks/useMatchExtras';
@@ -283,8 +284,8 @@ export const EventEditor = memo(function EventEditor({
                   apiPut('/api/officiels', { 
                     nom, 
                     telephone: numero 
-                  }).then(() => {}).catch((err) => {
-                    console.error(`Erreur lors de l'ajout/mise à jour de l'officiel ${nom}:`, err);
+                  }).then(() => {}).catch(() => {
+                    logError('app.unhandled');
                   })
                 );
               }
@@ -329,8 +330,8 @@ export const EventEditor = memo(function EventEditor({
                 apiPut('/api/officiels', { 
                   nom, 
                   telephone: numero 
-                }).then(() => {}).catch((err) => {
-                  console.error(`Erreur lors de l'ajout/mise à jour de l'encadrant ${nom}:`, err);
+                }).then(() => {}).catch(() => {
+                  logError('app.unhandled');
                 })
               );
             }
@@ -369,8 +370,8 @@ export const EventEditor = memo(function EventEditor({
                 apiPut('/api/officiels', { 
                   nom, 
                   telephone: numero 
-                }).then(() => {}).catch((err) => {
-                  console.error(`Erreur lors de l'ajout/mise à jour de l'encadrant ${nom}:`, err);
+                }).then(() => {}).catch(() => {
+                  logError('app.unhandled');
                 })
               );
             }
@@ -400,7 +401,7 @@ export const EventEditor = memo(function EventEditor({
       onSave();
       onClose();
     } catch (error) {
-      console.error('Error saving event:', error);
+      logError('app.unhandled', 'Error saving event:', error);
       toast.error('Erreur lors de la modification de l\'événement');
     }
   }, [
@@ -442,7 +443,7 @@ export const EventEditor = memo(function EventEditor({
         onClose();
       }
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logError('app.unhandled', 'Error deleting event:', error);
       toast.error('Erreur lors de la suppression de l\'événement');
     } finally {
       setIsDeleting(false);

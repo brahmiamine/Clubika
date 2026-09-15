@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 type AssignmentStatus = 'pending' | 'accepted' | 'declined';
 type EventType = 'officiel' | 'amical' | 'entrainement' | 'plateau';
 type PlanningRole = 'arbitre' | 'encadrant' | 'accompagnateur';
-type DeclineReason = 'work' | 'injury' | 'travel' | 'other_assignment' | 'personal' | 'other';
+type DeclineReason = 'work' | 'travel' | 'other_assignment' | 'personal' | 'other';
 
 /** Une fonction tenue par l'utilisateur sur un événement, avec son statut et sa réponse
  *  propres (issue #281) — un dirigeant multi-fonctions a une entrée par fonction, chacune
@@ -85,7 +85,6 @@ interface PlanningResponse {
 
 const declineLabels: Record<DeclineReason, string> = {
   work: 'Travail',
-  injury: 'Blessure / santé',
   travel: 'Voyage / déplacement',
   other_assignment: 'Autre affectation',
   personal: 'Contrainte personnelle',
@@ -129,7 +128,7 @@ export default function MonPlanningPage() {
   const [data, setData] = useState<PlanningResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [responding, setResponding] = useState<string | null>(null);
-  const [declines, setDeclines] = useState<Record<string, { reason: DeclineReason; comment: string }>>({});
+  const [declines, setDeclines] = useState<Record<string, DeclineReason>>({});
   const [showHistory, setShowHistory] = useState(false);
 
   const load = useCallback(async () => {
@@ -159,15 +158,14 @@ export default function MonPlanningPage() {
 
   const respond = async (event: PersonalPlanningEvent, fn: PersonalPlanningFunction, status: 'accepted' | 'declined') => {
     setResponding(fn.assignmentId);
-    const decline = declines[fn.assignmentId] ?? { reason: 'personal' as const, comment: '' };
+    const declineReason = declines[fn.assignmentId] ?? 'personal';
     try {
       await apiPost('/api/me/assignments/respond', {
         eventId: event.eventId,
         eventType: event.eventType,
         role: fn.role,
         status,
-        declineReason: status === 'declined' ? decline.reason : undefined,
-        declineComment: status === 'declined' ? decline.comment : undefined,
+        declineReason: status === 'declined' ? declineReason : undefined,
       });
       toast.success(status === 'accepted' ? 'Affectation acceptée' : 'Affectation refusée');
       await load();
@@ -182,7 +180,7 @@ export default function MonPlanningPage() {
   // son propre statut et sa propre action Accepter/Refuser, indépendamment des autres
   // fonctions du dirigeant sur ce même événement.
   const renderFunction = (event: PersonalPlanningEvent, fn: PersonalPlanningFunction, started: boolean) => {
-    const decline = declines[fn.assignmentId] ?? { reason: 'personal' as const, comment: '' };
+    const declineReason = declines[fn.assignmentId] ?? 'personal';
     return (
       <div key={fn.assignmentId} className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -191,17 +189,14 @@ export default function MonPlanningPage() {
         </div>
         {!event.cancelled && fn.status === 'declined' && fn.declineReason && (
           <p className="text-xs text-destructive">
-            Motif : {declineLabels[fn.declineReason]}{fn.declineComment ? ` — ${fn.declineComment}` : ''}
+            Motif : {declineLabels[fn.declineReason] ?? 'Indisponible'}
           </p>
         )}
         {!event.cancelled && !started && fn.status === 'pending' && (
           <>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <select className="rounded-md border bg-background px-3 py-2 text-sm" value={decline.reason} onChange={(changeEvent) => setDeclines((current) => ({ ...current, [fn.assignmentId]: { ...decline, reason: changeEvent.target.value as DeclineReason } }))}>
-                {Object.entries(declineLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-              <input className="rounded-md border bg-background px-3 py-2 text-sm" placeholder="Commentaire (optionnel)" value={decline.comment} onChange={(changeEvent) => setDeclines((current) => ({ ...current, [fn.assignmentId]: { ...decline, comment: changeEvent.target.value } }))} />
-            </div>
+            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={declineReason} onChange={(changeEvent) => setDeclines((current) => ({ ...current, [fn.assignmentId]: changeEvent.target.value as DeclineReason }))}>
+              {Object.entries(declineLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
             <div className="flex flex-wrap gap-2">
               <Button size="sm" onClick={() => respond(event, fn, 'accepted')} disabled={responding === fn.assignmentId}><Check className="mr-1.5 h-4 w-4" /> Accepter</Button>
               <Button variant="destructive" size="sm" onClick={() => respond(event, fn, 'declined')} disabled={responding === fn.assignmentId}><X className="mr-1.5 h-4 w-4" /> Refuser</Button>

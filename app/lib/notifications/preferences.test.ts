@@ -29,4 +29,13 @@ describe('notification preferences', () => {
     expect(selectedNotificationChannels(preferences, { urgency: 'critical', eventType: 'officiel' })).toEqual(['inApp', 'push', 'whatsapp']);
     expect(selectedNotificationChannels(preferences, { urgency: 'critical', eventType: 'plateau' })).toEqual(['inApp']);
   });
+
+  it('ne sélectionne WhatsApp qu’avec un opt-in explicite (issue #17)', () => {
+    const optedOut = normalizeNotificationPreferences({ whatsapp: false });
+    expect(optedOut.whatsapp).toBe(false);
+    expect(selectedNotificationChannels(optedOut, { urgency: 'critical' })).not.toContain('whatsapp');
+    const optedIn = normalizeNotificationPreferences({ whatsapp: true });
+    expect(optedIn.whatsapp).toBe(true);
+    expect(selectedNotificationChannels(optedIn, { urgency: 'critical' })).toContain('whatsapp');
+  });
 });

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextResponse } from 'next/server';
 import { ChatAccessError, ChatValidationError } from './service';
 
@@ -8,7 +9,7 @@ export function chatErrorResponse(error: unknown): NextResponse {
   if (error instanceof ChatValidationError) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
-  console.error('Chat request failed:', error);
+  logError('app.unhandled', 'Chat request failed:', error);
   return NextResponse.json({ error: 'Le service de chat est momentanément indisponible' }, { status: 500 });
 }
 

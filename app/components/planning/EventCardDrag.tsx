@@ -1,5 +1,6 @@
 "use client";
 
+import { logError } from '@/lib/observability/client-log';
 import { useRouter } from "next/navigation";
 import { memo, useState, useCallback, useMemo } from "react";
 import { Match, Entrainement, Plateau } from "@/types/match";
@@ -299,7 +300,7 @@ export const EventCardDrag = memo(function EventCardDrag({ event, allEvents, all
         toast.success("Officiel affecté avec succès");
         await onEventUpdate();
       } catch (error) {
-        console.error("Error adding officiel:", error);
+        logError('app.unhandled', "Error adding officiel:", error);
         toast.error("Erreur lors de l'affectation de l'officiel");
       }
     },
@@ -357,7 +358,7 @@ export const EventCardDrag = memo(function EventCardDrag({ event, allEvents, all
         toast.success("Officiel retiré avec succès");
         await onEventUpdate();
       } catch (error) {
-        console.error("Error removing officiel:", error);
+        logError('app.unhandled', "Error removing officiel:", error);
         toast.error("Erreur lors du retrait de l'officiel");
       }
     },
@@ -391,7 +392,7 @@ export const EventCardDrag = memo(function EventCardDrag({ event, allEvents, all
         }
       }
     } catch (error) {
-      console.error("Error deleting event:", error);
+      logError('app.unhandled', "Error deleting event:", error);
       toast.error("Erreur lors de la suppression de l'événement");
     } finally {
       setIsDeleting(false);

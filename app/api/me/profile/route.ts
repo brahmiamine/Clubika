@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -43,7 +44,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json({ success: true, passwordChanged });
   } catch (error) {
-    console.error('Error updating profile:', error);
+    logError('app.unhandled', 'Error updating profile:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour votre profil' }, { status: 500 });
   }
 }

@@ -1,3 +1,4 @@
+import { logError, logWarn } from '@/lib/observability/log';
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from 'node:crypto';
 
 const ALGORITHM = 'aes-256-gcm';
@@ -22,7 +23,7 @@ function getKey(): Buffer | null {
   const secret = process.env.APP_ENCRYPTION_KEY?.trim();
   if (!secret) {
     cachedKey = null;
-    console.warn(
+    logWarn('app.unhandled', 
       '[crypto] APP_ENCRYPTION_KEY non défini — les messages de chat et les mots de passe SMTP sont enregistrés en clair. Définissez cette variable avant la mise en production.',
     );
     return null;
@@ -83,9 +84,7 @@ export function decryptSecret(stored: string): string | null {
   if (!stored.startsWith(ENVELOPE_PREFIX)) return stored;
   const key = getKey();
   if (!key) {
-    console.error(
-      '[crypto] Déchiffrement impossible : APP_ENCRYPTION_KEY non défini alors qu\'une valeur chiffrée existe.',
-    );
+    logError('crypto.decrypt_failed');
     return null;
   }
   try {
@@ -97,7 +96,7 @@ export function decryptSecret(stored: string): string | null {
     decipher.setAuthTag(tag);
     return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
   } catch (error) {
-    console.error('[crypto] Déchiffrement impossible : clé invalide ou donnée corrompue.', error);
+    logError('app.unhandled', '[crypto] Déchiffrement impossible : clé invalide ou donnée corrompue.', error);
     return null;
   }
 }

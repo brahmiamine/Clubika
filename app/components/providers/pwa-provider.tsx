@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { BellRing, X } from 'lucide-react';
@@ -119,7 +120,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
-        console.error('Service worker registration failed:', error);
+        logError('app.unhandled', 'Service worker registration failed:', error);
       });
     }
 
@@ -170,7 +171,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     if (typeof navigator === 'undefined' || !canUseWebPush(navigator.userAgent, window.isSecureContext)) return;
     syncSubscription().catch((error) => {
       if (isPushServiceUnavailableError(error)) return;
-      console.error('Push subscription sync failed:', error);
+      logError('app.unhandled', 'Push subscription sync failed:', error);
     });
   }, [user, pushSupported, pushPermission]);
 
