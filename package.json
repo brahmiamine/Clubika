@@ -30,7 +30,8 @@
     "audit:actions": "node scripts/check-action-pins.mjs",
     "audit:exceptions": "node scripts/check-exceptions.mjs",
     "postinstall": "npx playwright install chromium --with-deps || echo 'Playwright installation skipped'",
-    "db:migrate": "tsx scripts/run-migrations.ts"
+    "db:migrate": "tsx scripts/run-migrations.ts",
+    "sportcorico:quarantine": "tsx scripts/apply-sportcorico-quarantine.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

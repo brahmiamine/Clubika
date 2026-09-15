@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   sendNotification: vi.fn(async (..._args: unknown[]) => ({ statusCode: 201 })),
   removePushSubscriptionByEndpoint: vi.fn(async (..._args: unknown[]) => undefined),
   listPushSubscriptionsForUser: vi.fn(async (..._args: unknown[]) => [{
-    endpoint: 'https://push.example.test/subscription',
+    endpoint: 'https://fcm.googleapis.com/fcm/send/test-subscription',
     endpointHash: 'hash',
     p256dh: 'public-key',
     auth: 'auth-secret',
@@ -41,6 +41,7 @@ function payload(notificationId: string): PushNotificationPayload {
 
 describe('triggerPushForUser (issue #219)', () => {
   beforeEach(() => {
+    vi.stubEnv('WEB_PUSH_ENABLED', 'true');
     mocks.sendNotification.mockClear();
     mocks.removePushSubscriptionByEndpoint.mockClear();
   });
@@ -62,7 +63,7 @@ describe('triggerPushForUser (issue #219)', () => {
     );
     expect(mocks.sendNotification).toHaveBeenCalledWith(
       expect.objectContaining({
-        endpoint: 'https://push.example.test/subscription',
+        endpoint: 'https://fcm.googleapis.com/fcm/send/test-subscription',
         keys: { p256dh: 'public-key', auth: 'auth-secret' },
       }),
       expect.any(String),

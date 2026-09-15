@@ -1,9 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { hashPassword, verifyPassword } from './password';
+import {
+  currentScryptN,
+  hashPassword,
+  passwordNeedsRehash,
+  UNUSABLE_PASSWORD_HASH,
+  verifyPassword,
+  verifyPasswordAndMaybeRehash,
+} from './password';
 
 describe('password hashing', () => {
-  it('hashes and verifies a correct password', async () => {
+  it('hashes and verifies a correct password with a versioned format', async () => {
     const hash = await hashPassword('correct-horse-battery-staple');
+    expect(hash.startsWith('v1:scrypt:')).toBe(true);
     expect(await verifyPassword('correct-horse-battery-staple', hash)).toBe(true);
   });
 
@@ -20,8 +28,42 @@ describe('password hashing', () => {
     expect(await verifyPassword('same-password', hashB)).toBe(true);
   });
 
-  it('rejects a malformed stored hash', async () => {
+  it('rejects a malformed stored hash and the unusable sentinel', async () => {
     expect(await verifyPassword('anything', 'not-a-valid-hash')).toBe(false);
     expect(await verifyPassword('anything', 'bcrypt:1:2:3:aa:bb')).toBe(false);
+    expect(await verifyPassword('anything', UNUSABLE_PASSWORD_HASH)).toBe(false);
+  });
+
+  it('still verifies a legacy unversioned scrypt hash and marks it for rehash', async () => {
+    const { promisify } = await import('node:util');
+    const { randomBytes, scrypt } = await import('node:crypto');
+    const scryptAsync = promisify(scrypt) as (
+      password: string,
+      salt: Buffer,
+      keylen: number,
+      options: { N: number; r: number; p: number },
+    ) => Promise<Buffer>;
+    const salt = randomBytes(16);
+    const derived = await scryptAsync('legacy-passphrase', salt, 64, { N: 16384, r: 8, p: 1 });
+    const legacy = `scrypt:16384:8:1:${salt.toString('hex')}:${derived.toString('hex')}`;
+    expect(await verifyPassword('legacy-passphrase', legacy)).toBe(true);
+    expect(passwordNeedsRehash(legacy)).toBe(true);
+    const result = await verifyPasswordAndMaybeRehash('legacy-passphrase', legacy);
+    expect(result.ok).toBe(true);
+    expect(result.newHash?.startsWith('v1:scrypt:')).toBe(true);
+  });
+
+  it('hashes with N=32768 without hitting OpenSSL maxmem', async () => {
+    const previous = process.env.PASSWORD_SCRYPT_N;
+    process.env.PASSWORD_SCRYPT_N = '32768';
+    try {
+      expect(currentScryptN()).toBe(32768);
+      const hash = await hashPassword('production-cost-passphrase');
+      expect(hash.startsWith('v1:scrypt:32768:')).toBe(true);
+      expect(await verifyPassword('production-cost-passphrase', hash)).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.PASSWORD_SCRYPT_N;
+      else process.env.PASSWORD_SCRYPT_N = previous;
+    }
   });
 });

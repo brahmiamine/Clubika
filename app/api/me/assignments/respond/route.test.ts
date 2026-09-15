@@ -89,6 +89,7 @@ describe.skipIf(!dbAvailable)('POST /api/me/assignments/respond (issue #155)', (
       const declineBody = await declineResponse.json();
       expect(declineBody.status).toBe('declined');
       expect(declineBody.declineReason).toBe('personal');
+      expect(declineBody).not.toHaveProperty('declineComment');
       expect(publishedAfterAccept).not.toBeNull();
 
       const liveAfterDecline = await runWithClubId(clubId, () => getPlanningEventSnapshot(db, 'entrainement', createdId!));
@@ -106,7 +107,7 @@ describe.skipIf(!dbAvailable)('POST /api/me/assignments/respond (issue #155)', (
     }
   });
 
-  it('rejects a decline without a reason with 400', async () => {
+  it('rejects a medical decline reason with 400 (issue #7)', async () => {
     const encadrant = await createTestUserAndSession('dirigeant', undefined, ['encadrant']);
     try {
       const response = await POST(respondRequest({
@@ -114,8 +115,12 @@ describe.skipIf(!dbAvailable)('POST /api/me/assignments/respond (issue #155)', (
         eventType: 'entrainement',
         role: 'encadrant',
         status: 'declined',
+        declineReason: 'injury',
+        declineComment: 'ne doit pas être persisté',
       }, encadrant.token));
       expect(response.status).toBe(400);
+      const body = await response.json() as { error?: string };
+      expect(body.error).toMatch(/médicaux/i);
     } finally {
       await encadrant.cleanup();
     }

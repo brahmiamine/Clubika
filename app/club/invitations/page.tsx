@@ -115,7 +115,7 @@ export default function InvitationsPage() {
         email: inviteEmail || undefined,
         personId: invitePersonId === '' ? undefined : invitePersonId,
       });
-      const fullUrl = `${window.location.origin}${data.url}`;
+      const fullUrl = data.url.startsWith('http') ? data.url : `${window.location.origin}${data.url}`;
       setLastInviteUrl(fullUrl);
       setInviteEmail('');
       setInvitePersonId('');

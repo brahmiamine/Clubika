@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import type { DataSource } from 'typeorm';
 import type { SessionUser } from '@/lib/auth/session';
 import type { UserEntity } from '@/lib/db/schemas';
@@ -198,7 +199,7 @@ export async function getGlobalPlanningPublicationPreview(
   try {
     await vacateDeclinedAssignmentsFromWorkingDraft(db, clubId);
   } catch (error) {
-    console.error('Impossible d’aligner le brouillon sur les refus d’affectation:', error);
+    logError('app.unhandled', 'Impossible d’aligner le brouillon sur les refus d’affectation:', error);
   }
   const [currentRaw, published, settings, users] = await Promise.all([
     listPlanningEventSnapshots(db),
@@ -231,7 +232,7 @@ export async function publishGlobalPlanning(
   try {
     await vacateDeclinedAssignmentsFromWorkingDraft(db, user.clubId);
   } catch (error) {
-    console.error('Impossible d’aligner le brouillon sur les refus d’affectation:', error);
+    logError('app.unhandled', 'Impossible d’aligner le brouillon sur les refus d’affectation:', error);
   }
   const settings = await readAppSettings(db, user.clubId);
   const beforeRaw = await getPublishedPlanning(db);

@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomUUID } from 'node:crypto';
 import { DataSource, EntityManager, In, IsNull, type QueryRunner } from 'typeorm';
 import type { SessionUser } from '@/lib/auth/session';
@@ -1096,7 +1097,7 @@ export async function listRooms(db: DataSource, user: SessionUser): Promise<Chat
         eventLogosByKey.set(key, resolveLogos(event));
       }
     } catch (error) {
-      console.error('Chat room logo enrichment failed:', error);
+      logError('app.unhandled', 'Chat room logo enrichment failed:', error);
     }
   }
 

@@ -1,5 +1,6 @@
 'use client';
 
+import { logError, logInfo } from '@/lib/observability/client-log';
 import { memo, useState, useCallback } from 'react';
 import { Match, Entrainement, Plateau } from '@/types/match';
 import { MatchCard } from '../matches/MatchCard';
@@ -49,7 +50,7 @@ export const EventCard = memo(function EventCard({ event, onEventUpdate, readOnl
 
       if (endpoint && event.id) {
         const response = await apiDelete<{ success?: boolean; error?: string }>(endpoint);
-        console.log('Delete response:', response);
+        logInfo('app.unhandled', 'Delete response:', response);
 
         // Vérifier si la suppression a réussi (success: true ou pas d'erreur)
         if (response?.success === true || (!response?.error && response?.success !== false)) {
@@ -66,7 +67,7 @@ export const EventCard = memo(function EventCard({ event, onEventUpdate, readOnl
         }
       }
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logError('app.unhandled', 'Error deleting event:', error);
       toast.error('Erreur lors de la suppression de l\'événement');
     } finally {
       setIsDeleting(false);

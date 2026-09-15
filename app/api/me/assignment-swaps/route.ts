@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { hasAnyPlanningFunction, hasPlanningFunction } from '@/lib/auth/roles';
@@ -328,7 +329,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof AssignmentSwapNotFoundError) return NextResponse.json({ error: error.message }, { status: 404 });
     if (error instanceof AssignmentSwapConflictError) return NextResponse.json({ error: error.message }, { status: 409 });
     if (error instanceof AssignmentSwapValidationError) return NextResponse.json({ error: error.message }, { status: error.status });
-    console.error('Personal assignment swap failed:', error);
+    logError('app.unhandled', 'Personal assignment swap failed:', error);
     return NextResponse.json({ error: 'Impossible de traiter la demande d’échange' }, { status: 500 });
   }
 }

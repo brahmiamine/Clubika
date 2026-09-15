@@ -20,8 +20,8 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (password.length < 8) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+    if (password.length < 12) {
+      toast.error('Le mot de passe doit contenir au moins 12 caractères');
       return;
     }
     if (password !== confirmPassword) {
@@ -45,8 +45,8 @@ export default function ResetPasswordPage() {
     <AuthShell>
         <CardHeader><CardTitle className="flex items-center gap-2"><KeyRound className="h-5 w-5" /> Nouveau mot de passe</CardTitle><CardDescription>Ce lien est temporaire et ne peut être utilisé qu’une fois.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2"><Label>Nouveau mot de passe</Label><Input type="password" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
-          <div className="space-y-2"><Label>Confirmer</Label><Input type="password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Nouveau mot de passe</Label><Input type="password" minLength={12} value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+          <div className="space-y-2"><Label>Confirmer</Label><Input type="password" minLength={12} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
           <Button className="w-full" onClick={submit} disabled={loading}>{loading ? 'Enregistrement...' : 'Changer le mot de passe'}</Button>
           <Button variant="ghost" asChild className="w-full"><Link href="/login">Annuler</Link></Button>
         </CardContent>

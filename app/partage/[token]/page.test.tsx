@@ -29,7 +29,6 @@ vi.mock('@/lib/utils/api', () => ({
         durationMinutes: 90,
         location: 'Stade A',
         category: 'U15',
-        meetingTime: '09:30',
         competition: 'Championnat',
         homeTeam: 'Club Test',
         awayTeam: 'Visiteur FC',
@@ -37,10 +36,7 @@ vi.mock('@/lib/utils/api', () => ({
         awayTeamLogo: null,
         venue: 'domicile',
         stadium: 'Stade A',
-        address: '1 rue du stade, Paris',
-        referee: 'Dupont',
-        assistants: ['Martin'],
-        officials: [{ role: 'arbitre', nom: 'Dupont' }],
+        address: '1 rue du Stade, Paris',
       },
     ],
   }),
@@ -59,5 +55,16 @@ describe('PublicPlanningSharePage — responsive mobile', () => {
     expect(html).toContain('min-h-screen bg-secondary-soft');
     expect(html).not.toContain('Planning propulsé par');
     expect(html).not.toContain('bg-[#101A35]');
+  });
+
+  it('n’affiche aucune identité d’affecté ni d’arbitre (issue #6)', () => {
+    const html = renderToStaticMarkup(<PublicPlanningSharePage />);
+
+    expect(html).not.toContain('Dupont');
+    expect(html).not.toContain('Martin');
+    expect(html).not.toContain('Arbitres');
+    expect(html).not.toContain('Encadrants');
+    expect(html).not.toContain('Accompagnateurs');
+    expect(html).toContain('aucune identité');
   });
 });
