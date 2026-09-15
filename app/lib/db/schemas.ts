@@ -328,12 +328,18 @@ export interface InvitationEntity {
   usedAt: Date | null;
   usedByUserId: number | null;
   createdAt: Date;
+  /** Empreinte du contexte d'échange court (cookie), jamais le jeton d'URL (issue #34). */
+  validationContextHash: string | null;
+  validationContextExpiresAt: Date | null;
 }
 
 export const InvitationSchema = new EntitySchema<InvitationEntity>({
   name: 'Invitation',
   tableName: 'invitations',
-  indices: [{ name: 'idx_invitations_person', columns: ['personType', 'personId'] }],
+  indices: [
+    { name: 'idx_invitations_person', columns: ['personType', 'personId'] },
+    { name: 'idx_invitations_validation_context', columns: ['validationContextHash'] },
+  ],
   columns: {
     id: { type: String, primary: true },
     clubId: { type: String, default: process.env.APP_CLUB_ID || 'afp' },
@@ -349,6 +355,8 @@ export const InvitationSchema = new EntitySchema<InvitationEntity>({
     usedAt: { type: 'datetime', nullable: true },
     usedByUserId: { type: Number, nullable: true },
     createdAt: { type: 'datetime', createDate: true },
+    validationContextHash: { type: String, length: 64, nullable: true },
+    validationContextExpiresAt: { type: 'datetime', nullable: true },
   },
 });
 

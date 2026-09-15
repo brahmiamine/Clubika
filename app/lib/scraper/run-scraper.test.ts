@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ClubTenantEntity } from '@/lib/db/schemas';
+import { SPORTCORICO_SYNC_DISABLED_MESSAGE } from './sync-gate';
 
 let tenant: Partial<ClubTenantEntity> | null = null;
 vi.mock('@/lib/db', () => ({
@@ -12,6 +13,7 @@ const {
   assertScrapedClubIdentity,
   getScraperSourceConfig,
   isHomeMatchForClub,
+  runScraperAndPersistToDb,
   teamNameMatchesClub,
 } = await import('./run-scraper');
 
@@ -64,6 +66,20 @@ describe('scraper club identity matching (issue #335)', () => {
   it('détermine le domicile/extérieur à partir du club configuré, pas d’AFP en dur', () => {
     expect(isHomeMatchForClub('AS de Football Tallard', 'AS de Football Tallard')).toBe(true);
     expect(isHomeMatchForClub('Visiteur FC', 'AS de Football Tallard')).toBe(false);
+  });
+});
+
+describe('runScraperAndPersistToDb kill switch (issue #4)', () => {
+  const previous = process.env.SPORTCORICO_SYNC_ENABLED;
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.SPORTCORICO_SYNC_ENABLED;
+    else process.env.SPORTCORICO_SYNC_ENABLED = previous;
+  });
+
+  it('n’acquiert aucun verrou ni processus lorsque le kill switch est fermé', async () => {
+    delete process.env.SPORTCORICO_SYNC_ENABLED;
+    await expect(runScraperAndPersistToDb('afp')).rejects.toThrow(SPORTCORICO_SYNC_DISABLED_MESSAGE);
   });
 });
 

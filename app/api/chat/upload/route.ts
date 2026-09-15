@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof ChatAttachmentValidationError) return NextResponse.json({ error: error.message }, { status: 413 });
     if (error instanceof ChatAccessError) return NextResponse.json({ error: error.message }, { status: 403 });
     if (error instanceof ChatValidationError) return NextResponse.json({ error: error.message }, { status: 400 });
-    console.error('Chat upload failed:', error);
+    logError('app.unhandled', 'Chat upload failed:', error);
     return NextResponse.json({ error: 'Envoi du fichier impossible' }, { status: 500 });
   }
 }
