@@ -8,6 +8,9 @@ import { normalizePlanningFunctions, WRITE_ROLES, type PlanningFunction } from '
 import { hashPassword } from '@/lib/auth/password';
 import { generatePlaceholderEmail } from '@/lib/auth/placeholder-account';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { applyTelephoneGateAndMeta, contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
+import { normalizeTelephone } from '@/lib/non-account-contacts/meta';
+import { assertTelephoneAllowed, parseProvenance, parsePurpose, upsertContactMeta } from '@/lib/non-account-contacts/meta';
 
 /** Fonction opérationnelle représentée par ce référentiel (issue #209). */
 const FUNCTION: PlanningFunction = 'encadrant';
@@ -72,7 +75,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { oldNom, nom, telephone, indisponibilites } = body;
+    const { oldNom, nom, indisponibilites } = body;
     const targetOldNom = oldNom && typeof oldNom === 'string' ? oldNom : nom;
 
     if (!targetOldNom || typeof targetOldNom !== 'string' || targetOldNom.trim() === '') {
@@ -97,7 +100,13 @@ export async function PUT(request: NextRequest) {
     }
 
     encadrant.nom = nom.trim();
-    encadrant.telephone = telephone && typeof telephone === 'string' ? telephone.trim() || null : null;
+    encadrant.telephone = await applyTelephoneGateAndMeta(db, {
+      user: encadrant,
+      clubId,
+      category: 'encadrant',
+      recordedByUserId: auth.user.id,
+      body,
+    });
     if (Object.prototype.hasOwnProperty.call(body, 'indisponibilites')) {
       const normalized = normalizeIndisponibilites(indisponibilites);
       encadrant.indisponibilites = normalized.length > 0 ? normalized : null;
@@ -107,6 +116,8 @@ export async function PUT(request: NextRequest) {
     const all = await findAllEncadrants(db, clubId);
     return NextResponse.json({ success: true, data: { encadrants: all.map(serialize) } satisfies EncadrantsData });
   } catch (error) {
+    const lifecycle = contactLifecycleResponse(error);
+    if (lifecycle) return lifecycle;
     console.error('Error updating encadrants in DB:', error);
     return NextResponse.json({ error: 'Failed to update encadrants' }, { status: 500 });
   }
@@ -131,10 +142,15 @@ export async function POST(request: NextRequest) {
     const existing = encadrants.find((item) => normalize(item.nom) === normalize(nom));
     if (existing) return NextResponse.json({ error: 'Un encadrant avec ce nom existe déjà' }, { status: 400 });
 
+    const resolvedTelephone = normalizeTelephone(telephone);
+    const provenance = parseProvenance(body.provenance);
+    const purpose = parsePurpose(body.purpose);
+    assertTelephoneAllowed({ telephone: resolvedTelephone, provenance });
+
     const normalized = normalizeIndisponibilites(indisponibilites);
     const email = await generatePlaceholderEmail(db, nom, TAG);
     const passwordHash = await hashPassword(randomBytes(24).toString('hex'));
-    await repo.save({
+    const saved = await repo.save({
       clubId,
       email,
       passwordHash,
@@ -145,14 +161,24 @@ export async function POST(request: NextRequest) {
       // Profil sans accès (issue #204) : pas d'identifiants connus, activation
       // uniquement via une invitation ciblant ce profil.
       claimedAt: null,
-      telephone: telephone && typeof telephone === 'string' ? telephone.trim() || null : null,
+      telephone: resolvedTelephone,
       indisponibilites: normalized.length > 0 ? normalized : null,
       icalToken: randomBytes(24).toString('hex'),
+    });
+    await upsertContactMeta(db, {
+      userId: saved.id,
+      clubId,
+      category: 'encadrant',
+      provenance,
+      purpose,
+      recordedByUserId: auth.user.id,
     });
 
     const all = await findAllEncadrants(db, clubId);
     return NextResponse.json({ success: true, data: { encadrants: all.map(serialize) } satisfies EncadrantsData });
   } catch (error) {
+    const lifecycle = contactLifecycleResponse(error);
+    if (lifecycle) return lifecycle;
     console.error('Error adding encadrant in DB:', error);
     return NextResponse.json({ error: 'Failed to add encadrant' }, { status: 500 });
   }

@@ -282,7 +282,9 @@ export const EventEditor = memo(function EventEditor({
                 updatePromises.push(
                   apiPut('/api/officiels', { 
                     nom, 
-                    telephone: numero 
+                    telephone: numero,
+                    provenance: 'liste_competition',
+                    purpose: 'organisation_planning',
                   }).then(() => {}).catch((err) => {
                     console.error(`Erreur lors de l'ajout/mise à jour de l'officiel ${nom}:`, err);
                   })
@@ -328,7 +330,9 @@ export const EventEditor = memo(function EventEditor({
               updatePromises.push(
                 apiPut('/api/officiels', { 
                   nom, 
-                  telephone: numero 
+                  telephone: numero,
+                  provenance: 'liste_competition',
+                  purpose: 'organisation_planning',
                 }).then(() => {}).catch((err) => {
                   console.error(`Erreur lors de l'ajout/mise à jour de l'encadrant ${nom}:`, err);
                 })
@@ -368,7 +372,9 @@ export const EventEditor = memo(function EventEditor({
               updatePromises.push(
                 apiPut('/api/officiels', { 
                   nom, 
-                  telephone: numero 
+                  telephone: numero,
+                  provenance: 'liste_competition',
+                  purpose: 'organisation_planning',
                 }).then(() => {}).catch((err) => {
                   console.error(`Erreur lors de l'ajout/mise à jour de l'encadrant ${nom}:`, err);
                 })

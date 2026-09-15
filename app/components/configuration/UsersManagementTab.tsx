@@ -214,7 +214,10 @@ export function UsersManagementTab() {
                       <span className="font-medium text-foreground">{user.nom}</span>
                     </DataCell>
                     <DataCell className="text-muted-foreground break-words">{user.email}</DataCell>
-                    <DataCell className="text-muted-foreground">{user.telephone || '—'}</DataCell>
+                    <DataCell className="text-muted-foreground">
+                      {user.telephone || '—'}
+                      {user.telephoneMasked ? ' (masqué)' : ''}
+                    </DataCell>
                     <DataCell className="text-muted-foreground">{ACCESS_ROLE_LABELS[user.accessRole]}</DataCell>
                     <DataCell className="text-muted-foreground">{functionsLabel || '—'}</DataCell>
                     <DataCell>{status}</DataCell>

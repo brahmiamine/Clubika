@@ -12,6 +12,9 @@ import { findUserReferences } from '@/lib/planning/user-references';
 import { notifyAdmins } from '@/lib/notifications/service';
 import { readAppSettings } from '@/lib/settings-store';
 import { anonymizeMessagesForDeletedUser } from '@/lib/chat/service';
+import { serializeManagedUser } from '@/lib/non-account-contacts/serialize-user';
+import { applyTelephoneGateAndMeta, contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
+import { inferCategoryFromPlanningFunctions } from '@/lib/non-account-contacts/meta';
 
 function isMysqlDeadlock(error: unknown): boolean {
   for (let current = error, depth = 0; current && typeof current === 'object' && depth < 5; depth += 1) {
@@ -36,16 +39,17 @@ async function retryOnMysqlDeadlock<T>(work: () => Promise<T>, attempts = 3): Pr
 }
 
 function serializeUser(user: UserEntity) {
+  const serialized = serializeManagedUser(user);
   return {
-    id: user.id,
-    email: user.email,
-    nom: user.nom,
-    accessRole: user.accessRole,
-    planningFunctions: user.planningFunctions,
-    active: user.active,
-    telephone: user.telephone,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+    id: serialized.id,
+    email: serialized.email,
+    nom: serialized.nom,
+    accessRole: serialized.accessRole,
+    planningFunctions: serialized.planningFunctions,
+    active: serialized.active,
+    telephone: serialized.telephone,
+    createdAt: serialized.createdAt,
+    updatedAt: serialized.updatedAt,
   };
 }
 
@@ -136,7 +140,19 @@ export async function PUT(
       user.accessRole = nextAccessRole;
       user.planningFunctions = nextFunctions;
       user.active = nextActive;
-      if (typeof telephone === 'string') user.telephone = telephone.trim() || null;
+      if (typeof telephone === 'string') {
+        if (user.claimedAt == null) {
+          user.telephone = await applyTelephoneGateAndMeta(db, {
+            user,
+            clubId: auth.user.clubId,
+            category: inferCategoryFromPlanningFunctions(user.planningFunctions),
+            recordedByUserId: auth.user.id,
+            body,
+          });
+        } else {
+          user.telephone = telephone.trim() || null;
+        }
+      }
       if (typeof password === 'string' && password.length > 0) {
         user.passwordHash = await hashPassword(password);
       }
@@ -180,8 +196,10 @@ export async function PUT(
     }
 
     const users = await getRepo(db).find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
-    return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
+    return NextResponse.json({ success: true, data: { users: users.map((user) => serializeUser(user)) } });
   } catch (error) {
+    const lifecycle = contactLifecycleResponse(error);
+    if (lifecycle) return lifecycle;
     console.error('Error updating user in DB:', error);
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
@@ -258,7 +276,7 @@ export async function DELETE(
     await revokeAllSessionsForUser(outcome.userId);
 
     const users = await getRepo(db).find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
-    return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
+    return NextResponse.json({ success: true, data: { users: users.map((user) => serializeUser(user)) } });
   } catch (error) {
     console.error('Error deleting user in DB:', error);
     return NextResponse.json({ error: 'Failed to delete user' }, { status: 500 });

@@ -41,6 +41,7 @@ interface InvitationValidation {
   accessRole: ClubAccessRole;
   planningFunctions: PlanningFunction[];
   personNom: string | null;
+  notice?: { version: string; text: string; disclaimer: string } | null;
   club?: InvitationClubBrand;
   error?: string;
 }
@@ -154,6 +155,13 @@ export default function InscriptionPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {invitation.notice ? (
+            <div className="mb-4 space-y-2 rounded-md border p-3 text-sm">
+              <p className="font-medium">Information (version {invitation.notice.version})</p>
+              <p className="whitespace-pre-wrap text-muted-foreground">{invitation.notice.text}</p>
+              <p className="text-xs text-muted-foreground">{invitation.notice.disclaimer}</p>
+            </div>
+          ) : null}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="nom">Nom</Label>

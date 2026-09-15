@@ -112,6 +112,7 @@ Les migrations sont à sens unique et sans `down` automatisé. Stratégie :
 | `scraper_sync_runs` | `app/lib/scraper/runs.ts` | `0006` |
 | `planning_assignment_state` | `app/lib/planning/assignment-state-store.ts` | `0007` |
 | tables d'entités TypeORM (`users`, `clubs`, chat, …) | `DataSource.synchronize()` au boot | `0018` |
+| `non_account_contact_meta`, `club_notice_config`, `non_account_rights_requests` | cycle de vie des fiches sans compte (issue [#26](https://github.com/brahmiamine/Clubika/issues/26)) | `0025` |
 
 ## Conversions de schéma encadrées
 

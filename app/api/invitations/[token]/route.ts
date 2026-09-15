@@ -6,6 +6,8 @@ import { setCurrentClubId } from '@/lib/auth/club-context';
 import { hashInvitationToken, resolveInvitationLookupId } from '@/lib/auth/invitation-tokens';
 import { isClubTenantActive } from '@/lib/db/club-tenants';
 import { readAppSettings } from '@/lib/settings-store';
+import { loadNoticeConfig } from '@/lib/non-account-contacts/meta';
+import { PRIVACY_NO_LEGAL_PROMISE } from '@/lib/non-account-contacts/constants';
 
 // GET: public — used by the /inscription/[token] page to validate a link before signup
 export async function GET(
@@ -34,6 +36,14 @@ export async function GET(
     }
 
     const settings = await readAppSettings(db, invitation.clubId);
+    const noticeConfig = await loadNoticeConfig(db, invitation.clubId);
+    const notice = noticeConfig?.noticeVersion
+      ? {
+          version: noticeConfig.noticeVersion,
+          text: noticeConfig.noticeText,
+          disclaimer: PRIVACY_NO_LEGAL_PROMISE,
+        }
+      : null;
 
     return NextResponse.json({
       valid: true,
@@ -41,6 +51,7 @@ export async function GET(
       accessRole: invitation.accessRole,
       planningFunctions: invitation.planningFunctions,
       personNom: invitation.personNom,
+      notice,
       club: {
         name: settings.clubName,
         logo: settings.clubLogo,

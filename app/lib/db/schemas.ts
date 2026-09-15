@@ -701,6 +701,96 @@ export const PlatformSessionSchema = new EntitySchema<PlatformSessionEntity>({
   },
 });
 
+export interface NonAccountContactMetaEntity {
+  id: string;
+  userId: number;
+  clubId: string;
+  category: string;
+  provenance: string | null;
+  purpose: string;
+  collectedAt: Date;
+  recordedByUserId: number;
+  noticeVersion: string | null;
+  noticeChannel: string;
+  noticeAt: Date | null;
+  noticeResult: string;
+  opposedAt: Date | null;
+  status: string;
+}
+
+export const NonAccountContactMetaSchema = new EntitySchema<NonAccountContactMetaEntity>({
+  name: 'NonAccountContactMeta',
+  tableName: 'non_account_contact_meta',
+  indices: [
+    { name: 'uq_non_account_contact_meta_user', columns: ['userId'], unique: true },
+    { name: 'idx_non_account_contact_meta_club', columns: ['clubId'] },
+  ],
+  columns: {
+    id: { type: String, primary: true },
+    userId: { type: Number },
+    clubId: { type: String },
+    category: { type: String },
+    provenance: { type: String, nullable: true },
+    purpose: { type: String },
+    collectedAt: { type: 'datetime' },
+    recordedByUserId: { type: Number },
+    noticeVersion: { type: String, nullable: true },
+    noticeChannel: { type: String, default: 'not_sent' },
+    noticeAt: { type: 'datetime', nullable: true },
+    noticeResult: { type: String, default: 'pending' },
+    opposedAt: { type: 'datetime', nullable: true },
+    status: { type: String, default: 'active' },
+  },
+});
+
+export interface ClubNoticeConfigEntity {
+  clubId: string;
+  noticeVersion: string;
+  noticeText: string;
+  updatedAt: Date;
+}
+
+export const ClubNoticeConfigSchema = new EntitySchema<ClubNoticeConfigEntity>({
+  name: 'ClubNoticeConfig',
+  tableName: 'club_notice_config',
+  columns: {
+    clubId: { type: String, primary: true },
+    noticeVersion: { type: String, default: '' },
+    noticeText: { type: 'text' },
+    updatedAt: { type: 'datetime', updateDate: true },
+  },
+});
+
+export interface NonAccountRightsRequestEntity {
+  id: string;
+  clubId: string;
+  type: string;
+  subjectEmailHash: string | null;
+  subjectPhoneHash: string | null;
+  status: string;
+  createdAt: Date;
+  processedAt: Date | null;
+}
+
+export const NonAccountRightsRequestSchema = new EntitySchema<NonAccountRightsRequestEntity>({
+  name: 'NonAccountRightsRequest',
+  tableName: 'non_account_rights_requests',
+  indices: [
+    { name: 'idx_non_account_rights_club', columns: ['clubId', 'createdAt'] },
+    { name: 'idx_non_account_rights_hashes', columns: ['clubId', 'subjectEmailHash', 'subjectPhoneHash'] },
+  ],
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    type: { type: String },
+    subjectEmailHash: { type: String, nullable: true },
+    subjectPhoneHash: { type: String, nullable: true },
+    status: { type: String, default: 'received' },
+    createdAt: { type: 'datetime', createDate: true },
+    processedAt: { type: 'datetime', nullable: true },
+  },
+});
+
 export const allSchemas = [
   ClubSchema,
   CategorieSchema,
@@ -725,4 +815,7 @@ export const allSchemas = [
   ClubTenantSchema,
   PlatformAdminSchema,
   PlatformSessionSchema,
+  NonAccountContactMetaSchema,
+  ClubNoticeConfigSchema,
+  NonAccountRightsRequestSchema,
 ];
