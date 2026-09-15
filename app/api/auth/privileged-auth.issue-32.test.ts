@@ -1,9 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
-import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { createTestUserAndSession, enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import { POST as confirmReset } from '@/app/api/auth/password-reset/confirm/route';
 import { POST as requestReset } from '@/app/api/auth/password-reset/request/route';
 import type { PasswordResetTokenEntity } from '@/lib/db/schemas';
@@ -18,8 +18,14 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
   const previousBase = process.env.APP_BASE_URL;
   const previousWebhook = process.env.PASSWORD_RESET_WEBHOOK_URL;
   const cleanups: Array<() => Promise<void>> = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     if (previousBase === undefined) delete process.env.APP_BASE_URL;
     else process.env.APP_BASE_URL = previousBase;
     if (previousWebhook === undefined) delete process.env.PASSWORD_RESET_WEBHOOK_URL;
@@ -50,7 +56,7 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
       const unknown = await requestReset(new NextRequest('http://localhost/api/auth/password-reset/request', {
         method: 'POST',
         body: JSON.stringify({ email: `nobody-${randomBytes(4).toString('hex')}@example.com` }),
-        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': randomBytes(8).toString('hex') },
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': uniqueTestIp() },
       }));
       const unknownBody = await unknown.json() as { resetUrl?: string; success: boolean };
       expect(unknownBody.success).toBe(true);
@@ -59,7 +65,7 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
       const known = await requestReset(new NextRequest('http://localhost/api/auth/password-reset/request', {
         method: 'POST',
         body: JSON.stringify({ email: account.user.email }),
-        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': randomBytes(8).toString('hex') },
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': uniqueTestIp() },
       }));
       expect(known.status).toBe(200);
       const knownBody = await known.json() as { resetUrl?: string };

@@ -4,6 +4,7 @@ import { requirePlatformAuth } from '@/lib/auth/platform-require';
 import type { ClubTenantEntity } from '@/lib/db/schemas';
 import { serializeOffboarding } from '@/lib/tenant-offboarding/writable';
 import { TOMBSTONE_CLUB_NAME } from '@/lib/tenant-offboarding/constants';
+import { logError } from '@/lib/observability/log';
 
 export async function GET(request: NextRequest) {
   const auth = await requirePlatformAuth(request);
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
       }));
     return NextResponse.json({ clubs: offboarding });
   } catch (error) {
-    console.error('Error listing offboarding clubs:', error);
+    logError('app.unhandled', 'Error listing offboarding clubs:', error);
     return NextResponse.json({ error: 'Impossible de charger l’offboarding' }, { status: 500 });
   }
 }

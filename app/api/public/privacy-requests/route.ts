@@ -5,6 +5,7 @@ import { PRIVACY_NO_LEGAL_PROMISE, isPrivacyRequestType } from '@/lib/privacy/ca
 import { createPrivacyRequest, notifyAdminsOfPrivacyRequest } from '@/lib/privacy/requests';
 import { checkCapabilityIpRateLimit, recordCapabilityIpAttempt } from '@/lib/auth/capability-rate-limit';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { logError } from '@/lib/observability/log';
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
       request: { id: row.id, type: row.type, status: row.status, createdAt: row.createdAt },
     });
   } catch (error) {
-    console.error('Public privacy intake failed:', error);
+    logError('app.unhandled', 'Public privacy intake failed:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer la demande' }, { status: 500 });
   }
 }

@@ -10,6 +10,7 @@ import { purgeClub } from '@/lib/tenant-offboarding/purge';
 import { getOffboardingSnapshot } from '@/lib/tenant-offboarding/status';
 import { parseRetentionUntil } from '@/lib/tenant-offboarding/dates';
 import { PRIVACY_NO_LEGAL_PROMISE } from '@/lib/tenant-offboarding/constants';
+import { logError } from '@/lib/observability/log';
 
 async function resolveClubId(params: Promise<{ id: string }> | { id: string }): Promise<string> {
   const resolved = params instanceof Promise ? await params : params;
@@ -20,7 +21,7 @@ function jsonError(error: unknown): NextResponse {
   if (error instanceof OffboardingError) {
     return NextResponse.json({ error: error.message, notice: PRIVACY_NO_LEGAL_PROMISE }, { status: error.status });
   }
-  console.error('tenant offboarding error:', error);
+  logError('app.unhandled', 'tenant offboarding error:', error);
   return NextResponse.json({ error: 'Impossible de traiter l’offboarding' }, { status: 500 });
 }
 

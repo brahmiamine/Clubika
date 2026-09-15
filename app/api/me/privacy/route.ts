@@ -4,6 +4,7 @@ import { getDb } from '@/lib/db';
 import type { UserEntity } from '@/lib/db/schemas';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { PRIVACY_NO_LEGAL_PROMISE, isPrivacyRequestType } from '@/lib/privacy/catalog';
+import { logError } from '@/lib/observability/log';
 import {
   createPrivacyRequest,
   listPrivacyRequestsForUser,
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
       request: toPrivacyRequestDto(row),
     });
   } catch (error) {
-    console.error('Privacy request create failed:', error);
+    logError('app.unhandled', 'Privacy request create failed:', error);
     return NextResponse.json({ error: 'Impossible d’enregistrer la demande' }, { status: 500 });
   }
 }

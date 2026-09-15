@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth/require';
 import { revokeAllSessionsForUser } from '@/lib/auth/session';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { notifyAdmins } from '@/lib/notifications/service';
+import { logError } from '@/lib/observability/log';
 import {
   AccountClosureError,
   closeAccount,
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof AccountClosureError && error.code === 'not-found') {
       return NextResponse.json({ error: error.message }, { status: 404 });
     }
-    console.error('Error processing account closure request:', error);
+    logError('app.unhandled', 'Error processing account closure request:', error);
     return NextResponse.json({ error: 'Impossible de traiter la fermeture du compte' }, { status: 500 });
   }
 }

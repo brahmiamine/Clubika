@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { consumeExportDownload } from '@/lib/privacy/download';
 import { checkCapabilityIpRateLimit, checkCapabilityTokenRateLimit, recordCapabilityIpAttempt, recordCapabilityTokenAttempt } from '@/lib/auth/capability-rate-limit';
+import { logError } from '@/lib/observability/log';
 
 export async function GET(
   request: NextRequest,
@@ -35,7 +36,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('Privacy export download failed:', error);
+    logError('app.unhandled', 'Privacy export download failed:', error);
     return NextResponse.json({ error: 'Téléchargement impossible' }, { status: 500 });
   }
 }

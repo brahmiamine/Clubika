@@ -6,6 +6,7 @@ import { setCurrentClubId } from '@/lib/auth/club-context';
 import { hasAccountAccess } from '@/lib/auth/placeholder-account';
 import { parseStatus, upsertContactMeta, markOpposition, inferCategoryFromPlanningFunctions, loadContactMeta } from '@/lib/non-account-contacts/meta';
 import { contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
+import { logError } from '@/lib/observability/log';
 
 export async function PATCH(
   request: NextRequest,
@@ -65,7 +66,7 @@ export async function PATCH(
   } catch (error) {
     const lifecycle = contactLifecycleResponse(error);
     if (lifecycle) return lifecycle;
-    console.error('Error updating non-account contact:', error);
+    logError('app.unhandled', 'Error updating non-account contact:', error);
     return NextResponse.json({ error: 'Mise à jour impossible' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import type { DataSource, EntityManager } from 'typeorm';
 import { auditPayloadsEqual, minimizeAuditPayload } from '@/lib/audit/minimize';
 import type { MatchAuditLogEntity } from '@/lib/db/schemas';
+import { logInfo } from '@/lib/observability/log';
 
 export interface SanitizeHistoricalAuditLogsResult {
   scanned: number;
@@ -90,11 +91,11 @@ export async function applyAuditLogMinimizeMigration(db: DataSource): Promise<vo
   if (Number(tables[0]?.n) === 0) return;
 
   const inventory = await sanitizeHistoricalAuditLogs(db, { dryRun: true });
-  console.info(
+  logInfo('app.unhandled',
     `[migration 0037] inventaire audit : scanned=${inventory.scanned} actorCleared=${inventory.actorCleared} payloadRedacted=${inventory.payloadRedacted} mutated=${inventory.mutated}`,
   );
   const applied = await sanitizeHistoricalAuditLogs(db, { dryRun: false });
-  console.info(
+  logInfo('app.unhandled',
     `[migration 0037] application audit : scanned=${applied.scanned} actorCleared=${applied.actorCleared} payloadRedacted=${applied.payloadRedacted} mutated=${applied.mutated}`,
   );
 }

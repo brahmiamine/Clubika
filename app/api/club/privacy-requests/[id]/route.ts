@@ -8,6 +8,7 @@ import { getPrivacyRequest, patchPrivacyRequest, toPrivacyRequestDto } from '@/l
 import { applyProcessingFlag } from '@/lib/privacy/rectify';
 import { issueExportToken } from '@/lib/privacy/download';
 import { normalizePrivacyEmail } from '@/lib/privacy/catalog';
+import { logError } from '@/lib/observability/log';
 
 export async function GET(
   request: NextRequest,
@@ -99,7 +100,7 @@ export async function PATCH(
       request: toPrivacyRequestDto(refreshed!),
     });
   } catch (error) {
-    console.error('Privacy request patch failed:', error);
+    logError('app.unhandled', 'Privacy request patch failed:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour la demande' }, { status: 500 });
   }
 }

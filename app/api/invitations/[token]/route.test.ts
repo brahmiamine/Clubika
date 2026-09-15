@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
-import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { createTestUserAndSession, enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import type { InvitationEntity } from '@/lib/db/schemas';
 import { hashInvitationToken, maskEmail } from '@/lib/auth/invitation-tokens';
 import { hashBucketComponent } from '@/lib/auth/login-rate-limit';
@@ -15,13 +15,21 @@ import { saveAppSettings } from '@/lib/settings-store';
 
 const dbAvailable = await isDbAvailable();
 
-function getRequest(token: string, ip = randomBytes(8).toString('hex')) {
+let restoreProxy: (() => void) | undefined;
+beforeEach(() => {
+  restoreProxy = enableTrustedProxyHeaders();
+});
+afterEach(() => {
+  restoreProxy?.();
+});
+
+function getRequest(token: string, ip = uniqueTestIp()) {
   return new NextRequest(`http://localhost/api/invitations/${token}`, {
     headers: { 'x-forwarded-for': ip },
   });
 }
 
-function contextRequest(contextToken: string, ip = randomBytes(8).toString('hex')) {
+function contextRequest(contextToken: string, ip = uniqueTestIp()) {
   return new NextRequest('http://localhost/api/invitations/context', {
     headers: {
       'x-forwarded-for': ip,
