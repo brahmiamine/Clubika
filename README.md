@@ -268,6 +268,7 @@ plateforme lorsque la table est vide ; retirez-les après la première connexion
 ### Email SMTP
 
 ```env
+SMTP_ENABLED=true
 SMTP_HOST=smtp.exemple.fr
 SMTP_PORT=587
 SMTP_USER=notifications@exemple.fr
@@ -275,6 +276,10 @@ SMTP_PASSWORD=change-me
 SMTP_SECURE=false
 SMTP_FROM=notifications@exemple.fr
 ```
+
+`SMTP_ENABLED` doit valoir exactement `true`. Sans ce drapeau, aucun e-mail n’est envoyé.
+Le port 587 impose STARTTLS avec certificat vérifié ; le port 465 (ou `SMTP_SECURE=true`)
+utilise le TLS implicite. Il n’y a pas de repli en clair. Procédure : `docs/external-services.md`.
 
 Ces variables servent de repli global. Chaque club peut définir son propre serveur SMTP dans
 **Configuration → Personnalisation** (réservé aux administrateurs du club) ; le mot de passe est
@@ -333,21 +338,29 @@ Générez les clés VAPID avec :
 node scripts/generate-vapid-keys.mjs
 ```
 
-Configurez ensuite les variables VAPID indiquées par le script dans votre `.env`. Ne commitez jamais les clés privées.
+Configurez ensuite les variables VAPID indiquées par le script **et** `WEB_PUSH_ENABLED=true`.
+Ne commitez jamais les clés privées. Sans ce drapeau, aucun push n’est envoyé.
 
 ### Routage et météo
 
-Open-Meteo est le provider météo par défaut. Pour le mode gratuit non commercial, aucune clé API ni compte n'est nécessaire. Les URLs ci-dessous sont optionnelles : elles permettent seulement de remplacer les endpoints par défaut.
+Désactivés par défaut (issue #30). Il n’y a **pas** de fallback vers
+`router.project-osrm.org` ni vers les API publiques Open-Meteo en production.
+Pour activer, après revue juridique :
 
 ```env
-ROUTING_API_BASE_URL=https://router.project-osrm.org
-OPEN_METEO_GEOCODING_URL=https://geocoding-api.open-meteo.com/v1/search
+ROUTING_ENABLED=true
+ROUTING_API_BASE_URL=https://osrm.votre-infra.example
+OPEN_METEO_ENABLED=true
 OPEN_METEO_FORECAST_URL=https://api.open-meteo.com/v1/forecast
+OPEN_METEO_GEOCODING_URL=https://geocoding-api.open-meteo.com/v1/search
 ```
 
-La météo utilise le lieu de l'événement ou les coordonnées de ressource, avec timeout court. Le géocodage et la prévision sont mis en cache en mémoire côté serveur (respectivement 30 et 5 minutes), partagés entre tous les utilisateurs consultant le même lieu ou le même jour — les appels réseau à Open-Meteo eux-mêmes désactivent explicitement le cache HTTP (`cache: 'no-store'`) puisque c'est ce cache applicatif qui fait foi. Une panne du routage ou de la météo ne bloque jamais une écriture du planning ; l'information est simplement signalée comme indisponible.
+Le drapeau club « Trajet et météo » peut en plus être coupé sans perte de données.
+Une panne du routage ou de la météo ne bloque jamais une écriture du planning.
 
-Les données Open-Meteo nécessitent une attribution. L'interface affiche la source. Vérifiez les conditions Open-Meteo si l'application devient commerciale ; leur API publique gratuite est destinée à l'usage non commercial.
+Les données Open-Meteo nécessitent une attribution. Vérifiez les conditions du
+prestataire si l’application devient commerciale. Détail des kill switches :
+[`docs/external-services.md`](docs/external-services.md).
 
 ### Relances automatiques GitHub Actions
 

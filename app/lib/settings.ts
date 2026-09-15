@@ -61,7 +61,7 @@ export const DEFAULT_PLANNING_FEATURES: PlanningFeatureFlags = {
     scraperSync: false,
     officialMatchesCurrentWeekendOnly: true,
     eventChat: true,
-    travelAndWeather: true,
+    travelAndWeather: false,
     calendarExport: true,
     collaboration: true,
     requireArbitreForPublication: true,

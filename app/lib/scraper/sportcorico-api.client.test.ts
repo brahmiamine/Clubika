@@ -41,7 +41,6 @@ describe('fetchSportCoricoMatch', () => {
     );
     expect(fetchImpl).not.toHaveBeenCalled();
   });
-
   it('retourne le match API quand la réponse est valide', async () => {
     enableLicensedSync();
     const fetchImpl: typeof fetch = vi.fn(async () => new Response(JSON.stringify({
@@ -80,6 +79,13 @@ describe('fetchSportCoricoMatch', () => {
     await expect(fetchSportCoricoMatch('broken-slug', fetchImpl)).rejects.toThrow(
       'Réponse SportCorico invalide pour broken-slug',
     );
+  });
+
+  it('bloque l’appel si SPORTCORICO_SYNC_ENABLED n’est pas true', async () => {
+    vi.stubEnv('SPORTCORICO_SYNC_ENABLED', '');
+    const fetchImpl: typeof fetch = vi.fn(async () => new Response('nope'));
+    await expect(fetchSportCoricoMatch('demo-slug', fetchImpl)).rejects.toThrow(/désactivée/);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
 
@@ -148,7 +154,6 @@ describe('fetchSportCoricoClub', () => {
     );
     expect(fetchImpl).not.toHaveBeenCalled();
   });
-
   it('retourne le club API quand la réponse est valide', async () => {
     enableLicensedSync();
     const fetchImpl: typeof fetch = vi.fn(async () => new Response(JSON.stringify({

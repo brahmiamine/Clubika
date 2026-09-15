@@ -6,6 +6,7 @@ import { buildPlanningAnalytics } from '@/lib/planning/analytics';
 import { getWeekendPlanning } from '@/lib/planning/weekend';
 import { getPlanningWeather } from '@/lib/planning/weather';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { isPlanningFeatureEnabled } from '@/lib/settings-store';
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole(request, ['admin']);
@@ -20,16 +21,19 @@ export async function GET(request: NextRequest) {
       getWeekendPlanning(db),
     ]);
 
-    const weatherResults = await Promise.all(
-      weekend.items.slice(0, 8).map(async (item) => ({
-        eventId: item.eventId,
-        eventType: item.eventType,
-        title: item.title,
-        date: item.date,
-        time: item.time,
-        weather: await getPlanningWeather(db, item.eventType, item.eventId),
-      })),
-    );
+    const weatherEnabled = await isPlanningFeatureEnabled(db, auth.user.clubId, 'travelAndWeather');
+    const weatherResults = weatherEnabled
+      ? await Promise.all(
+        weekend.items.slice(0, 8).map(async (item) => ({
+          eventId: item.eventId,
+          eventType: item.eventType,
+          title: item.title,
+          date: item.date,
+          time: item.time,
+          weather: await getPlanningWeather(db, item.eventType, item.eventId),
+        })),
+      )
+      : [];
     const weatherAlerts = weatherResults.filter(
       (item) => item.weather.available && item.weather.severity !== 'normal',
     );
