@@ -67,10 +67,13 @@ appliqué, et **sans** `synchronize` en production), donc un oubli de l'étape
 explicite ne laisse pas le schéma à la traîne — mais l'étape `db:migrate` permet de
 faire échouer le déploiement **avant** la mise en service.
 
-Une base existante (schéma déjà créé par d'anciens `synchronize`) reçoit `0018`
-comme un no-op des `CREATE TABLE IF NOT EXISTS` plus les durcissements
-idempotents (retrait des colonnes héritées `roles` / `role`, `clubId` NOT NULL sur
-`match_audit_log`).
+La migration `0038` (issue #22) crée les tables d’exercice des droits et ajoute
+les drapeaux de restriction/opposition sur `users`. Idempotente.
+
+La migration `0037` (issue #20) n'ajoute pas de colonne : elle inventorie puis
+assainit les lignes de `match_audit_log` (voir [`docs/audit-log.md`](audit-log.md)).
+Prendre une sauvegarde SQL avant `db:migrate` sur une instance qui contient déjà
+de l'audit ; le retour arrière est la restauration de cette sauvegarde.
 
 ### CI
 
@@ -89,6 +92,10 @@ Avec Docker Compose, ajouter un service one-shot `migrate` (même image, command
 
 `TYPEORM_SYNCHRONIZE=1` n'est utile que pour un bac de développement hors CI, jamais
 en production (`NODE_ENV=production` l'ignore).
+
+La migration `0039` (issue #25) ajoute l’état d’offboarding sur `club_tenants` et
+les tables de restitution / instructions sous-traitants / certificats. Idempotente.
+Voir [tenant-offboarding.md](./tenant-offboarding.md).
 
 ### Rollback
 
@@ -112,6 +119,8 @@ Les migrations sont à sens unique et sans `down` automatisé. Stratégie :
 | `scraper_sync_runs` | `app/lib/scraper/runs.ts` | `0006` |
 | `planning_assignment_state` | `app/lib/planning/assignment-state-store.ts` | `0007` |
 | tables d'entités TypeORM (`users`, `clubs`, chat, …) | `DataSource.synchronize()` au boot | `0018` |
+| `account_closures` + colonnes `users.closedAt` / `closureRequestedAt` / `closedByUserId` | fermeture de compte (issue #11) | `0036` |
+| `non_account_contact_meta`, `club_notice_config`, `non_account_rights_requests` | cycle de vie des fiches sans compte (issue [#26](https://github.com/brahmiamine/Clubika/issues/26)) | `0040` |
 
 ## Conversions de schéma encadrées
 

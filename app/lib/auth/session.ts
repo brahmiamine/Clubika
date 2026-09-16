@@ -120,7 +120,7 @@ function sessionIsExpired(session: UserSessionEntity, now = Date.now()): boolean
   return now >= idleDeadline || now >= absoluteDeadline;
 }
 
-async function findSessionByToken(token: string): Promise<UserSessionEntity | null> {
+export async function findSessionByToken(token: string): Promise<UserSessionEntity | null> {
   const db = await getDb();
   const repo = db.getRepository<UserSessionEntity>('UserSession');
   const candidates = sessionTokenHashCandidates(token);
@@ -179,7 +179,7 @@ export async function resolveClubSession(token: string | undefined | null): Prom
 
   const db = await getDb();
   const user = await db.getRepository<UserEntity>('User').findOneBy({ id: session.userId });
-  if (!user || !user.active) {
+  if (!user || !user.active || user.closedAt) {
     return null;
   }
 

@@ -30,6 +30,8 @@ const MATRIX: Array<{
   { type: 'planning-preferences-updated', eventType: null, eventId: null, adminHref: '/club/notifications', personalHref: '/mon-planning/notifications' },
   { type: 'post-event-report', eventType: 'officiel', eventId: 'm5', adminHref: '/club/evenements/officiel/m5?from=planning', personalHref: '/mon-planning/evenements/officiel/m5' },
   { type: 'user-deactivated-with-assignments', eventType: null, eventId: null, adminHref: '/club/planning', personalHref: '/mon-planning/notifications' },
+  { type: 'account-closure-requested', eventType: null, eventId: null, adminHref: '/club/utilisateurs', personalHref: '/mon-planning/notifications' },
+  { type: 'account-closure-processed', eventType: null, eventId: null, adminHref: '/club/utilisateurs', personalHref: '/mon-planning/notifications' },
   { type: 'chat-dm', eventType: 'chat', eventId: 'room-dm', adminHref: '/club/chat?roomId=room-dm', personalHref: '/mon-planning/chat?roomId=room-dm' },
   { type: 'chat-event-message', eventType: 'chat', eventId: 'room-evt', adminHref: '/club/chat?roomId=room-evt', personalHref: '/mon-planning/chat?roomId=room-evt' },
   { type: 'chat-mention', eventType: 'chat', eventId: 'room-ch', adminHref: '/club/chat?roomId=room-ch', personalHref: '/mon-planning/chat?roomId=room-ch' },

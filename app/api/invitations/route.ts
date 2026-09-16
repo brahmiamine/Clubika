@@ -16,6 +16,12 @@ import {
 import { isDuplicateEntryError } from '@/lib/db/duplicate-entry';
 import { BodyValidator, parseJsonBody, RequestValidationError } from '@/lib/validation/request';
 import { resolveCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
+import {
+  inferCategoryFromPlanningFunctions,
+  loadContactMeta,
+  upsertContactMeta,
+  recordNoticeProof,
+} from '@/lib/non-account-contacts/meta';
 
 function pendingInvitationEmailKey(clubId: string, email: string | null): string | null {
   return email ? `${clubId}:${email.toLowerCase()}` : null;
@@ -216,6 +222,21 @@ export async function POST(request: NextRequest) {
     };
 
     await repo.save(invitation);
+
+    if (targetProfile) {
+      const existingMeta = await loadContactMeta(db, targetProfile.id);
+      if (!existingMeta) {
+        await upsertContactMeta(db, {
+          userId: targetProfile.id,
+          clubId: auth.user.clubId,
+          category: inferCategoryFromPlanningFunctions(targetProfile.planningFunctions),
+          provenance: null,
+          purpose: 'organisation_planning',
+          recordedByUserId: auth.user.id,
+        });
+      }
+      await recordNoticeProof(db, targetProfile.id, auth.user.clubId, 'invitation');
+    }
 
     const path = `/inscription/${rawToken}`;
     const origin = resolveCanonicalPublicOrigin();

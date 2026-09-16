@@ -16,6 +16,8 @@ function serializeClub(club: ClubTenantEntity) {
     active: club.active,
     matchesUrlKey: club.matchesUrlKey,
     scraperClubName: club.scraperClubName,
+    offboardingStatus: club.offboardingStatus ?? 'none',
+    legalHoldActive: Boolean(club.legalHoldActive),
     createdAt: club.createdAt,
     updatedAt: club.updatedAt,
   };
@@ -179,6 +181,16 @@ export async function POST(request: NextRequest) {
       smtpFromEmail: null,
       smtpFromName: null,
       active: true,
+      offboardingStatus: 'none',
+      frozenAt: null,
+      retentionUntil: null,
+      purgedAt: null,
+      legalHoldActive: false,
+      legalHoldMotive: null,
+      legalHoldScope: null,
+      legalHoldExpiresAt: null,
+      legalHoldApprovedBy: null,
+      legalHoldCreatedAt: null,
     });
 
     try {
