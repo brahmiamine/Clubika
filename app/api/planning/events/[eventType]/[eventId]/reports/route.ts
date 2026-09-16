@@ -21,10 +21,11 @@ import {
   isReportCategory,
   paginateReports,
   parseReportPage,
-  reportAuditMeta,
   toVisibleReport,
   type ReportPayload,
 } from '@/lib/planning/report-access';
+import { reportAuditAfter } from '@/lib/planning/report-privacy';
+import { purgeExpiredPostEventReports } from '@/lib/planning/report-retention';
 import { reportJson, reportNotFound } from './context';
 import type { PlanningEventType } from '@/lib/planning/event-store';
 
@@ -71,6 +72,7 @@ export async function GET(
 ) {
   const ctx = await loadReportCollection(request, params);
   if ('error' in ctx) return ctx.error;
+  await purgeExpiredPostEventReports(ctx.db);
   const { limit, offset } = parseReportPage(new URL(request.url).searchParams);
   const stored = await listPlanningRecords<ReportPayload>(
     ctx.db,
@@ -126,7 +128,12 @@ export async function POST(
       entityId: id,
       action: 'report',
       before: null,
-      after: reportAuditMeta(id),
+      after: reportAuditAfter({
+        reportId: id,
+        eventType: ctx.eventType,
+        eventId: ctx.eventId,
+        category,
+      }),
     });
     await notifyAdmins(ctx.db, {
       type: 'post-event-report',
@@ -153,6 +160,5 @@ export async function POST(
   } catch (error) {
     logError('app.unhandled', 'Post-event report failed:', error);
     return reportJson({ error: 'Impossible d’enregistrer le rapport' }, 500);
-  }
   }
 }

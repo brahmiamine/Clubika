@@ -13,6 +13,7 @@ import {
   revokeAllSessionsForUser,
   type SessionRevocationEvent,
 } from './session';
+import { getClubSessionAuthenticatedAt, touchClubSessionAuth } from './recent-auth';
 
 const dbAvailable = await isDbAvailable();
 
@@ -91,6 +92,17 @@ describe.skipIf(!dbAvailable)('session (integration)', () => {
     expect(await getSessionUser(token)).not.toBeNull();
     expect(await getSessionUser(row?.id)).toBeNull();
     expect(await getSessionUser(row?.tokenHash)).toBeNull();
+  });
+
+  it('reads authenticatedAt from the hashed cookie token (issue #32 + #29)', async () => {
+    const { token, id } = await createSession(userId);
+    const authenticatedAt = await getClubSessionAuthenticatedAt(token);
+    expect(authenticatedAt).toBeInstanceOf(Date);
+    expect(await getClubSessionAuthenticatedAt(id)).toBeNull();
+    await touchClubSessionAuth(token);
+    const afterTouch = await getClubSessionAuthenticatedAt(token);
+    expect(afterTouch).toBeInstanceOf(Date);
+    expect(afterTouch!.getTime()).toBeGreaterThanOrEqual(authenticatedAt!.getTime());
   });
 
   it('expires a session after its idle TTL (issue #29)', async () => {

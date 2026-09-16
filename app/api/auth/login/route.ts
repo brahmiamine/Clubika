@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     for (const candidate of candidates) {
       // Un profil sans accès (issue #204) n'a pas d'identifiants connus : même si
       // le hash technique venait à être deviné, il ne doit jamais ouvrir de session.
-      if (!candidate.active || !hasAccountAccess(candidate)) continue;
+      if (!candidate.active || candidate.closedAt || !hasAccountAccess(candidate)) continue;
 
       const candidateClubId = resolveUserClubId(candidate);
       if (!(await isClubTenantActive(db, candidateClubId))) continue;

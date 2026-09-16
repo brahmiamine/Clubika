@@ -244,10 +244,23 @@ export interface UserEntity {
    * peut pas se connecter et n'est pas présenté comme un compte actif.
    */
   claimedAt: Date | null;
+  /**
+   * Fermeture RGPD (issue #11) : date à laquelle l'identité a été remplacée par le
+   * stub « Utilisateur supprimé ». `null` = compte non fermé.
+   */
+  closedAt: Date | null;
+  /** Demande de fermeture initiée par le titulaire, en attente ou déjà traitée. */
+  closureRequestedAt: Date | null;
+  /** Utilisateur (admin ou soi-même) qui a exécuté la fermeture. */
+  closedByUserId: number | null;
   telephone: string | null;
   indisponibilites: OfficielIndisponibilite[] | null;
   icalToken: string;
   notifyChannel: string;
+  /** Restriction de traitements non essentiels (issue #22). */
+  processingRestrictedAt?: Date | null;
+  /** Opposition aux traitements non essentiels (issue #22). */
+  processingOpposedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -273,10 +286,15 @@ export const UserSchema = new EntitySchema<UserEntity>({
     planningFunctions: { type: 'simple-json' },
     active: { type: Boolean, default: true },
     claimedAt: { type: 'datetime', nullable: true },
+    closedAt: { type: 'datetime', nullable: true },
+    closureRequestedAt: { type: 'datetime', nullable: true },
+    closedByUserId: { type: Number, nullable: true },
     telephone: { type: String, nullable: true },
     indisponibilites: { type: 'simple-json', nullable: true },
     icalToken: { type: String, unique: true },
     notifyChannel: { type: String, default: 'push' },
+    processingRestrictedAt: { type: 'datetime', nullable: true },
+    processingOpposedAt: { type: 'datetime', nullable: true },
     createdAt: { type: 'datetime', createDate: true },
     updatedAt: { type: 'datetime', updateDate: true },
   },
@@ -645,6 +663,17 @@ export interface ClubTenantEntity {
   smtpFromEmail: string | null;
   smtpFromName: string | null;
   active: boolean;
+  /** none | frozen | purged — issue #25 */
+  offboardingStatus: string;
+  frozenAt: Date | null;
+  retentionUntil: Date | null;
+  purgedAt: Date | null;
+  legalHoldActive: boolean;
+  legalHoldMotive: string | null;
+  legalHoldScope: string | null;
+  legalHoldExpiresAt: Date | null;
+  legalHoldApprovedBy: number | null;
+  legalHoldCreatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -673,6 +702,16 @@ export const ClubTenantSchema = new EntitySchema<ClubTenantEntity>({
     smtpFromEmail: { type: String, nullable: true },
     smtpFromName: { type: String, nullable: true },
     active: { type: Boolean, default: true },
+    offboardingStatus: { type: String, default: 'none' },
+    frozenAt: { type: 'datetime', nullable: true },
+    retentionUntil: { type: 'datetime', nullable: true },
+    purgedAt: { type: 'datetime', nullable: true },
+    legalHoldActive: { type: Boolean, default: false },
+    legalHoldMotive: { type: String, nullable: true },
+    legalHoldScope: { type: String, nullable: true },
+    legalHoldExpiresAt: { type: 'datetime', nullable: true },
+    legalHoldApprovedBy: { type: Number, nullable: true },
+    legalHoldCreatedAt: { type: 'datetime', nullable: true },
     createdAt: { type: 'datetime', createDate: true },
     updatedAt: { type: 'datetime', updateDate: true },
   },
@@ -817,6 +856,287 @@ export const PrivilegedAuthEventSchema = new EntitySchema<PrivilegedAuthEventEnt
   },
 });
 
+export interface PrivacyRequestEntity {
+  id: string;
+  clubId: string;
+  type: string;
+  status: string;
+  subjectUserId: number | null;
+  subjectEmailHash: string | null;
+  identityVerifiedAt: Date | null;
+  dueAt: Date | null;
+  assigneeUserId: number | null;
+  decisionCode: string | null;
+  responseProof: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  completedAt: Date | null;
+}
+
+export const PrivacyRequestSchema = new EntitySchema<PrivacyRequestEntity>({
+  name: 'PrivacyRequest',
+  tableName: 'privacy_requests',
+  indices: [
+    { name: 'idx_privacy_requests_club', columns: ['clubId', 'createdAt'] },
+    { name: 'idx_privacy_requests_subject', columns: ['clubId', 'subjectUserId'] },
+  ],
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    type: { type: String },
+    status: { type: String },
+    subjectUserId: { type: Number, nullable: true },
+    subjectEmailHash: { type: String, nullable: true },
+    identityVerifiedAt: { type: 'datetime', nullable: true },
+    dueAt: { type: 'datetime', nullable: true },
+    assigneeUserId: { type: Number, nullable: true },
+    decisionCode: { type: String, nullable: true },
+    responseProof: { type: String, nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+    updatedAt: { type: 'datetime', updateDate: true },
+    completedAt: { type: 'datetime', nullable: true },
+  },
+});
+
+export interface PrivacyExportTokenEntity {
+  id: string;
+  clubId: string;
+  userId: number;
+  requestId: string;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  downloadedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PrivacyExportTokenSchema = new EntitySchema<PrivacyExportTokenEntity>({
+  name: 'PrivacyExportToken',
+  tableName: 'privacy_export_tokens',
+  indices: [{ name: 'idx_privacy_export_tokens_user', columns: ['clubId', 'userId'] }],
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    userId: { type: Number },
+    requestId: { type: String },
+    expiresAt: { type: 'datetime' },
+    revokedAt: { type: 'datetime', nullable: true },
+    downloadedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface PrivacyContactChangeEntity {
+  id: string;
+  clubId: string;
+  userId: number;
+  newEmail: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+  createdAt: Date;
+}
+
+export const PrivacyContactChangeSchema = new EntitySchema<PrivacyContactChangeEntity>({
+  name: 'PrivacyContactChange',
+  tableName: 'privacy_contact_changes',
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    userId: { type: Number },
+    newEmail: { type: String },
+    expiresAt: { type: 'datetime' },
+    usedAt: { type: 'datetime', nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface TenantOffboardingExportEntity {
+  id: string;
+  clubId: string;
+  createdByPlatformAdminId: number;
+  expiresAt: Date;
+  usedAt: Date | null;
+  revokedAt: Date | null;
+  manifestSha256: string | null;
+  byteLength: number | null;
+  createdAt: Date;
+}
+
+export const TenantOffboardingExportSchema = new EntitySchema<TenantOffboardingExportEntity>({
+  name: 'TenantOffboardingExport',
+  tableName: 'tenant_offboarding_exports',
+  indices: [{ name: 'idx_tenant_offboarding_exports_club', columns: ['clubId', 'createdAt'] }],
+  columns: {
+    id: { type: String, primary: true, length: 64 },
+    clubId: { type: String, length: 64 },
+    createdByPlatformAdminId: { type: Number },
+    expiresAt: { type: 'datetime' },
+    usedAt: { type: 'datetime', nullable: true },
+    revokedAt: { type: 'datetime', nullable: true },
+    manifestSha256: { type: String, length: 64, nullable: true },
+    byteLength: { type: Number, nullable: true },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface TenantProcessorInstructionEntity {
+  id: string;
+  clubId: string;
+  processorId: string;
+  status: string;
+  instructedAt: Date;
+  responseAt: Date | null;
+}
+
+export const TenantProcessorInstructionSchema = new EntitySchema<TenantProcessorInstructionEntity>({
+  name: 'TenantProcessorInstruction',
+  tableName: 'tenant_processor_instructions',
+  indices: [{ name: 'idx_tenant_processor_instructions_club', columns: ['clubId', 'processorId'] }],
+  columns: {
+    id: { type: String, primary: true, length: 64 },
+    clubId: { type: String, length: 64 },
+    processorId: { type: String, length: 32 },
+    status: { type: String, length: 32 },
+    instructedAt: { type: 'datetime' },
+    responseAt: { type: 'datetime', nullable: true },
+  },
+});
+
+export interface TenantOffboardingEventEntity {
+  id: string;
+  clubId: string;
+  action: string;
+  platformAdminId: number | null;
+  payloadJson: string;
+  createdAt: Date;
+}
+
+export const TenantOffboardingEventSchema = new EntitySchema<TenantOffboardingEventEntity>({
+  name: 'TenantOffboardingEvent',
+  tableName: 'tenant_offboarding_events',
+  indices: [{ name: 'idx_tenant_offboarding_events_club', columns: ['clubId', 'createdAt'] }],
+  columns: {
+    id: { type: String, primary: true, length: 64 },
+    clubId: { type: String, length: 64 },
+    action: { type: String, length: 64 },
+    platformAdminId: { type: Number, nullable: true },
+    payloadJson: { type: 'text' },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface TenantDeletionCertificateEntity {
+  id: string;
+  clubId: string;
+  clubIdHash: string;
+  createdByPlatformAdminId: number | null;
+  payloadJson: string;
+  createdAt: Date;
+}
+
+export const TenantDeletionCertificateSchema = new EntitySchema<TenantDeletionCertificateEntity>({
+  name: 'TenantDeletionCertificate',
+  tableName: 'tenant_deletion_certificates',
+  indices: [{ name: 'idx_tenant_deletion_certificates_club', columns: ['clubId'] }],
+  columns: {
+    id: { type: String, primary: true, length: 64 },
+    clubId: { type: String, length: 64 },
+    clubIdHash: { type: String, length: 64 },
+    createdByPlatformAdminId: { type: Number, nullable: true },
+    payloadJson: { type: 'text' },
+    createdAt: { type: 'datetime', createDate: true },
+  },
+});
+
+export interface NonAccountContactMetaEntity {
+  id: string;
+  userId: number;
+  clubId: string;
+  category: string;
+  provenance: string | null;
+  purpose: string;
+  collectedAt: Date;
+  recordedByUserId: number;
+  noticeVersion: string | null;
+  noticeChannel: string;
+  noticeAt: Date | null;
+  noticeResult: string;
+  opposedAt: Date | null;
+  status: string;
+}
+
+export const NonAccountContactMetaSchema = new EntitySchema<NonAccountContactMetaEntity>({
+  name: 'NonAccountContactMeta',
+  tableName: 'non_account_contact_meta',
+  indices: [
+    { name: 'uq_non_account_contact_meta_user', columns: ['userId'], unique: true },
+    { name: 'idx_non_account_contact_meta_club', columns: ['clubId'] },
+  ],
+  columns: {
+    id: { type: String, primary: true },
+    userId: { type: Number },
+    clubId: { type: String },
+    category: { type: String },
+    provenance: { type: String, nullable: true },
+    purpose: { type: String },
+    collectedAt: { type: 'datetime' },
+    recordedByUserId: { type: Number },
+    noticeVersion: { type: String, nullable: true },
+    noticeChannel: { type: String, default: 'not_sent' },
+    noticeAt: { type: 'datetime', nullable: true },
+    noticeResult: { type: String, default: 'pending' },
+    opposedAt: { type: 'datetime', nullable: true },
+    status: { type: String, default: 'active' },
+  },
+});
+
+export interface ClubNoticeConfigEntity {
+  clubId: string;
+  noticeVersion: string;
+  noticeText: string;
+  updatedAt: Date;
+}
+
+export const ClubNoticeConfigSchema = new EntitySchema<ClubNoticeConfigEntity>({
+  name: 'ClubNoticeConfig',
+  tableName: 'club_notice_config',
+  columns: {
+    clubId: { type: String, primary: true },
+    noticeVersion: { type: String, default: '' },
+    noticeText: { type: 'text' },
+    updatedAt: { type: 'datetime', updateDate: true },
+  },
+});
+
+export interface NonAccountRightsRequestEntity {
+  id: string;
+  clubId: string;
+  type: string;
+  subjectEmailHash: string | null;
+  subjectPhoneHash: string | null;
+  status: string;
+  createdAt: Date;
+  processedAt: Date | null;
+}
+
+export const NonAccountRightsRequestSchema = new EntitySchema<NonAccountRightsRequestEntity>({
+  name: 'NonAccountRightsRequest',
+  tableName: 'non_account_rights_requests',
+  indices: [
+    { name: 'idx_non_account_rights_club', columns: ['clubId', 'createdAt'] },
+    { name: 'idx_non_account_rights_hashes', columns: ['clubId', 'subjectEmailHash', 'subjectPhoneHash'] },
+  ],
+  columns: {
+    id: { type: String, primary: true },
+    clubId: { type: String },
+    type: { type: String },
+    subjectEmailHash: { type: String, nullable: true },
+    subjectPhoneHash: { type: String, nullable: true },
+    status: { type: String, default: 'received' },
+    createdAt: { type: 'datetime', createDate: true },
+    processedAt: { type: 'datetime', nullable: true },
+  },
+});
+
 export const allSchemas = [
   ClubSchema,
   CategorieSchema,
@@ -844,4 +1164,14 @@ export const allSchemas = [
   PlatformMfaChallengeSchema,
   PlatformMfaRecoveryCodeSchema,
   PrivilegedAuthEventSchema,
+  PrivacyRequestSchema,
+  PrivacyExportTokenSchema,
+  PrivacyContactChangeSchema,
+  TenantOffboardingExportSchema,
+  TenantProcessorInstructionSchema,
+  TenantOffboardingEventSchema,
+  TenantDeletionCertificateSchema,
+  NonAccountContactMetaSchema,
+  ClubNoticeConfigSchema,
+  NonAccountRightsRequestSchema,
 ];

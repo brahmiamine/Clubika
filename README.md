@@ -110,15 +110,26 @@ football pouvant compter des mineurs dans ses effectifs :
   participant — il n'y a de toute façon pas accès en lecture.
 - Un auteur ne peut pas encore supprimer son propre message (hors modération admin) ;
   périmètre volontairement limité pour cette première itération.
-- La suppression d'un compte (`DELETE /api/users/[id]`) anonymise `senderName` sur tous
-  ses messages passés (`Compte supprimé`) plutôt que de purger leur contenu : le
-  contenu des messages reste visible pour les autres participants (l'historique d'une
-  conversation de groupe ou d'événement n'est pas retiré aux autres membres), seule
-  l'attribution nominative disparaît.
-- Aucune purge automatique par ancienneté n'est implémentée à ce stade (pas de politique
-  de rétention par durée) : les messages et pièces jointes sont conservés indéfiniment,
-  au-delà de la modération admin ci-dessus. À revisiter si une politique de rétention
-  légale ou contractuelle l'exige.
+- La fermeture d'un compte (`DELETE /api/users/[id]` ou `POST /api/me/account-closure`)
+  anonymise `senderName` / `forwardedFromName` sur tous ses messages passés
+  (`Utilisateur supprimé`) plutôt que de purger leur contenu : le contenu des
+  messages reste visible pour les autres participants, seule l'attribution
+  nominative disparaît (issue #11). Voir [docs/account-closure.md](docs/account-closure.md).
+- La conservation dans le temps est gouvernée par la matrice issue #9
+  (`docs/retention.md`, `POST /api/cron/retention-purge`). Valeurs **produit**
+  configurables (`RETENTION_*_DAYS`), pas une obligation légale. Le job purge
+  chat, pièces jointes (blob + métadonnées), rapports, audits, sessions
+  expirées/révoquées, notifications, invitations, push, journaux scrape, outbox
+  et partages publics. Dry-run : `?dryRun=true`. Aucun archivage intermédiaire
+  des données personnelles (pas de base légale fournie).
+
+**Rapports post-événement (issue #8).** Le journal d’audit ne recopie plus le texte du
+rapport : uniquement l’identifiant, l’acteur, la date, l’événement et la catégorie.
+L’auteur ou un administrateur du club peut supprimer un rapport (`DELETE .../reports/:id`).
+Durée opérationnelle : `RETENTION_REPORTS_DAYS` / `POST_EVENT_REPORT_RETENTION_DAYS` (365 jours par défaut) ; les
+rapports expirés sont purgés à la lecture et par le job #9, avec une trace d’audit minimale sans le
+contenu. La base légale et la politique globale de rétention restent l’issue #9 — cette
+durée n’est pas une décision CNIL.
 
 Notifications disponibles :
 

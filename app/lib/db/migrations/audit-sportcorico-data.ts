@@ -1,4 +1,5 @@
 import type { DataSource } from 'typeorm';
+import { logWarn } from '@/lib/observability/log';
 import type { AppMetaEntity, MatchExtraEntity, MatchOfficialEntity } from '@/lib/db/schemas';
 import {
   parseMatchExtrasPayload,
@@ -252,7 +253,7 @@ export async function auditSportCoricoData(
     counts,
     written,
   };
-  console.warn(`[migrations] 0027 audit_quarantaine_sportcorico (${report.mode}): ${JSON.stringify(report)}`);
+  logWarn('app.unhandled', `[migrations] 0027 audit_quarantaine_sportcorico (${report.mode}): ${JSON.stringify(report)}`);
   return report;
 }
 
