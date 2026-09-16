@@ -44,7 +44,7 @@ function sessionIsExpired(session: PlatformSessionEntity, now = Date.now()): boo
   return now >= idleDeadline || now >= absoluteDeadline;
 }
 
-async function findSessionByToken(token: string): Promise<PlatformSessionEntity | null> {
+export async function findSessionByToken(token: string): Promise<PlatformSessionEntity | null> {
   const db = await getDb();
   const repo = db.getRepository<PlatformSessionEntity>('PlatformSession');
   const candidates = sessionTokenHashCandidates(token);

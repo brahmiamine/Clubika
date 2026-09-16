@@ -147,6 +147,13 @@ export default function LoginPage() {
             >
               {isLoading ? 'Connexion...' : clubChoices ? 'Continuer' : 'Se connecter'}
             </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              <Link href="/exercice-des-droits" className="hover:underline">Exercer vos droits</Link>
+              {' · '}
+              <Link href="/droits-sans-compte" className="text-primary hover:underline">
+                Exercer un droit sans compte
+              </Link>
+            </p>
           </form>
         </CardContent>
     </AuthShell>

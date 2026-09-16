@@ -20,6 +20,12 @@ function anonymousRequest(path: string): NextRequest {
 }
 
 describe('proxy — exceptions publiques (issue #211)', () => {
+  it("laisse passer un visiteur anonyme sur /droits-sans-compte", async () => {
+    const response = await proxy(anonymousRequest('/droits-sans-compte'));
+    expect(response.headers.get('location')).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
   it("laisse passer un visiteur anonyme sur /partage/<token>", async () => {
     const response = await proxy(anonymousRequest('/partage/un-token-quelconque'));
     // NextResponse.next() ne porte ni redirection ni statut d'erreur.
@@ -27,8 +33,14 @@ describe('proxy — exceptions publiques (issue #211)', () => {
     expect(response.status).toBe(200);
   });
 
-  it('laisse passer un visiteur anonyme sur /api/public/planning/<token>', async () => {
-    const response = await proxy(anonymousRequest('/api/public/planning/un-token-quelconque'));
+  it('laisse passer un visiteur anonyme sur /exercice-des-droits (issue #22)', async () => {
+    const response = await proxy(anonymousRequest('/exercice-des-droits'));
+    expect(response.headers.get('location')).toBeNull();
+    expect(response.status).toBe(200);
+  });
+
+  it('laisse passer un visiteur anonyme sur /api/privacy/exports/<token> (issue #22)', async () => {
+    const response = await proxy(anonymousRequest('/api/privacy/exports/un-jeton'));
     expect(response.headers.get('location')).toBeNull();
     expect(response.status).toBe(200);
   });

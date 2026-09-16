@@ -283,7 +283,9 @@ export const EventEditor = memo(function EventEditor({
                 updatePromises.push(
                   apiPut('/api/officiels', { 
                     nom, 
-                    telephone: numero 
+                    telephone: numero,
+                    provenance: 'liste_competition',
+                    purpose: 'organisation_planning',
                   }).then(() => {}).catch(() => {
                     logError('app.unhandled');
                   })
@@ -329,7 +331,9 @@ export const EventEditor = memo(function EventEditor({
               updatePromises.push(
                 apiPut('/api/officiels', { 
                   nom, 
-                  telephone: numero 
+                  telephone: numero,
+                  provenance: 'liste_competition',
+                  purpose: 'organisation_planning',
                 }).then(() => {}).catch(() => {
                   logError('app.unhandled');
                 })
@@ -369,7 +373,9 @@ export const EventEditor = memo(function EventEditor({
               updatePromises.push(
                 apiPut('/api/officiels', { 
                   nom, 
-                  telephone: numero 
+                  telephone: numero,
+                  provenance: 'liste_competition',
+                  purpose: 'organisation_planning',
                 }).then(() => {}).catch(() => {
                   logError('app.unhandled');
                 })

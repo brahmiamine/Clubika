@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
 import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { setCurrentClubId } from '@/lib/auth/club-context';
 import { getSessionUser } from '@/lib/auth/session';
 import type { NotificationEntity } from '@/lib/db/schemas';
 import { DELETE, PUT } from './route';
@@ -19,8 +20,8 @@ function putRequest(body: Record<string, unknown>, token: string) {
   });
 }
 
-function deleteRequest(token: string) {
-  return new NextRequest('http://localhost/api/users/1', {
+function deleteRequest(token: string, search = '') {
+  return new NextRequest(`http://localhost/api/users/1${search}`, {
     method: 'DELETE',
     headers: { cookie: `session_token=${token}` },
   });
@@ -101,8 +102,8 @@ describe.skipIf(!dbAvailable)('PUT /api/users/[id] — alerte de désactivation 
   });
 });
 
-describe.skipIf(!dbAvailable)('DELETE /api/users/[id] — protection des comptes référencés (issue #273)', () => {
-  it('refuse de supprimer un compte affecté à un événement en brouillon', async () => {
+describe.skipIf(!dbAvailable)('DELETE /api/users/[id] — fermeture et anonymisation (issue #11)', () => {
+  it('anonymise un compte affecté à un événement en brouillon au lieu de renvoyer 409', async () => {
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const admin = await createTestUserAndSession('admin', { clubId });
     const encadrant = await createTestUserAndSession('dirigeant', { clubId, nom: `Référencé ${randomBytes(3).toString('hex')}` }, ['encadrant']);
@@ -127,42 +128,127 @@ describe.skipIf(!dbAvailable)('DELETE /api/users/[id] — protection des comptes
       draftId = created.entrainement?.id ?? null;
       expect(created.entrainement?.encadrants?.[0]?.personId).toBe(encadrant.user.id);
 
-      const response = await DELETE(deleteRequest(admin.token), { params: { id: String(encadrant.user.id) } });
-      expect(response.status).toBe(409);
-      const body = await response.json();
-      expect(body.details).toEqual(expect.arrayContaining([expect.stringContaining('brouillon')]));
-
+      const dryRun = await DELETE(deleteRequest(admin.token, '?dryRun=true'), { params: { id: String(encadrant.user.id) } });
+      expect(dryRun.status).toBe(200);
       const db = await getDb();
-      const stillThere = await db.getRepository('User').findOneBy({ id: encadrant.user.id });
-      expect(stillThere).not.toBeNull();
+      const before = await db.getRepository('User').findOneBy({ id: encadrant.user.id });
+      expect(before?.email).toBe(encadrant.user.email);
+
+      const response = await DELETE(deleteRequest(admin.token), { params: { id: String(encadrant.user.id) } });
+      expect(response.status).toBe(200);
+      const body = await response.json() as {
+        closure: { preview: { displayName: string; retained: Array<{ category: string; kept: boolean }> } };
+      };
+      expect(body.closure.preview.displayName).toBe('Utilisateur supprimé');
+      expect(body.closure.preview.retained.some((item) => item.category === 'planning-history' && item.kept)).toBe(true);
+
+      const stub = await db.getRepository('User').findOneBy({ id: encadrant.user.id });
+      expect(stub).not.toBeNull();
+      expect(stub?.nom).toBe('Utilisateur supprimé');
+      expect(stub?.email).toBe(`closed.${encadrant.user.id}@invalid.local`);
+      expect(stub?.telephone).toBeNull();
+      expect(stub?.active).toBe(false);
+      expect(stub?.closedAt).not.toBeNull();
+      expect(stub?.passwordHash).toBe('closed:revoked');
+
+      const draft = await db.getRepository('Entrainement').findOneBy({ id: draftId });
+      expect(JSON.stringify(draft?.payload)).toContain('Utilisateur supprimé');
+      expect(JSON.stringify(draft?.payload)).not.toContain(encadrant.user.nom);
+
+      const again = await DELETE(deleteRequest(admin.token), { params: { id: String(encadrant.user.id) } });
+      expect(again.status).toBe(200);
+      const againBody = await again.json() as { closure: { alreadyClosed: boolean; closedAt: string } };
+      expect(againBody.closure.alreadyClosed).toBe(true);
     } finally {
       const db = await getDb();
       if (draftId) {
         await db.getRepository('Entrainement').delete({ id: draftId });
         await db.getRepository('MatchAuditLog').delete({ entityId: draftId });
       }
+      await db.query('DELETE FROM account_closures WHERE user_id = ?', [encadrant.user.id]);
       await admin.cleanup();
       await encadrant.cleanup();
     }
   });
 
-  it('supprime un compte sans aucune référence métier', async () => {
+  it('ferme un compte sans référence métier en conservant un stub anonymisé', async () => {
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const admin = await createTestUserAndSession('admin', { clubId });
     const encadrant = await createTestUserAndSession('dirigeant', { clubId }, ['encadrant']);
+    const previousIcal = encadrant.user.icalToken;
 
     try {
       const response = await DELETE(deleteRequest(admin.token), { params: { id: String(encadrant.user.id) } });
       expect(response.status).toBe(200);
 
       const db = await getDb();
-      const gone = await db.getRepository('User').findOneBy({ id: encadrant.user.id });
-      expect(gone).toBeNull();
+      const stub = await db.getRepository('User').findOneBy({ id: encadrant.user.id });
+      expect(stub).not.toBeNull();
+      expect(stub?.nom).toBe('Utilisateur supprimé');
+      expect(stub?.icalToken).not.toBe(previousIcal);
+      expect(stub?.email).not.toContain('@example.com');
+    } finally {
+      const db = await getDb();
+      await db.query('DELETE FROM account_closures WHERE user_id = ?', [encadrant.user.id]);
+      await admin.cleanup();
+      await encadrant.cleanup();
+    }
+  });
+
+  it('rejoue la transaction si une étape ultérieure échoue', async () => {
+    const clubId = `test-club-${randomBytes(6).toString('hex')}`;
+    const admin = await createTestUserAndSession('admin', { clubId });
+    const encadrant = await createTestUserAndSession('dirigeant', { clubId, email: `keep-${randomBytes(4).toString('hex')}@example.com` }, ['encadrant']);
+
+    try {
+      const db = await getDb();
+      const originalEmail = encadrant.user.email;
+      setCurrentClubId(clubId);
+      await expect(db.transaction(async (manager) => {
+        const { closeAccount, countLockedActiveAdmins, lockTargetAndActiveAdmins } = await import('@/lib/account-closure/close-account');
+        const locked = await lockTargetAndActiveAdmins(manager, clubId, encadrant.user.id);
+        const target = locked.find((row) => row.id === encadrant.user.id);
+        expect(target).toBeDefined();
+        await closeAccount(manager, {
+          target: target!,
+          processedByUserId: admin.user.id,
+          processedByRole: 'admin',
+          activeAdminCount: countLockedActiveAdmins(locked),
+        });
+        throw new Error('boom-after-close');
+      })).rejects.toThrow('boom-after-close');
+
+      const still = await db.getRepository('User').findOneBy({ id: encadrant.user.id });
+      expect(still?.email).toBe(originalEmail);
+      expect(still?.closedAt).toBeNull();
+      expect(still?.nom).toBe(encadrant.user.nom);
     } finally {
       await admin.cleanup();
-      // Le compte encadrant a déjà été supprimé par le handler ; cleanup() ne doit pas
-      // échouer si sa ligne n'existe plus (delete est idempotent côté TypeORM).
       await encadrant.cleanup();
+    }
+  });
+
+  it('n’anonymise pas un homonyme d’un autre club', async () => {
+    const clubA = `test-club-${randomBytes(6).toString('hex')}`;
+    const clubB = `test-club-${randomBytes(6).toString('hex')}`;
+    const adminA = await createTestUserAndSession('admin', { clubId: clubA });
+    const twinA = await createTestUserAndSession('dirigeant', { clubId: clubA, nom: 'Jumeau Clubika' }, ['encadrant']);
+    const twinB = await createTestUserAndSession('dirigeant', { clubId: clubB, nom: 'Jumeau Clubika' }, ['encadrant']);
+
+    try {
+      const response = await DELETE(deleteRequest(adminA.token), { params: { id: String(twinA.user.id) } });
+      expect(response.status).toBe(200);
+      const db = await getDb();
+      const other = await db.getRepository('User').findOneBy({ id: twinB.user.id });
+      expect(other?.nom).toBe('Jumeau Clubika');
+      expect(other?.email).toBe(twinB.user.email);
+      expect(other?.closedAt).toBeNull();
+    } finally {
+      const db = await getDb();
+      await db.query('DELETE FROM account_closures WHERE user_id = ?', [twinA.user.id]);
+      await adminA.cleanup();
+      await twinA.cleanup();
+      await twinB.cleanup();
     }
   });
 });

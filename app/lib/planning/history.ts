@@ -12,6 +12,7 @@ import type { PlanningEventLinkType } from './event-links';
 import { createTeamLogoResolver } from './team-logos';
 import { officialMatchOverrideFieldLabel } from './official-match-overrides';
 import { parseEntrainementPayload, parseMatchPayload, parsePlateauPayload } from '@/lib/db/planning-payload-codecs';
+import { auditActorLabel } from '@/lib/audit/catalog';
 
 export interface PlanningHistoryItem {
   id: number;
@@ -210,7 +211,7 @@ function sourceOverrideSummary(entry: MatchAuditLogEntity): string | null {
 export function humanizeAuditEntry(entry: MatchAuditLogEntity, eventMap?: Map<string, ResolvedEvent>): PlanningHistoryItem {
   const action = ACTION_LABELS[entry.action] ?? entry.action;
   const entity = ENTITY_LABELS[entry.entityType] ?? entry.entityType;
-  const actor = entry.userNom || entry.userEmail || 'Système';
+  const actor = auditActorLabel(entry.userId);
 
   let event: ResolvedEvent | undefined;
   const ref = extractEventRef(entry);
