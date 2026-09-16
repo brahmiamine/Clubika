@@ -103,6 +103,7 @@ function toPlanningFeatureFlags(features: PlanningFeatureFlags): PlanningFeature
     requireArbitreForPublication: features.requireArbitreForPublication,
     requireEncadrantForPublication: features.requireEncadrantForPublication,
     requireAccompagnateurForPublication: features.requireAccompagnateurForPublication,
+    massExport: features.massExport,
   };
 }
 

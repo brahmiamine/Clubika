@@ -29,7 +29,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["**/*.test.ts", "**/*.test.tsx", "e2e/**/*.ts", "scripts/**/*.{ts,mjs,js}", "scraper.js", "public/sw.js"],
+    files: ["**/*.test.ts", "**/*.test.tsx", "e2e/**/*.ts", "scripts/**/*.{ts,mjs,js}", "deploy/scripts/**/*.{ts,mjs,js}", "scraper.js", "public/sw.js"],
     rules: {
       "no-console": "off",
     },

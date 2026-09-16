@@ -1,5 +1,7 @@
 import { createHash } from 'node:crypto';
-import type { DataSource } from 'typeorm';
+import type { DataSource, EntityManager } from 'typeorm';
+
+type Queryable = DataSource | EntityManager;
 
 export interface BrowserPushSubscription {
   endpoint: string;
@@ -21,7 +23,7 @@ function hashEndpoint(endpoint: string): string {
 }
 
 export async function savePushSubscription(
-  db: DataSource,
+  db: Queryable,
   userId: number,
   subscription: BrowserPushSubscription,
   userAgent: string | null,
@@ -53,7 +55,7 @@ export async function savePushSubscription(
 }
 
 export async function removePushSubscription(
-  db: DataSource,
+  db: Queryable,
   userId: number,
   endpoint: string,
 ): Promise<void> {
@@ -64,14 +66,14 @@ export async function removePushSubscription(
 }
 
 export async function removePushSubscriptionByEndpoint(
-  db: DataSource,
+  db: Queryable,
   endpoint: string,
 ): Promise<void> {
   await db.query('DELETE FROM push_subscriptions WHERE endpoint_hash = ?', [hashEndpoint(endpoint)]);
 }
 
 export async function removeAllPushSubscriptionsForUser(
-  db: DataSource,
+  db: Queryable,
   userId: number,
 ): Promise<void> {
   await db.query('DELETE FROM push_subscriptions WHERE user_id = ?', [userId]);
