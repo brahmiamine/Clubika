@@ -30,6 +30,7 @@ describe('historique des overrides source (issue #151)', () => {
 
     expect((item as unknown as { sourceOverrideSummary?: string }).sourceOverrideSummary)
       .toBe('Correction admin : Date, Heure, Stade');
+    expect(item.actor).toBe('Utilisateur #1');
   });
 
   it('indique explicitement un retour aux données source', () => {

@@ -240,7 +240,14 @@ describe.skipIf(!dbAvailable)('runSchemaMigrations (intégration MariaDB)', () =
         'chat_attachments',
         'scraper_sync_runs',
         'planning_assignment_state',
+        'tenant_offboarding_exports',
+        'tenant_processor_instructions',
+        'tenant_offboarding_events',
+        'tenant_deletion_certificates',
         ...TYPEORM_ENTITY_TABLE_NAMES,
+        'non_account_contact_meta',
+        'club_notice_config',
+        'non_account_rights_requests',
       ]],
     ) as Array<{ name: string }>;
     expect(tables.map((row) => String(row.name)).sort()).toEqual([
@@ -252,7 +259,14 @@ describe.skipIf(!dbAvailable)('runSchemaMigrations (intégration MariaDB)', () =
       'planning_records',
       'push_subscriptions',
       'scraper_sync_runs',
+      'tenant_deletion_certificates',
+      'tenant_offboarding_events',
+      'tenant_offboarding_exports',
+      'tenant_processor_instructions',
       ...TYPEORM_ENTITY_TABLE_NAMES,
+      'non_account_contact_meta',
+      'club_notice_config',
+      'non_account_rights_requests',
     ].sort());
   });
 });

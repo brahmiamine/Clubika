@@ -102,7 +102,7 @@ describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request (issue #286
         'Content-Type': 'application/json',
         host: 'evil.example',
         'x-forwarded-host': 'evil.example',
-        'x-forwarded-for': randomBytes(8).toString('hex'),
+        'x-forwarded-for': uniqueTestIp(),
       },
     }));
     expect(response.status).toBe(200);
@@ -114,8 +114,14 @@ describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request (issue #286
 
 describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request — limitation de débit (issue #381)', () => {
   const cleanupIps: string[] = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     for (const ip of cleanupIps.splice(0)) {
       await db.query('DELETE FROM login_rate_limits WHERE bucket_key = ?', [`password-reset-request:ip:${hashBucketComponent(ip)}`]);
@@ -123,7 +129,7 @@ describe.skipIf(!dbAvailable)('POST /api/auth/password-reset/request — limitat
   });
 
   it('renvoie 429 après 5 demandes depuis la même IP', async () => {
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     cleanupIps.push(ip);
 
     for (let i = 0; i < 5; i += 1) {

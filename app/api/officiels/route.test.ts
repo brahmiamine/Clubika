@@ -34,7 +34,11 @@ describe.skipIf(!dbAvailable)('/api/officiels CRUD (integration)', () => {
       const nom = `Test Officiel ${Date.now()}`;
       createdNoms.push(nom);
 
-      const createResponse = await POST(officielsRequest('POST', token, { nom, telephone: '0600000000' }));
+      const createResponse = await POST(officielsRequest('POST', token, {
+        nom,
+        telephone: '0600000000',
+        provenance: 'responsable_club',
+      }));
       expect(createResponse.status).toBe(200);
 
       const listResponse = await GET(officielsRequest('GET', token));
@@ -61,6 +65,18 @@ describe.skipIf(!dbAvailable)('/api/officiels CRUD (integration)', () => {
   it('rejects mutations without authentication', async () => {
     const response = await PUT(officielsRequest('PUT', undefined, { nom: 'X', oldNom: 'X' }));
     expect(response.status).toBe(401);
+  });
+
+  it('refuse un téléphone sans provenance documentée (issue #26)', async () => {
+    const { token, cleanup } = await createTestUserAndSession('admin');
+    try {
+      const nom = `Test Officiel ${Date.now()}`;
+      createdNoms.push(nom);
+      const response = await POST(officielsRequest('POST', token, { nom, telephone: '0600000000' }));
+      expect(response.status).toBe(400);
+    } finally {
+      await cleanup();
+    }
   });
 
   it('masque un arbitre club désactivé du référentiel de sélection (issue #206)', async () => {

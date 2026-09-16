@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2 } from 'lucide-react';
+import { Building2, FileWarning } from 'lucide-react';
 import { apiGet } from '@/lib/utils/api';
 import { DashboardShell, type DashboardNavSection } from '@/app/components/layout/DashboardShell';
 
@@ -16,6 +16,7 @@ const sections: DashboardNavSection[] = [
   {
     items: [
       { href: '/plateforme', label: 'Clubs', icon: Building2, exact: true },
+      { href: '/plateforme/offboarding', label: 'Fin de contrat', icon: FileWarning },
     ],
   },
 ];

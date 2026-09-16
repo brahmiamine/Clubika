@@ -10,6 +10,9 @@ const BLOCKED_PREFIXES = [
   '/mot-de-passe-oublie',
   '/reinitialiser',
   '/inscription',
+  '/droits-sans-compte',
+  '/exercice-des-droits',
+  '/confirmer-email',
 ];
 
 /** Espaces authentifiés où l'installation PWA peut être proposée. */
