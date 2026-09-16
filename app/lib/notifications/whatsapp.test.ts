@@ -106,22 +106,31 @@ describe('sendWhatsAppNotification', () => {
   });
 
   it('journalise un échec sans numéro ni contenu', async () => {
-    const errors: unknown[] = [];
-    vi.spyOn(console, 'error').mockImplementation((...args) => { errors.push(args.join(' ')); });
+    const chunks: string[] = [];
+    const original = process.stderr.write.bind(process.stderr);
+    process.stderr.write = ((chunk: string | Uint8Array) => {
+      chunks.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write;
     vi.stubEnv('WHATSAPP_PROVIDER', 'webhook');
     vi.stubEnv('NOTIFICATION_WHATSAPP_WEBHOOK_URL', 'https://provider.example/whatsapp');
     vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 502 })));
 
-    await sendWhatsAppNotification({
-      to: '0612345678',
-      title: 'Affectation confidentielle',
-      message: 'Ne jamais logger ceci',
-      eventType: 'officiel',
-      eventId: 'secret-event',
-    });
+    try {
+      await sendWhatsAppNotification({
+        to: '0612345678',
+        title: 'Affectation confidentielle',
+        message: 'Ne jamais logger ceci',
+        eventType: 'officiel',
+        eventId: 'secret-event',
+      });
+    } finally {
+      process.stderr.write = original;
+    }
 
-    const joined = errors.join('\n');
-    expect(joined).toMatch(/status 502/);
+    const joined = chunks.join('\n');
+    expect(joined).toContain('"event":"whatsapp.delivery_failed"');
+    expect(joined).toMatch(/"status":502/);
     expect(joined).not.toMatch(/0612345678/);
     expect(joined).not.toMatch(/33612345678/);
     expect(joined).not.toMatch(/Affectation confidentielle/);

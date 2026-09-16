@@ -1,5 +1,4 @@
 import { logError } from '@/lib/observability/log';
-import { randomBytes } from 'node:crypto';
 import { IsNull, MoreThan } from 'typeorm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -10,6 +9,7 @@ import { hashInvitationToken, newInvitationToken } from '@/lib/auth/invitation-t
 import { resolveCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
 import { isDuplicateEntryError } from '@/lib/db/duplicate-entry';
 import { recordPrivilegedAuthEvent } from '@/lib/auth/privileged-auth-journal';
+import { rejectIfClubNotWritable } from '@/lib/tenant-offboarding/writable';
 
 function serializeAdmin(user: UserEntity) {
   return {
@@ -67,6 +67,8 @@ export async function POST(
 
   try {
     const { id } = params instanceof Promise ? await params : params;
+    const blocked = await rejectIfClubNotWritable(await getDb(), id);
+    if (blocked) return blocked;
     const db = await getDb();
     const clubRepo = db.getRepository<ClubTenantEntity>('ClubTenant');
     const club = await clubRepo.findOneBy({ id });

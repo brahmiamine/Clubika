@@ -5,6 +5,7 @@ import { runWithClubId } from '@/lib/auth/club-context';
 import {
   assignedUserIdsFromSnapshot,
   canCommentOnPlanningEvent,
+  canDeletePostEventReport,
   canReadPlanningEventWorkspace,
   isAssignedToPlanningEvent,
   personalPlanningAccessUser,
@@ -253,5 +254,13 @@ describe('assignedUserIdsFromSnapshot — chat événement', () => {
     ] as never;
 
     expect(assignedUserIdsFromSnapshot(snapshot, users)).toEqual([7]);
+  });
+});
+
+describe('canDeletePostEventReport (issue #8)', () => {
+  it('autorise l’auteur et l’admin, pas un pair', () => {
+    expect(canDeletePostEventReport(encadrant, { ownerUserId: 7 })).toBe(true);
+    expect(canDeletePostEventReport(admin, { ownerUserId: 7 })).toBe(true);
+    expect(canDeletePostEventReport(outsider, { ownerUserId: 7 })).toBe(false);
   });
 });

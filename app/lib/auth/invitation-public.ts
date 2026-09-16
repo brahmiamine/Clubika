@@ -20,6 +20,8 @@ import { getDb } from '@/lib/db';
 import { isClubTenantActive } from '@/lib/db/club-tenants';
 import type { InvitationEntity } from '@/lib/db/schemas';
 import { readAppSettings } from '@/lib/settings-store';
+import { loadNoticeConfig } from '@/lib/non-account-contacts/meta';
+import { PRIVACY_NO_LEGAL_PROMISE } from '@/lib/non-account-contacts/constants';
 
 export const INVITATION_VALIDATE_RATE_LIMIT_KEY = 'invitation-validate';
 
@@ -36,6 +38,7 @@ export interface InvitationPublicPayload {
   valid: true;
   emailMasked: string | null;
   clubName: string;
+  notice: { version: string; text: string; disclaimer: string } | null;
 }
 
 export function invitationPublicJson(body: unknown, status: number): NextResponse {
@@ -83,10 +86,19 @@ async function toPublicPayload(
 ): Promise<InvitationPublicPayload> {
   const settings = await readAppSettings(db, invitation.clubId);
   const clubName = settings.clubName.trim() || 'Club';
+  const noticeConfig = await loadNoticeConfig(db, invitation.clubId);
+  const notice = noticeConfig?.noticeVersion
+    ? {
+        version: noticeConfig.noticeVersion,
+        text: noticeConfig.noticeText,
+        disclaimer: PRIVACY_NO_LEGAL_PROMISE,
+      }
+    : null;
   return {
     valid: true,
     emailMasked: maskEmail(invitation.email),
     clubName,
+    notice,
   };
 }
 

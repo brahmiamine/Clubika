@@ -43,7 +43,7 @@ export async function ensureAdminBootstrap(dataSource: DataSource): Promise<void
     return;
   }
   if (process.env.NODE_ENV === 'production' && !process.env.BOOTSTRAP_APPROVAL?.trim()) {
-    console.warn(
+    logWarn('app.unhandled', 
       '[bootstrap] Bootstrap club refusé : BOOTSTRAP_APPROVAL est obligatoire en production (double contrôle, issue #32).',
     );
     return;

@@ -54,9 +54,9 @@ jobs:
       - name: Scan base image OS (CRITICAL)
         run: |
           set -euo pipefail
-          base="$(awk '/^FROM /{print $2; exit}' Dockerfile)"
-          if [[ -z "$base" ]]; then
-            echo "FROM introuvable dans Dockerfile" >&2
+          base="$(awk -F= '/^NODE_IMAGE=/{print $2; exit}' deploy/runtime-images.lock)"
+          if [[ -z "$base" || "$base" == *'${'* ]]; then
+            echo "NODE_IMAGE introuvable dans deploy/runtime-images.lock" >&2
             exit 2
           fi
           echo "Scan OS de l'image de base : $base"
