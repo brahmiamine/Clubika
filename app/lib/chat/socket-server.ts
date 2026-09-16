@@ -54,7 +54,11 @@ interface ClientToServerEvents {
    * besoin d'être remonté au client, ce n'est qu'un indicateur de confort.
   */
   'chat:typing': (command: unknown) => void;
-  /** Modération admin (issue #259) : supprime un message (contenu/pièce jointe purgés). */
+  /**
+   * Supprime un message (contenu/pièce jointe purgés) : réservé à son auteur ou à un
+   * administrateur du club (issue #259 pour la modération admin, issue #10 pour
+   * l'auteur) — `deleteMessage` revérifie club/salon/accès/auteur côté serveur.
+   */
   'chat:delete': (
     command: unknown,
     acknowledge?: (result: { ok: true; message: ChatMessageDto } | { ok: false; error: string }) => void,
