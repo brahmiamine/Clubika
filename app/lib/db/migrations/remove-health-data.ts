@@ -1,4 +1,5 @@
 import type { DataSource } from 'typeorm';
+import { logInfo } from '@/lib/observability/log';
 import {
   isHealthCommentPurgeEnabled,
   sanitizeAssignmentStateRecord,
@@ -118,7 +119,7 @@ export async function migrateHealthDataFields(
     }
   }
 
-  console.info(
+  logInfo('app.unhandled',
     '[migrations] 0026 health-data:',
     `injuryRemapped=${report.assignmentInjuryRemapped}`,
     `declineComments=${report.assignmentCommentsPresent}`,

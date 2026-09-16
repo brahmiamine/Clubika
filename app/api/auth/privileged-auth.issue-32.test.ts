@@ -1,9 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
-import { createTestUserAndSession } from '@/lib/auth/test-helpers';
+import { createTestUserAndSession, enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import { POST as confirmReset } from '@/app/api/auth/password-reset/confirm/route';
 import { POST as requestReset } from '@/app/api/auth/password-reset/request/route';
 import type { PasswordResetTokenEntity } from '@/lib/db/schemas';
@@ -15,13 +15,17 @@ function hashToken(token: string): string {
 }
 
 describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et replay (issue #32)', () => {
-  const previousBase = process.env.APP_BASE_URL;
   const previousWebhook = process.env.PASSWORD_RESET_WEBHOOK_URL;
   const cleanups: Array<() => Promise<void>> = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
-    if (previousBase === undefined) delete process.env.APP_BASE_URL;
-    else process.env.APP_BASE_URL = previousBase;
+    restoreProxy?.();
+    vi.unstubAllEnvs();
     if (previousWebhook === undefined) delete process.env.PASSWORD_RESET_WEBHOOK_URL;
     else process.env.PASSWORD_RESET_WEBHOOK_URL = previousWebhook;
     while (cleanups.length) {
@@ -31,7 +35,16 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
   });
 
   it('ne met jamais le jeton brut dans un webhook, un log structuré ou une réponse générique', async () => {
-    process.env.APP_BASE_URL = 'http://localhost:3000';
+    const account = await createTestUserAndSession('dirigeant');
+    cleanups.push(account.cleanup, async () => {
+      const db = await getDb();
+      await db.getRepository('PasswordResetToken').delete({ userId: account.user.id });
+    });
+
+    // SMTP off + NODE_ENV=test exposerait `resetUrl` en repli local. La garantie
+    // issue #32/#30 porte sur la prod : pas de webhook, pas de secret dans le JSON.
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('APP_BASE_URL', 'https://app.example.com');
     const payloads: unknown[] = [];
     process.env.PASSWORD_RESET_WEBHOOK_URL = 'http://127.0.0.1:9/never-used';
     const originalFetch = globalThis.fetch;
@@ -40,17 +53,11 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
       return new Response('ok', { status: 200 });
     }) as typeof fetch;
 
-    const account = await createTestUserAndSession('dirigeant');
-    cleanups.push(account.cleanup, async () => {
-      const db = await getDb();
-      await db.getRepository('PasswordResetToken').delete({ userId: account.user.id });
-    });
-
     try {
       const unknown = await requestReset(new NextRequest('http://localhost/api/auth/password-reset/request', {
         method: 'POST',
         body: JSON.stringify({ email: `nobody-${randomBytes(4).toString('hex')}@example.com` }),
-        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': randomBytes(8).toString('hex') },
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': uniqueTestIp() },
       }));
       const unknownBody = await unknown.json() as { resetUrl?: string; success: boolean };
       expect(unknownBody.success).toBe(true);
@@ -59,16 +66,13 @@ describe.skipIf(!dbAvailable)('Reset / invitations — absence de fuite et repla
       const known = await requestReset(new NextRequest('http://localhost/api/auth/password-reset/request', {
         method: 'POST',
         body: JSON.stringify({ email: account.user.email }),
-        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': randomBytes(8).toString('hex') },
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': uniqueTestIp() },
       }));
       expect(known.status).toBe(200);
       const knownBody = await known.json() as { resetUrl?: string };
       expect(knownBody.resetUrl).toBeUndefined();
 
-      expect(payloads.length).toBeGreaterThan(0);
-      const serialized = JSON.stringify(payloads);
-      expect(serialized).not.toMatch(/reinitialiser\/[a-f0-9]{64}/);
-      expect(serialized).not.toContain('resetUrl');
+      expect(payloads).toEqual([]);
     } finally {
       globalThis.fetch = originalFetch;
     }

@@ -48,7 +48,7 @@ const PERSONAL_TABS: Omit<TabItem, 'badge'>[] = [
 ];
 
 const HIDDEN_EXACT_PATHS = ['/'];
-const HIDDEN_PREFIXES = ['/login', '/plateforme/login', '/inscription', '/mot-de-passe-oublie', '/reinitialiser', '/partage/'];
+const HIDDEN_PREFIXES = ['/login', '/plateforme/login', '/inscription', '/mot-de-passe-oublie', '/reinitialiser', '/partage/', '/droits-sans-compte', '/exercice-des-droits', '/confirmer-email'];
 
 export const MobileTabBar = memo(function MobileTabBar() {
   const pathname = usePathname();

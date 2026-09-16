@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   notifyAdmins: vi.fn(),
   readAppSettings: vi.fn(),
   setCurrentClubId: vi.fn(),
+  purgeExpiredPostEventReports: vi.fn(),
 }));
 
 vi.mock('@/lib/auth/require', () => ({ requireAuth: mocks.requireAuth }));
@@ -48,6 +49,9 @@ vi.mock('@/lib/db/audit-log', () => ({ logAuditEntry: mocks.logAuditEntry }));
 vi.mock('@/lib/notifications/service', () => ({ notifyAdmins: mocks.notifyAdmins }));
 vi.mock('@/lib/settings-store', () => ({ readAppSettings: mocks.readAppSettings }));
 vi.mock('@/lib/auth/club-context', () => ({ setCurrentClubId: mocks.setCurrentClubId }));
+vi.mock('@/lib/planning/report-retention', () => ({
+  purgeExpiredPostEventReports: mocks.purgeExpiredPostEventReports,
+}));
 
 import { GET, POST } from './route';
 import { DELETE, GET as GET_ONE, PATCH } from './[reportId]/route';
@@ -155,6 +159,7 @@ beforeEach(() => {
   mocks.logAuditEntry.mockResolvedValue(undefined);
   mocks.notifyAdmins.mockResolvedValue(undefined);
   mocks.deletePlanningRecord.mockResolvedValue(true);
+  mocks.purgeExpiredPostEventReports.mockResolvedValue(0);
 });
 
 describe('GET /reports (issue #28)', () => {
@@ -170,6 +175,7 @@ describe('GET /reports (issue #28)', () => {
     expect(body.reports[0].id).toBe('post-event-report:own');
     expect(JSON.stringify(body)).not.toContain('other-secret');
     expect(JSON.stringify(body)).not.toContain('Autre Affecte');
+    expect(mocks.purgeExpiredPostEventReports).toHaveBeenCalled();
   });
 
   it('lets a club admin list every report of the tenant without author names', async () => {
@@ -217,7 +223,12 @@ describe('POST /reports (issue #28)', () => {
     expect(notifyPayload).not.toContain('Auteur Club');
 
     const auditAfter = mocks.logAuditEntry.mock.calls[0]?.[1]?.after;
-    expect(auditAfter).toEqual({ reportId: 'post-event-report:fixed' });
+    expect(auditAfter).toEqual({
+      reportId: 'post-event-report:fixed',
+      eventType: 'entrainement',
+      eventId: 'evt-1',
+      category: 'incident',
+    });
     expect(JSON.stringify(mocks.logAuditEntry.mock.calls[0])).not.toContain(SENTINEL);
   });
 });
@@ -278,5 +289,6 @@ describe('GET/PATCH/DELETE /reports/:id (issue #28)', () => {
     expect(response.status).toBe(200);
     expect(mocks.deletePlanningRecord).toHaveBeenCalledWith({}, 'post-event-report:own');
     expect(JSON.stringify(mocks.logAuditEntry.mock.calls[0])).not.toContain(SENTINEL);
+    expect(mocks.logAuditEntry.mock.calls[0]?.[1]?.after).toEqual({ deleted: true, reason: 'user' });
   });
 });

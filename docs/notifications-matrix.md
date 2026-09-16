@@ -27,6 +27,8 @@ rien. Les retries partagent une clé d’idempotence.
 | `planning-preferences-updated` | Préférences planning | Admins | normal | Disponibilités club | `matrix.test.ts` |
 | `post-event-report` | Compte-rendu post-événement | Admins | normal | Espace événement | `matrix.test.ts` |
 | `user-deactivated-with-assignments` | Désactivation d’un compte encore affecté | Admins | important | Inbox notifications | — |
+| `account-closure-requested` | Demande de fermeture de compte | Admins | normal | `/club/utilisateurs` | `matrix.test.ts` |
+| `account-closure-processed` | Compte fermé et anonymisé | Admins | normal | `/club/utilisateurs` | `matrix.test.ts` |
 | `chat-dm` | Message privé | Autres participants, jamais l’auteur | normal | `/club/chat?roomId=` ou `/mon-planning/chat?roomId=` | `notifications.test.ts` |
 | `chat-event-message` | Message de salon d’événement | Membres actifs du club sauf l’auteur ; une personne mentionnée n’a que `chat-mention` | normal | Salon | `notifications.test.ts` |
 | `chat-channel-message` | Message de canal | Autres participants | normal | Salon | `notifications.test.ts` |

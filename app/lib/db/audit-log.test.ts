@@ -5,6 +5,7 @@ import { logAuditEntry } from './audit-log';
 import { backfillAuditLogClubId } from './migrations/audit-log-tenant';
 import { MatchAuditLogEntity } from './schemas';
 import type { SessionUser } from '@/lib/auth/session';
+import { auditBlobContainsNeedle } from '@/lib/audit/minimize';
 
 const dbAvailable = await isDbAvailable();
 
@@ -48,7 +49,9 @@ describe.skipIf(!dbAvailable)('logAuditEntry (integration)', () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe('update');
-    expect(rows[0]?.userEmail).toBe('admin-afp@example.com');
+    expect(rows[0]?.userId).toBe(1);
+    expect(rows[0]?.userEmail).toBeNull();
+    expect(rows[0]?.userNom).toBeNull();
     expect(rows[0]?.after).toEqual({ confirmed: true });
   });
 
@@ -61,7 +64,7 @@ describe.skipIf(!dbAvailable)('logAuditEntry (integration)', () => {
       entityId,
       action: 'create',
       before: null,
-      after: { note: 'x' },
+      after: { confirmed: true },
     });
 
     const repo = db.getRepository<MatchAuditLogEntity>('MatchAuditLog');
@@ -117,7 +120,7 @@ describe.skipIf(!dbAvailable)('logAuditEntry (integration)', () => {
       entityId,
       action: 'update',
       before: null,
-      after: { note: 'A' },
+      after: { confirmed: true },
     });
     await logAuditEntry(db, {
       user: testUser('club-b', 4),
@@ -125,7 +128,7 @@ describe.skipIf(!dbAvailable)('logAuditEntry (integration)', () => {
       entityId,
       action: 'update',
       before: null,
-      after: { note: 'B' },
+      after: { confirmed: false },
     });
 
     const repo = db.getRepository<MatchAuditLogEntity>('MatchAuditLog');
@@ -133,9 +136,42 @@ describe.skipIf(!dbAvailable)('logAuditEntry (integration)', () => {
     const rowsB = await repo.find({ where: { entityId, clubId: 'club-b' } });
 
     expect(rowsA).toHaveLength(1);
-    expect(rowsA[0]?.after).toEqual({ note: 'A' });
+    expect(rowsA[0]?.after).toEqual({ confirmed: true });
     expect(rowsB).toHaveLength(1);
-    expect(rowsB[0]?.after).toEqual({ note: 'B' });
+    expect(rowsB[0]?.after).toEqual({ confirmed: false });
+  });
+
+  it('n’écrit jamais les sentinelles nominatives en base (issue #20)', async () => {
+    const db = await getDb();
+    const sentinels = {
+      nom: 'Sentinel Write',
+      email: 'sentinel.write@example.test',
+      telephone: '0699887766',
+      text: 'Texte de rapport sentinelle',
+      fileName: 'secret-write.pdf',
+      token: 'tok_write_secret',
+    };
+    await logAuditEntry(db, {
+      user: testUser('afp'),
+      entityType: 'PlanningCollaboration',
+      entityId,
+      action: 'report',
+      before: sentinels,
+      after: { ...sentinels, category: 'other', authorUserId: 1, confirmed: true },
+    });
+
+    const repo = db.getRepository<MatchAuditLogEntity>('MatchAuditLog');
+    const row = await repo.findOneByOrFail({ entityId });
+    expect(row.userEmail).toBeNull();
+    expect(row.userNom).toBeNull();
+    expect(row.userId).toBe(1);
+    expect(row.after).toEqual({ category: 'other', authorUserId: 1, confirmed: true });
+    expect(row.before).toBeNull();
+    expect(auditBlobContainsNeedle(row, Object.values(sentinels))).toBe(false);
+    expect(auditBlobContainsNeedle({ email: row.userEmail, nom: row.userNom }, [
+      'admin-afp@example.com',
+      'Admin',
+    ])).toBe(false);
   });
 });
 
