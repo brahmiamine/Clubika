@@ -119,6 +119,14 @@ export function canCommentOnPlanningEvent(user: SessionUser, snapshot: PlanningE
   return isVisiblePublicationStatus(snapshot.planningStatus) && isAssignedToPlanningEvent(user, snapshot);
 }
 
+export function canDeletePostEventReport(
+  user: SessionUser,
+  record: { ownerUserId: number | null },
+): boolean {
+  if (isPlanningAdmin(user)) return true;
+  return record.ownerUserId === user.id;
+}
+
 export function canSubmitPostEventReport(
   user: SessionUser,
   snapshot: PlanningEventSnapshot,

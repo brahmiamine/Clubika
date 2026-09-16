@@ -7,6 +7,7 @@ import { logAuditEntry } from '@/lib/db/audit-log';
 import { serializeMatchExtrasPayload, serializeMatchPayload } from '@/lib/db/planning-payload-codecs';
 import { parseOfficialMatchesCsv } from '@/lib/planning/official-csv';
 import { BodyValidator, parseJsonBody, RequestValidationError } from '@/lib/validation/request';
+import { logError } from '@/lib/observability/log';
 
 const MAX_CSV_CHARS = 256_000;
 const MAX_CSV_ROWS = 200;
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof RequestValidationError) {
       return NextResponse.json({ error: 'Requête invalide', details: error.issues }, { status: 400 });
     }
-    console.error('Official CSV import failed:', error);
+    logError('app.unhandled', 'Official CSV import failed:', error);
     return NextResponse.json({ error: 'Impossible d’importer le calendrier officiel' }, { status: 500 });
   }
 }

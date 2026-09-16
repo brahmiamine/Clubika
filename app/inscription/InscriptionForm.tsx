@@ -17,6 +17,7 @@ export interface InvitationPublicView {
   valid: boolean;
   emailMasked: string | null;
   clubName: string;
+  notice?: { version: string; text: string; disclaimer: string } | null;
 }
 
 const ALLOWED_REDIRECTS = new Set(['/club', '/mon-planning']);
@@ -74,6 +75,13 @@ export function InscriptionForm({ invitation }: { invitation: InvitationPublicVi
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {invitation.notice ? (
+          <div className="mb-4 space-y-2 rounded-md border p-3 text-sm">
+            <p className="font-medium">Information (version {invitation.notice.version})</p>
+            <p className="whitespace-pre-wrap text-muted-foreground">{invitation.notice.text}</p>
+            <p className="text-xs text-muted-foreground">{invitation.notice.disclaimer}</p>
+          </div>
+        ) : null}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="nom">Nom</Label>

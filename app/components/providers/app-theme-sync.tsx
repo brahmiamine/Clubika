@@ -9,7 +9,7 @@ import { applyDefaultThemeVariables, applyThemeVariables, hasThemeUserOverride }
 // Écrans hors session : ils n'appartiennent à aucun club et ne doivent donc pas
 // prendre les couleurs primaire/secondaire d'un club. `/login` est l'entrée
 // commune de toute la plateforme et garde la palette par défaut de l'app.
-const CLUBLESS_PREFIXES = ["/login", "/mot-de-passe-oublie", "/reinitialiser", "/plateforme", "/inscription"];
+const CLUBLESS_PREFIXES = ["/login", "/mot-de-passe-oublie", "/reinitialiser", "/plateforme", "/inscription", "/droits-sans-compte", "/exercice-des-droits", "/confirmer-email"];
 
 function isClublessRoute(pathname: string): boolean {
   if (pathname === "/") return true;
