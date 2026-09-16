@@ -109,7 +109,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
     createdEmails.push(email);
     const { GET: validateGet } = await import('../route');
     const { POST: acceptFromContext } = await import('../../accept/route');
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     const validate = await validateGet(
       new NextRequest(`http://localhost/api/invitations/${invitation.rawToken}`, {
         headers: { 'x-forwarded-for': ip },

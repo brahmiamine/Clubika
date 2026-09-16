@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { UserSessionEntity } from '@/lib/db/schemas';
 import { getDb } from '@/lib/db';
-import type { PlatformSessionEntity, UserSessionEntity } from '@/lib/db/schemas';
-import { getSessionUser, SESSION_COOKIE_NAME, type SessionUser } from './session';
+import { getSessionUser, SESSION_COOKIE_NAME, findSessionByToken as findClubSessionByToken, type SessionUser } from './session';
 import {
   getPlatformSessionAdmin,
   PLATFORM_SESSION_COOKIE_NAME,
+  findSessionByToken as findPlatformSessionByToken,
   type PlatformAdminSessionUser,
 } from './platform-session';
+import { isPlausibleSessionToken } from './session-token';
 
 export const STEP_UP_MAX_AGE_MS = 15 * 60 * 1000;
 export const REAUTH_REQUIRED = 'REAUTH_REQUIRED';
@@ -28,9 +30,8 @@ export function mfaStepUpRequiredResponse(
 }
 
 export async function getClubSessionAuthenticatedAt(token: string | undefined | null): Promise<Date | null> {
-  if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-  const db = await getDb();
-  const session = await db.getRepository<UserSessionEntity>('UserSession').findOneBy({ id: token });
+  if (!isPlausibleSessionToken(token)) return null;
+  const session = await findClubSessionByToken(token);
   if (!session || session.revokedAt) return null;
   return session.authenticatedAt ?? session.createdAt;
 }
@@ -50,18 +51,19 @@ export async function requireRecentClubAuth(
 }
 
 export async function touchClubSessionAuth(token: string | undefined | null): Promise<void> {
-  if (!token || !/^[a-f0-9]{64}$/.test(token)) return;
+  if (!isPlausibleSessionToken(token)) return;
+  const session = await findClubSessionByToken(token);
+  if (!session || session.revokedAt) return;
   const db = await getDb();
   await db.getRepository<UserSessionEntity>('UserSession').update(
-    { id: token },
+    { id: session.id },
     { authenticatedAt: new Date() },
   );
 }
 
 export async function getPlatformSessionMfaAt(token: string | undefined | null): Promise<Date | null> {
-  if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-  const db = await getDb();
-  const session = await db.getRepository<PlatformSessionEntity>('PlatformSession').findOneBy({ id: token });
+  if (!isPlausibleSessionToken(token)) return null;
+  const session = await findPlatformSessionByToken(token);
   if (!session || session.revokedAt) return null;
   return session.mfaVerifiedAt ?? null;
 }

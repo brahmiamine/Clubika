@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { logAuditEntry } from '@/lib/db/audit-log';
+import { logError } from '@/lib/observability/log';
 import { deletePlanningRecord, getPlanningRecord, savePlanningRecord } from '@/lib/planning/records';
 import { requireAuth } from '@/lib/auth/require';
 import { getDb } from '@/lib/db';
@@ -11,10 +12,10 @@ import {
   canReadReport,
   canUpdateReport,
   isReportCategory,
-  reportAuditMeta,
   toVisibleReport,
   type ReportPayload,
 } from '@/lib/planning/report-access';
+import { isPostEventReportCategory, reportAuditAfter, reportDeletionAuditAfter } from '@/lib/planning/report-privacy';
 import { isReportRecordId, reportJson, reportNotFound } from '../context';
 
 async function loadOwnedReport(
@@ -89,20 +90,27 @@ export async function PATCH(
       ownerUserId: ctx.record.ownerUserId,
       payload,
     });
+    const auditCategory = isPostEventReportCategory(payload.category) ? payload.category : 'other';
+    const auditMeta = reportAuditAfter({
+      reportId: ctx.record.id,
+      eventType: ctx.eventType,
+      eventId: ctx.eventId,
+      category: auditCategory,
+    });
     await logAuditEntry(ctx.db, {
       user: ctx.auth.user,
       entityType: 'PlanningCollaboration',
       entityId: ctx.record.id,
       action: 'update',
-      before: reportAuditMeta(ctx.record.id),
-      after: reportAuditMeta(ctx.record.id),
+      before: auditMeta,
+      after: auditMeta,
     });
     return reportJson({
       success: true,
       report: toVisibleReport(ctx.auth.user, { ...ctx.record, payload }),
     });
-  } catch {
-    console.error('Post-event report update failed');
+  } catch (error) {
+    logError('app.unhandled', 'Post-event report update failed', error);
     return reportJson({ error: 'Impossible de modifier le rapport' }, 500);
   }
 }
@@ -119,13 +127,21 @@ export async function DELETE(
 
   const deleted = await deletePlanningRecord(ctx.db, ctx.record.id);
   if (!deleted) return reportNotFound();
+  const category = isPostEventReportCategory(ctx.record.payload.category)
+    ? ctx.record.payload.category
+    : 'other';
   await logAuditEntry(ctx.db, {
     user: ctx.auth.user,
     entityType: 'PlanningCollaboration',
     entityId: ctx.record.id,
     action: 'delete',
-    before: reportAuditMeta(ctx.record.id),
-    after: null,
+    before: reportAuditAfter({
+      reportId: ctx.record.id,
+      eventType: ctx.eventType,
+      eventId: ctx.eventId,
+      category,
+    }),
+    after: reportDeletionAuditAfter('user'),
   });
   return reportJson({ success: true });
 }
