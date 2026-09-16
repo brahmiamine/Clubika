@@ -32,7 +32,7 @@ export async function ensurePlatformAdminBootstrap(dataSource: DataSource): Prom
   }
 
   if (productionDualControlMissing()) {
-    console.warn(
+    logWarn('app.unhandled', 
       '[bootstrap] Bootstrap plateforme refusé : PLATFORM_BOOTSTRAP_APPROVAL est obligatoire en production (double contrôle, issue #32).',
     );
     return;

@@ -6,6 +6,7 @@ import { verifyPassword } from '@/lib/auth/password';
 import { SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { touchClubSessionAuth } from '@/lib/auth/recent-auth';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { logError } from '@/lib/observability/log';
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth(request);
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     await touchClubSessionAuth(request.cookies.get(SESSION_COOKIE_NAME)?.value);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Reauthentication failed:', error);
+    logError('app.unhandled', 'Reauthentication failed:', error);
     return NextResponse.json({ error: 'Impossible de réauthentifier la session' }, { status: 500 });
   }
 }

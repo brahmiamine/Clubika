@@ -649,3 +649,9 @@
   border-radius: 3px;
   background: var(--fff-white);
 }
+
+.footerLink {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

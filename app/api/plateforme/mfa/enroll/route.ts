@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import type { PlatformAdminEntity } from '@/lib/db/schemas';
 import { PLATFORM_MFA_PENDING_COOKIE_NAME } from '@/lib/auth/constants';
+import { logError } from '@/lib/observability/log';
 import {
   beginEnrollmentSecret,
   clearMfaPendingCookie,
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       otpauthUrl: enrollment.otpauthUrl,
     });
   } catch (error) {
-    console.error('Platform MFA enroll begin failed:', error);
+    logError('app.unhandled', 'Platform MFA enroll begin failed:', error);
     return NextResponse.json({ error: 'Impossible de préparer le second facteur' }, { status: 500 });
   }
 }
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     clearMfaPendingCookie(response);
     return response;
   } catch (error) {
-    console.error('Platform MFA enroll confirm failed:', error);
+    logError('app.unhandled', 'Platform MFA enroll confirm failed:', error);
     return NextResponse.json({ error: 'Impossible d\'activer le second facteur' }, { status: 500 });
   }
 }

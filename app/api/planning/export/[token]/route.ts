@@ -10,6 +10,7 @@ import { EXPORT_CACHE_HEADERS, exportColumnLabels } from '@/lib/planning/export'
 import { listExportSnapshots, projectExportRows } from '@/lib/planning/export-query';
 import { consumeExportDownload } from '@/lib/planning/export-download';
 import { exportFileResponse, renderExportBody } from '@/lib/planning/export-render';
+import { logError } from '@/lib/observability/log';
 
 export async function GET(
   request: NextRequest,
@@ -52,7 +53,7 @@ export async function GET(
       clubName: settings.clubName,
     }));
   } catch (error) {
-    console.error('Planning export download failed:', error);
+    logError('app.unhandled', 'Planning export download failed:', error);
     return NextResponse.json({ error: 'Impossible d’exporter le planning' }, { status: 500 });
   }
 }
