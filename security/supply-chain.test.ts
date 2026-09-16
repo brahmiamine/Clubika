@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { assertExceptionsFresh, blockingFindings, loadExceptions } from '../scripts/audit-dependencies.mjs';
 import { findUnpinnedUses } from '../scripts/check-action-pins.mjs';
@@ -121,5 +122,11 @@ jobs:
 `;
     const hits = findUnpinnedUses(sample);
     expect(hits.map((h) => h.ref)).toEqual(['actions/checkout@v4']);
+  });
+
+  it('scans the locked NODE_IMAGE, not the Dockerfile ARG placeholder', () => {
+    const workflow = readFileSync('.github/workflows/supply-chain.yml', 'utf8');
+    expect(workflow).toContain('deploy/runtime-images.lock');
+    expect(workflow).not.toMatch(/awk '\/\^FROM \//);
   });
 });
