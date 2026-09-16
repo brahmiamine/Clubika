@@ -141,7 +141,7 @@ Notifications disponibles :
 
 ### Partage, calendriers et exports
 
-- liens publics temporaires de 1 à 90 jours ;
+- liens publics temporaires de 1 à 30 jours (7 j par défaut, maximum configurable, voir `docs/retention.md`) ;
 - seul le SHA-256 du token de partage est enregistré ;
 - le DTO public est une liste blanche calendrier (type, horaires, catégorie, compétition, équipes, stade officiel, météo) ; pas de noms, téléphones, `personId`, commentaires, rapports ni audit ;
 - export CSV UTF-8 protégé contre l'injection de formules tableur ;
