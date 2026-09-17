@@ -175,7 +175,6 @@ describe.skipIf(!dbAvailable)('DELETE /api/users/[id] — fermeture et anonymisa
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const admin = await createTestUserAndSession('admin', { clubId });
     const encadrant = await createTestUserAndSession('dirigeant', { clubId }, ['encadrant']);
-    const previousIcal = encadrant.user.icalToken;
 
     try {
       const response = await DELETE(deleteRequest(admin.token), { params: { id: String(encadrant.user.id) } });
@@ -185,7 +184,9 @@ describe.skipIf(!dbAvailable)('DELETE /api/users/[id] — fermeture et anonymisa
       const stub = await db.getRepository('User').findOneBy({ id: encadrant.user.id });
       expect(stub).not.toBeNull();
       expect(stub?.nom).toBe('Utilisateur supprimé');
-      expect(stub?.icalToken).not.toBe(previousIcal);
+      // Issue #13 : la fermeture de compte révoque le flux iCal personnel au lieu
+      // de le faire tourner vers un jeton jamais restitué.
+      expect(stub?.icalTokenHash).toBeNull();
       expect(stub?.email).not.toContain('@example.com');
     } finally {
       const db = await getDb();

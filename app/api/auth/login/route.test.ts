@@ -51,7 +51,6 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login (integration)', () => {
       active: true,
       claimedAt: new Date(),
       personLinks: [],
-      icalToken: 'ical-login-test',
     });
     userId = user.id;
 
@@ -75,7 +74,6 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login (integration)', () => {
       active: true,
       claimedAt: new Date(),
       personLinks: [],
-      icalToken: `ical-login-rotation-${randomBytes(4).toString('hex')}`,
     });
     userId = user.id;
 
@@ -117,7 +115,6 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login (integration)', () => {
       active: true,
       // Profil créé par un référentiel de fonction : jamais activé, pas de session.
       claimedAt: null,
-      icalToken: `ical-${Date.now()}`,
     });
     try {
       const response = await POST(loginRequest({ email: placeholderEmail, password: 'known-password-123' }));
@@ -154,7 +151,6 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login — même email dans deux cl
       planningFunctions: [],
       active: true,
       claimedAt: new Date(),
-      icalToken: `ical-${randomBytes(6).toString('hex')}`,
     });
     const userB = await userRepo.save({
       clubId: clubB,
@@ -165,7 +161,6 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login — même email dans deux cl
       planningFunctions: ['arbitre_club'],
       active: true,
       claimedAt: new Date(),
-      icalToken: `ical-${randomBytes(6).toString('hex')}`,
     });
 
     try {
@@ -212,7 +207,6 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login — sélecteur de club (issu
       planningFunctions: [],
       active: true,
       claimedAt: new Date(),
-      icalToken: `ical-${randomBytes(6).toString('hex')}`,
     });
     const userB = await userRepo.save({
       clubId: clubB,
@@ -223,7 +217,6 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login — sélecteur de club (issu
       planningFunctions: ['arbitre_club'],
       active: true,
       claimedAt: new Date(),
-      icalToken: `ical-${randomBytes(6).toString('hex')}`,
     });
 
     try {
@@ -308,7 +301,6 @@ describe.skipIf(!dbAvailable)('POST /api/auth/login — limitation de débit (is
       planningFunctions: ['arbitre_club'],
       active: true,
       claimedAt: new Date(),
-      icalToken: `ical-${randomBytes(6).toString('hex')}`,
     });
     try {
       // 4 échecs (sous le premier palier de 5) puis un succès : si la réinitialisation

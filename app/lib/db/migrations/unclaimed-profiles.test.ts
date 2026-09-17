@@ -36,14 +36,12 @@ describe.skipIf(!dbAvailable)('migration 0012 — backfillUnclaimedProfiles (iss
       ...base,
       email: `claimed-${tag}@example.com`,
       nom: 'Compte Réel',
-      icalToken: `ical-real-${tag}`,
     });
     const placeholder = await userRepo.save({
       ...base,
       email: `profil.${tag}.officiel@sans-acces.local`,
       nom: 'Profil Technique',
       planningFunctions: ['arbitre_club'],
-      icalToken: `ical-placeholder-${tag}`,
     });
 
     try {

@@ -5,6 +5,7 @@ import { UserEntity } from '@/lib/db/schemas';
 import { requireRole } from '@/lib/auth/require';
 import { normalizeAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
 import { revokeAllSessionsForUser } from '@/lib/auth/session';
+import { REVOKED_ICAL_TOKEN } from '@/lib/planning/ical-token';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { requireRecentClubAuth } from '@/lib/auth/recent-auth';
 import { recordPrivilegedAuthEvent } from '@/lib/auth/privileged-auth-journal';
@@ -118,6 +119,15 @@ export async function PUT(
       user.accessRole = nextAccessRole;
       user.planningFunctions = nextFunctions;
       user.active = nextActive;
+      // Révocation automatique du flux iCal personnel à la désactivation (issue
+      // #13) : le flux 404 déjà pour un compte inactif (voir /api/ical/[token]),
+      // mais on ne laisse pas un jeton dormant redevenir exploitable telle quelle
+      // si le compte est réactivé plus tard — l'abonné en régénère un après
+      // réactivation s'il souhaite se réabonner.
+      if (wasActive && !nextActive) {
+        user.icalTokenHash = REVOKED_ICAL_TOKEN.icalTokenHash;
+        user.icalTokenCreatedAt = REVOKED_ICAL_TOKEN.icalTokenCreatedAt;
+      }
       if (typeof telephone === 'string') {
         if (user.claimedAt == null) {
           user.telephone = await applyTelephoneGateAndMeta(manager, {

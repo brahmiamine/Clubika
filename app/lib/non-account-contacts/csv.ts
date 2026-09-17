@@ -131,7 +131,8 @@ export async function importContactCsv(
           claimedAt: null,
           telephone,
           indisponibilites: null,
-          icalToken: randomBytes(24).toString('hex'),
+          // Pas de flux iCal généré à l'import (issue #13) — voir
+          // `app/lib/planning/ical-token.ts`.
         });
         await upsertContactMeta(manager, {
           userId: created.id,

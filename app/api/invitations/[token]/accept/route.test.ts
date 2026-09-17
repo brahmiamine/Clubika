@@ -183,7 +183,6 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
       planningFunctions: [],
       active: true,
       claimedAt: new Date(),
-      icalToken: `ical-${randomBytes(6).toString('hex')}`,
     });
 
     const invitation = await createInvitation({ clubId, accessRole: 'dirigeant', planningFunctions: [] });
@@ -209,7 +208,6 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
       planningFunctions: [],
       active: true,
       claimedAt: new Date(),
-      icalToken: `ical-${randomBytes(6).toString('hex')}`,
     });
 
     const invitation = await createInvitation({ clubId: clubB, accessRole: 'dirigeant', planningFunctions: [] });
@@ -341,7 +339,6 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept — activati
       planningFunctions,
       active: true,
       claimedAt: null,
-      icalToken: randomBytes(12).toString('hex'),
     });
     cleanupUserIds.push(profile.id);
     return profile;
