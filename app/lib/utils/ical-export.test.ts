@@ -231,4 +231,99 @@ describe('generateIcal', () => {
       expect(uid).toMatch(/^officiel-match-id-with-spaces@club---space\.clubika$/);
     });
   });
+
+  describe('minimisation de DESCRIPTION pour le flux personnel (issue #13)', () => {
+    // Le folding RFC 5545 (foldLine, 75 caractères) peut couper un nom en deux lignes
+    // CRLF+espace : on déplie avant de chercher une sous-chaîne pour ne pas dépendre de
+    // la position exacte du nom dans la ligne.
+    function unfold(ics: string): string {
+      return ics.replace(/\r\n /g, '');
+    }
+
+    function extrasWithContacts(): Record<string, MatchExtras> {
+      return {
+        'match-1': {
+          id: 'match-1',
+          arbitreTouche: [
+            { nom: 'Abonné Test', numero: '', personId: 7, personType: 'officiel' },
+            { nom: 'Autre Arbitre Sentinelle', numero: '', personId: 8, personType: 'officiel' },
+          ],
+          contactEncadrants: [{ nom: 'Autre Encadrant Sentinelle', numero: '' }],
+          contactAccompagnateur: [{ nom: 'Autre Accompagnateur Sentinelle', numero: '' }],
+        },
+      };
+    }
+
+    it('ne mentionne dans DESCRIPTION que les contacts correspondant à l’identité filtrée (fuite de données)', () => {
+      const match = makeMatch({ id: 'match-1' });
+      const ics = unfold(generateIcal([match], extrasWithContacts(), undefined, {
+        personNom: 'Abonné Test',
+        personId: 7,
+        personType: 'officiel',
+        role: 'all',
+      }));
+
+      expect(ics).toContain('Abonné Test');
+      expect(ics).not.toContain('Autre Arbitre Sentinelle');
+      expect(ics).not.toContain('Autre Encadrant Sentinelle');
+      expect(ics).not.toContain('Autre Accompagnateur Sentinelle');
+    });
+
+    it('inclut tous les contacts assignés quand aucun filtre d’identité n’est actif (export club complet)', () => {
+      const match = makeMatch({ id: 'match-1' });
+      const ics = unfold(generateIcal([match], extrasWithContacts(), undefined, { clubId: 'club-a' }));
+
+      // Sans filtre de personne, l'export club (non personnel) conserve tous les
+      // contacts assignés : seul le flux personnel filtré les minimise.
+      expect(ics).toContain('Abonné Test');
+      expect(ics).toContain('Autre Arbitre Sentinelle');
+      expect(ics).toContain('Autre Encadrant Sentinelle');
+      expect(ics).toContain('Autre Accompagnateur Sentinelle');
+    });
+
+    it('retire le champ Adresse libre de DESCRIPTION, personnel ou non', () => {
+      const match = makeMatch({
+        id: 'match-1',
+        details: {
+          stadium: 'Stade Sentinelle',
+          address: '26 Rue Sentinelle, 75000 Villefictive',
+          dateTime: '',
+          competition: '',
+          terrainType: '',
+          itineraryLink: '',
+          rawText: '',
+        },
+      });
+      const ics = unfold(generateIcal([match], {}, undefined, { clubId: 'club-a' }));
+
+      expect(ics).not.toContain('Adresse:');
+      expect(ics).not.toContain('26 Rue Sentinelle');
+      // LOCATION (nom du stade) reste présent : seule l'adresse libre est retirée.
+      expect(ics).toContain('LOCATION:Stade Sentinelle');
+    });
+
+    it('filtre aussi DESCRIPTION pour les événements non-match (entraînement) via les encadrants', () => {
+      const entrainement: Entrainement = {
+        id: 'ent-1',
+        type: 'entrainement',
+        date: '20/01/2026',
+        time: '18:00',
+        lieu: 'Stade Municipal',
+        encadrants: [
+          { nom: 'Abonné Test', numero: '', personId: 7, personType: 'officiel' },
+          { nom: 'Autre Encadrant Sentinelle', numero: '', personId: 8, personType: 'officiel' },
+        ],
+      };
+
+      const ics = unfold(generateIcal([entrainement], {}, undefined, {
+        personNom: 'Abonné Test',
+        personId: 7,
+        personType: 'officiel',
+        role: 'all',
+      }));
+
+      expect(ics).toContain('Abonné Test');
+      expect(ics).not.toContain('Autre Encadrant Sentinelle');
+    });
+  });
 });

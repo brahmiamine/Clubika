@@ -166,7 +166,8 @@ export async function POST(request: NextRequest) {
         claimedAt: null,
         telephone: resolvedTelephone,
         indisponibilites: normalized.length > 0 ? normalized : null,
-        icalToken: randomBytes(24).toString('hex'),
+        // Pas de flux iCal généré à l'import (issue #13) — voir
+        // `app/lib/planning/ical-token.ts`.
       });
       await upsertContactMeta(manager, {
         userId: saved.id,

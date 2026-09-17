@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { IsNull, type EntityManager } from 'typeorm';
 import { logError } from '@/lib/observability/log';
@@ -199,7 +198,8 @@ export async function acceptInvitationInTransaction(
       planningFunctions: normalizePlanningFunctions(invitation.planningFunctions),
       active: true,
       claimedAt,
-      icalToken: randomBytes(24).toString('hex'),
+      // Pas de flux iCal généré à l'activation (issue #13) — l'abonné en génère
+      // un depuis son profil — voir `app/lib/planning/ical-token.ts`.
     });
   }
 

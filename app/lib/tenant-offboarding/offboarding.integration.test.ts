@@ -103,7 +103,6 @@ describe.skipIf(!dbAvailable)('tenant offboarding (issue #25)', () => {
       planningFunctions: [],
       active: true,
       claimedAt: new Date(),
-      icalToken: randomBytes(12).toString('hex'),
     });
     const userB = await db.getRepository('User').save({
       clubId: clubB,
@@ -114,7 +113,6 @@ describe.skipIf(!dbAvailable)('tenant offboarding (issue #25)', () => {
       planningFunctions: [],
       active: true,
       claimedAt: new Date(),
-      icalToken: randomBytes(12).toString('hex'),
     });
 
     await db.getRepository('Invitation').save({

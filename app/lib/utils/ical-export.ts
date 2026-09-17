@@ -47,19 +47,49 @@ function getEventLocation(event: Event): string {
   return event.lieu || '';
 }
 
-function getEventDescription(event: Event, extras: MatchExtras | undefined, clubAbbreviation = ''): string {
+/**
+ * Noms à faire figurer dans DESCRIPTION pour une liste de contacts d'un rôle
+ * donné (issue #13) : sans filtre d'identité (export club complet, non
+ * personnel), tous les contacts assignés ; avec un filtre d'identité (flux
+ * personnel `/api/ical/[token]`, ou export filtré sur une personne), unique-
+ * ment ceux qui correspondent à l'abonné — jamais les noms des autres
+ * arbitres, encadrants ou accompagnateurs affectés au même événement.
+ */
+function contactNamesForDescription(
+  contacts: AssignmentContact[] | undefined,
+  selfIdentities: IcalIdentity[] | undefined,
+): string[] {
+  const list = contacts || [];
+  const scoped = selfIdentities?.length
+    ? list.filter((contact) => selfIdentities.some((identity) => contactMatches(contact, identity)))
+    : list;
+  return scoped.map((contact) => contact.nom);
+}
+
+function getEventDescription(
+  event: Event,
+  extras: MatchExtras | undefined,
+  clubAbbreviation = '',
+  selfIdentities?: IcalIdentity[],
+): string {
   const lines: string[] = [];
   const arbitreLabel = roleLabelWithClub('Arbitre', clubAbbreviation);
   const encadrantsLabel = roleLabelWithClub('Encadrants', clubAbbreviation);
   const accompagnateursLabel = roleLabelWithClub('Accompagnateurs', clubAbbreviation);
   if (isMatchEvent(event)) {
     if (event.competition) lines.push(`Compétition: ${event.competition}`);
-    if (event.details?.address) lines.push(`Adresse: ${event.details.address}`);
-    if (extras?.arbitreTouche?.length) lines.push(`${arbitreLabel}: ${extras.arbitreTouche.map((c) => c.nom).join(', ')}`);
-    if (extras?.contactEncadrants?.length) lines.push(`${encadrantsLabel}: ${extras.contactEncadrants.map((c) => c.nom).join(', ')}`);
-    if (extras?.contactAccompagnateur?.length) lines.push(`${accompagnateursLabel}: ${extras.contactAccompagnateur.map((c) => c.nom).join(', ')}`);
-  } else if (event.encadrants?.length) {
-    lines.push(`${encadrantsLabel}: ${event.encadrants.map((c) => c.nom).join(', ')}`);
+    // Le champ « Adresse » libre (issue #13) est retiré de DESCRIPTION : il
+    // duplique LOCATION (nom du stade, déjà présent) sans plus-value pour
+    // l'abonné, pour une donnée en plus à protéger en cas de fuite de l'URL.
+    const arbitres = contactNamesForDescription(extras?.arbitreTouche, selfIdentities);
+    if (arbitres.length) lines.push(`${arbitreLabel}: ${arbitres.join(', ')}`);
+    const encadrants = contactNamesForDescription(extras?.contactEncadrants, selfIdentities);
+    if (encadrants.length) lines.push(`${encadrantsLabel}: ${encadrants.join(', ')}`);
+    const accompagnateurs = contactNamesForDescription(extras?.contactAccompagnateur, selfIdentities);
+    if (accompagnateurs.length) lines.push(`${accompagnateursLabel}: ${accompagnateurs.join(', ')}`);
+  } else {
+    const encadrants = contactNamesForDescription(event.encadrants, selfIdentities);
+    if (encadrants.length) lines.push(`${encadrantsLabel}: ${encadrants.join(', ')}`);
   }
   return lines.join('\\n');
 }
@@ -202,6 +232,13 @@ export function generateIcal(
   const filteredEvents = hasPersonFilter && options
     ? publishedEvents.filter((event) => eventMatchesPerson(event, allExtras, options))
     : publishedEvents;
+  // Minimisation DESCRIPTION (issue #13) : dès qu'un filtre par personne est actif
+  // (flux personnel `/api/ical/[token]`, ou export club filtré sur une personne),
+  // DESCRIPTION ne mentionne plus que les contacts correspondant à ce filtre —
+  // jamais les noms des autres personnes assignées au même événement.
+  const selfIdentities = hasPersonFilter && options
+    ? (options.identities?.length ? options.identities : [options])
+    : undefined;
 
   const now = toIcalUtcTimestamp(new Date());
   const calendarName = club?.name || 'Clubika';
@@ -233,7 +270,7 @@ export function generateIcal(
     if (cancelled) lines.push('STATUS:CANCELLED');
     const location = getEventLocation(event);
     if (location) lines.push(foldLine(`LOCATION:${escapeIcalText(location)}`));
-    const description = getEventDescription(event, extras, clubAbbreviation);
+    const description = getEventDescription(event, extras, clubAbbreviation, selfIdentities);
     if (description) lines.push(foldLine(`DESCRIPTION:${escapeIcalText(description)}`));
     lines.push('END:VEVENT');
   }
