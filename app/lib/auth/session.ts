@@ -265,7 +265,7 @@ export async function revokeOtherSessionsForUser(userId: number, currentToken: s
 /** Révoque immédiatement toutes les sessions des utilisateurs d'un club. */
 export async function revokeAllSessionsForClub(clubId: string): Promise<void> {
   const db = await getDb();
-  const users = await db.getRepository<UserEntity>('User').find({ where: { clubId }, select: ['id'] });
+  const users = await db.getRepository<UserEntity>('User').find({ where: { clubId }, select: { id: true } });
   if (users.length === 0) return;
 
   const userIds = users.map((user) => user.id);

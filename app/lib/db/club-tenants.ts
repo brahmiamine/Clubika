@@ -6,7 +6,7 @@ type Queryable = DataSource | EntityManager;
 export async function listActiveClubIds(db: DataSource): Promise<string[]> {
   const rows = await db.getRepository<ClubTenantEntity>('ClubTenant').find({
     where: { active: true },
-    select: ['id'],
+    select: { id: true },
   });
   if (rows.length > 0) return rows.map((row) => row.id);
   // Aucun club encore enregistré dans club_tenants (première mise en route) :
