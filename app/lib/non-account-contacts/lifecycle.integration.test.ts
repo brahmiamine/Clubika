@@ -106,6 +106,7 @@ describe.skipIf(!dbAvailable)('fiches sans compte (issue #26)', () => {
     const invited = await postInvitation(jsonRequest('http://localhost/api/invitations', 'POST', admin.token, {
       accessRole: 'dirigeant',
       personId: profile!.id,
+      adultConfirmed: true,
     }));
     expect(invited.status).toBe(200);
 
@@ -151,6 +152,16 @@ describe.skipIf(!dbAvailable)('fiches sans compte (issue #26)', () => {
     expect(JSON.stringify(report)).not.toContain('Personne Import');
     expect(JSON.stringify(report)).not.toContain('0622222299');
     expect(JSON.stringify(report)).not.toContain('0633333399');
+
+    // Issue #18 : aucun import automatisé ne doit produire de compte utilisable —
+    // seule une invitation explicitement confirmée « majeure » par un administrateur
+    // peut activer un profil. Le profil importé reste un référentiel sans accès :
+    // `claimedAt` à `null`, mot de passe inconnu de quiconque.
+    const importedDb = await getDb();
+    const importedProfile = await importedDb.getRepository<UserEntity>('User').findOneBy({ clubId: clubA, nom: 'Personne Import' });
+    expect(importedProfile).not.toBeNull();
+    expect(importedProfile?.claimedAt).toBeNull();
+    expect(importedProfile?.passwordHash).not.toBe('');
 
     const listB = await getContacts(jsonRequest('http://localhost/api/non-account-contacts', 'GET', adminB.token));
     const bodyB = await listB.json() as { fiches: Array<{ nom: string }> };

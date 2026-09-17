@@ -36,10 +36,10 @@ describe.skipIf(!dbAvailable)('GET/POST /api/invitations (issue #155)', () => {
       const getResponse = await GET(getRequest('http://localhost/api/invitations', encadrant.token));
       expect(getResponse.status).toBe(403);
 
-      const postResponse = await POST(postRequest({ email: 'nouveau@example.com', accessRole: 'dirigeant' }, encadrant.token));
+      const postResponse = await POST(postRequest({ email: 'nouveau@example.com', accessRole: 'dirigeant', adultConfirmed: true }, encadrant.token));
       expect(postResponse.status).toBe(403);
 
-      const invalidRole = await POST(postRequest({ email: 'nouveau@example.com', accessRole: 'superadmin' }, admin.token));
+      const invalidRole = await POST(postRequest({ email: 'nouveau@example.com', accessRole: 'superadmin', adultConfirmed: true }, admin.token));
       expect(invalidRole.status).toBe(400);
     } finally {
       await encadrant.cleanup();
@@ -51,10 +51,10 @@ describe.skipIf(!dbAvailable)('GET/POST /api/invitations (issue #155)', () => {
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const admin = await createTestUserAndSession('admin', { clubId });
     try {
-      const withoutEmail = await POST(postRequest({ accessRole: 'admin' }, admin.token));
+      const withoutEmail = await POST(postRequest({ accessRole: 'admin', adultConfirmed: true }, admin.token));
       expect(withoutEmail.status).toBe(400);
 
-      const blankEmail = await POST(postRequest({ accessRole: 'admin', email: '   ' }, admin.token));
+      const blankEmail = await POST(postRequest({ accessRole: 'admin', email: '   ', adultConfirmed: true }, admin.token));
       expect(blankEmail.status).toBe(400);
     } finally {
       await admin.cleanup();
@@ -77,12 +77,15 @@ describe.skipIf(!dbAvailable)('GET/POST /api/invitations (issue #155)', () => {
         planningFunctions: ['encadrant'],
         personNom: 'Nouveau Encadrant',
         expiresInDays: 3,
+        adultConfirmed: true,
       }, admin.token));
       expect(createResponse.status).toBe(200);
       const createBody = await createResponse.json();
       invitationId = createBody.invitation.id as string;
       // L'email est normalisé (minuscules) avant stockage.
       expect(createBody.invitation.email).toBe('nouveau.encadrant@example.com');
+      // La confirmation de majorité de l'admin invitant est horodatée (issue #18).
+      expect(createBody.invitation.adultConfirmedAt).toBeTruthy();
       // Le jeton brut de l'URL n'est jamais stocké tel quel : seule son empreinte
       // SHA-256 l'est, comme `id` (issue #271).
       const rawToken = String(createBody.url).split('/inscription/').pop() ?? '';
@@ -94,6 +97,7 @@ describe.skipIf(!dbAvailable)('GET/POST /api/invitations (issue #155)', () => {
         email: `long-expiry-${randomBytes(6).toString('hex')}@example.com`,
         accessRole: 'dirigeant',
         expiresInDays: 365,
+        adultConfirmed: true,
       }, admin.token));
       expect(tooLong.status).toBe(400);
 
@@ -113,6 +117,51 @@ describe.skipIf(!dbAvailable)('GET/POST /api/invitations (issue #155)', () => {
       if (invitationId) await db.getRepository('Invitation').delete({ id: invitationId });
       await admin.cleanup();
       await otherAdmin.cleanup();
+    }
+  });
+});
+
+describe.skipIf(!dbAvailable)('POST /api/invitations — confirmation de majorité (issue #18)', () => {
+  it('refuse la création d\'une invitation sans confirmation explicite de majorité, même par appel direct à l\'API', async () => {
+    const clubId = `test-club-${randomBytes(6).toString('hex')}`;
+    const admin = await createTestUserAndSession('admin', { clubId });
+    try {
+      // Aucun champ `adultConfirmed` : simule un appel direct à l'API qui
+      // contournerait la case à cocher de l'écran d'invitation.
+      const missingField = await POST(postRequest({
+        email: `sans-confirmation-${randomBytes(6).toString('hex')}@example.com`,
+        accessRole: 'dirigeant',
+      }, admin.token));
+      expect(missingField.status).toBe(400);
+      expect(await missingField.json()).toMatchObject({
+        issues: [expect.objectContaining({ field: 'adultConfirmed' })],
+      });
+
+      // `adultConfirmed: false` explicite doit être refusé tout autant que l'absence
+      // du champ — un booléen à `false` ne doit jamais équivaloir à une confirmation.
+      const explicitFalse = await POST(postRequest({
+        email: `confirmation-fausse-${randomBytes(6).toString('hex')}@example.com`,
+        accessRole: 'dirigeant',
+        adultConfirmed: false,
+      }, admin.token));
+      expect(explicitFalse.status).toBe(400);
+      expect((await explicitFalse.json()).error).toMatch(/majeure/i);
+
+      // Une valeur non booléenne (ex. tentative de contournement par une chaîne
+      // "truthy") est rejetée par la validation de forme, pas silencieusement acceptée.
+      const wrongType = await POST(postRequest({
+        email: `mauvais-type-${randomBytes(6).toString('hex')}@example.com`,
+        accessRole: 'dirigeant',
+        adultConfirmed: 'yes',
+      }, admin.token));
+      expect(wrongType.status).toBe(400);
+
+      // Aucune des trois tentatives n'a créé d'invitation en base.
+      const db = await getDb();
+      const invitations = await db.getRepository<InvitationEntity>('Invitation').find({ where: { clubId } });
+      expect(invitations).toHaveLength(0);
+    } finally {
+      await admin.cleanup();
     }
   });
 });
@@ -144,7 +193,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations — ciblage d\'un profil sa
     const profile = await createUnclaimedProfile(clubId, 'Nadia Arbitre');
     let invitationId: string | null = null;
     try {
-      const response = await POST(postRequest({ accessRole: 'dirigeant', personId: profile.id }, admin.token));
+      const response = await POST(postRequest({ accessRole: 'dirigeant', personId: profile.id, adultConfirmed: true }, admin.token));
       expect(response.status).toBe(200);
       const body = await response.json();
       invitationId = body.invitation.id;
@@ -165,16 +214,16 @@ describe.skipIf(!dbAvailable)('POST /api/invitations — ciblage d\'un profil sa
     const profile = await createUnclaimedProfile(clubId, 'Karim Encadrant');
     let invitationId: string | null = null;
     try {
-      const first = await POST(postRequest({ accessRole: 'dirigeant', personId: profile.id }, admin.token));
+      const first = await POST(postRequest({ accessRole: 'dirigeant', personId: profile.id, adultConfirmed: true }, admin.token));
       expect(first.status).toBe(200);
       invitationId = (await first.json()).invitation.id;
 
-      const duplicate = await POST(postRequest({ accessRole: 'dirigeant', personId: profile.id }, admin.token));
+      const duplicate = await POST(postRequest({ accessRole: 'dirigeant', personId: profile.id, adultConfirmed: true }, admin.token));
       expect(duplicate.status).toBe(409);
 
       // Un compte déjà activé n'a rien à faire derrière une invitation.
       await markProfileClaimed(profile.id);
-      const claimed = await POST(postRequest({ accessRole: 'dirigeant', personId: profile.id }, admin.token));
+      const claimed = await POST(postRequest({ accessRole: 'dirigeant', personId: profile.id, adultConfirmed: true }, admin.token));
       expect(claimed.status).toBe(409);
     } finally {
       await cleanup({ users: [profile.id], invitations: invitationId ? [invitationId] : [] });
@@ -192,6 +241,7 @@ describe.skipIf(!dbAvailable)('POST /api/invitations — ciblage d\'un profil sa
       const response = await POST(postRequest({
         accessRole: 'dirigeant',
         personNom: 'Profil Inactif',
+        adultConfirmed: true,
       }, admin.token));
       expect(response.status).toBe(200);
       const body = await response.json();
@@ -212,17 +262,17 @@ describe.skipIf(!dbAvailable)('POST /api/invitations — ciblage d\'un profil sa
     const twinB = await createUnclaimedProfile(clubId, 'Jumeau Commun');
     const invitationIds: string[] = [];
     try {
-      const resolved = await POST(postRequest({ accessRole: 'dirigeant', personNom: 'Unique Accompagnateur' }, admin.token));
+      const resolved = await POST(postRequest({ accessRole: 'dirigeant', personNom: 'Unique Accompagnateur', adultConfirmed: true }, admin.token));
       expect(resolved.status).toBe(200);
       const resolvedBody = await resolved.json();
       invitationIds.push(resolvedBody.invitation.id);
       expect(resolvedBody.invitation.personId).toBe(unique.id);
 
-      const ambiguous = await POST(postRequest({ accessRole: 'dirigeant', personNom: 'Jumeau Commun' }, admin.token));
+      const ambiguous = await POST(postRequest({ accessRole: 'dirigeant', personNom: 'Jumeau Commun', adultConfirmed: true }, admin.token));
       expect(ambiguous.status).toBe(400);
 
       // Nom inconnu : simple libellé d'affichage, aucun rapprochement forcé.
-      const label = await POST(postRequest({ accessRole: 'dirigeant', personNom: 'Inconnu Personne' }, admin.token));
+      const label = await POST(postRequest({ accessRole: 'dirigeant', personNom: 'Inconnu Personne', adultConfirmed: true }, admin.token));
       expect(label.status).toBe(200);
       const labelBody = await label.json();
       invitationIds.push(labelBody.invitation.id);

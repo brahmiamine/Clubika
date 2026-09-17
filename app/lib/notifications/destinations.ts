@@ -50,6 +50,7 @@ function destinationForNotificationType(type: string | null, space: Notification
       return space === 'club' ? planningListHref('club') : null;
     case 'account-closure-requested':
     case 'account-closure-processed':
+    case 'minor-account-erroneous-closure':
       return space === 'club' ? '/club/utilisateurs' : null;
     default:
       return null;

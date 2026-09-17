@@ -15,11 +15,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/app/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, UserCog, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, ShieldAlert, UserCog, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUsers } from '@/app/hooks/useUsers';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
-import { apiDelete } from '@/lib/utils/api';
+import { apiDelete, apiPost } from '@/lib/utils/api';
 import {
   ACCESS_ROLE_LABELS,
   ALL_ACCESS_ROLES,
@@ -41,6 +41,9 @@ export function UsersManagementTab() {
   const { users, isLoading, reload } = useUsers();
 
   const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
+  // Issue #18 : traitement dédié d'un compte mineur créé par erreur (suspension,
+  // information des administrateurs, effacement), distinct de la fermeture standard.
+  const [minorErroneousUserId, setMinorErroneousUserId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -73,6 +76,20 @@ export function UsersManagementTab() {
         description: 'L’identité nominative a été remplacée par « Utilisateur supprimé ».',
       });
       setDeleteUserId(null);
+      await reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur inconnue');
+    }
+  };
+
+  const handleMinorErroneous = async () => {
+    if (minorErroneousUserId === null) return;
+    try {
+      await apiPost(`/api/users/${minorErroneousUserId}/minor-erroneous`);
+      toast.success('Compte suspendu et anonymisé', {
+        description: 'Les administrateurs du club ont été notifiés (issue #18).',
+      });
+      setMinorErroneousUserId(null);
       await reload();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur inconnue');
@@ -191,6 +208,17 @@ export function UsersManagementTab() {
                   >
                     <Trash2 className="h-4 w-4 text-primary" />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="Compte mineur créé par erreur"
+                    title="Compte mineur créé par erreur : suspendre, informer et effacer (issue #18)"
+                    disabled={closed || user.id === currentUser?.id}
+                    onClick={() => setMinorErroneousUserId(user.id)}
+                  >
+                    <ShieldAlert className="h-4 w-4 text-destructive" />
+                  </Button>
                 </div>
               );
 
@@ -252,6 +280,24 @@ export function UsersManagementTab() {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteUser}>Fermer le compte</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={minorErroneousUserId !== null} onOpenChange={(open) => !open && setMinorErroneousUserId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Compte mineur créé par erreur</AlertDialogTitle>
+            <AlertDialogDescription>
+              Clubika V1 est réservée aux adultes du staff (issue #18). N’utilisez cette action
+              que si ce compte s’avère appartenir à une personne mineure : il sera immédiatement
+              suspendu, les administrateurs actifs du club seront informés, puis l’identité sera
+              effacée (comme une fermeture de compte standard). Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMinorErroneous}>Suspendre et effacer</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

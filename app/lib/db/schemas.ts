@@ -363,6 +363,14 @@ export interface InvitationEntity {
   personId: number | null;
   createdByUserId: number | null;
   createdByPlatformAdminId: number | null;
+  /**
+   * Confirmation explicite par l'administrateur invitant que la personne est majeure
+   * (issue #18) : la V1 réserve les comptes aux adultes du staff tant qu'aucun parcours
+   * mineur n'a été conçu. Horodatage de la confirmation uniquement — jamais de date de
+   * naissance ni d'autre donnée d'âge collectée. `null` = invitation antérieure à cette
+   * exigence (créée avant le déploiement) ; toute nouvelle invitation la requiert.
+   */
+  adultConfirmedAt: Date | null;
   expiresAt: Date;
   usedAt: Date | null;
   usedByUserId: number | null;
@@ -391,6 +399,7 @@ export const InvitationSchema = new EntitySchema<InvitationEntity>({
     personId: { type: Number, nullable: true },
     createdByUserId: { type: Number, nullable: true },
     createdByPlatformAdminId: { type: Number, nullable: true },
+    adultConfirmedAt: { type: 'datetime', nullable: true },
     expiresAt: { type: 'datetime' },
     usedAt: { type: 'datetime', nullable: true },
     usedByUserId: { type: Number, nullable: true },

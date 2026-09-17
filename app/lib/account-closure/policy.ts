@@ -11,7 +11,15 @@ import type { UserReferenceReport } from '@/lib/planning/user-references';
  * encore identifier quelqu'un par leur texte est soumis à revue (#12).
  */
 
-export type AccountClosureRole = 'self' | 'admin';
+/**
+ * `'minor-erroneous'` (issue #18) : fermeture déclenchée par le traitement dédié d'un
+ * compte mineur créé par erreur (V1 réservée aux adultes du staff), distincte d'une
+ * fermeture standard demandée par le titulaire (`'self'`) ou décidée par un
+ * administrateur pour un autre motif (`'admin'`) — même mécanique de suspension et
+ * d'anonymisation, mais tracée séparément dans `account_closures.processed_by_role`
+ * pour l'audit de conformité.
+ */
+export type AccountClosureRole = 'self' | 'admin' | 'minor-erroneous';
 
 export interface RetainedCategory {
   category: string;
