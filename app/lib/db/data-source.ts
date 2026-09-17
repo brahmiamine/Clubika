@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
+import * as mysql2 from 'mysql2';
 import { loadSecretFilesFromEnv } from '../ops/load-secret-files';
 import { allSchemas } from './schemas';
 import { runSchemaMigrations } from './migrations/runner';
@@ -46,6 +47,7 @@ export function shouldSynchronizeSchema(env: {
 
 /** Pool mysql2 : le driver `mysql` 2.x mélange les paquets en requêtes concurrentes. */
 export const MARIADB_CONNECTOR_PACKAGE = 'mysql2' as const;
+const MARIADB_DRIVER = mysql2;
 
 export function mariadbPoolExtra(): { connectionLimit: number; enableKeepAlive: boolean } {
   return { connectionLimit: 10, enableKeepAlive: true };
@@ -64,7 +66,7 @@ function createDataSource(): DataSource {
     logging: false,
     timezone: 'Z',
     charset: 'utf8mb4_unicode_ci',
-    connectorPackage: MARIADB_CONNECTOR_PACKAGE,
+    driver: MARIADB_DRIVER,
     extra: mariadbPoolExtra(),
   });
 }

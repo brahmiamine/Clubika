@@ -110,4 +110,60 @@ describe.skipIf(!dbAvailable)('runRetentionPurge (issue #9)', () => {
     const attachSecond = second.categories.find((item) => item.category === 'planningAttachments');
     expect(attachSecond?.deleted).toBe(0);
   });
+
+  it('purge les liens de partage public expirés peu après leur échéance, sans attendre la fenêtre de 90 jours (issue #14)', async () => {
+    const db = await getDb();
+    const clubId = `ret-share-${randomBytes(4).toString('hex')}`;
+    const account = await createTestUserAndSession('admin', { clubId });
+
+    // Créé récemment (bien en-deçà du filet de sécurité `publicShares`/90 j sur
+    // `created_at`), mais expiré depuis plus de 7 j : ne doit survivre qu'à la
+    // purge générale, jamais à la purge technique courte sur `expiresAt`.
+    const expiredId = `public-share:${randomBytes(4).toString('hex')}`;
+    // Non expiré : ne doit être purgé par aucune des deux catégories.
+    const activeId = `public-share:${randomBytes(4).toString('hex')}`;
+
+    cleanups.push(async () => {
+      await db.query('DELETE FROM planning_records WHERE club_id = ?', [clubId]);
+      await db.query('DELETE FROM retention_purge_runs WHERE summary LIKE ?', [`%${clubId}%`]).catch(() => undefined);
+      await account.cleanup();
+      await db.getRepository('ClubTenant').delete({ id: clubId }).catch(() => undefined);
+    });
+
+    const expiredAt = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
+    const activeExpiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    const scope = { eventTypes: [], fromDate: null, toDate: null };
+
+    await db.query(
+      `INSERT INTO planning_records (id, club_id, kind, owner_user_id, payload)
+       VALUES (?, ?, 'public-share', ?, ?)`,
+      [expiredId, clubId, account.user.id, JSON.stringify({ tokenHash: 'x', expiresAt: expiredAt, scope, createdByUserId: account.user.id })],
+    );
+    await db.query(
+      `INSERT INTO planning_records (id, club_id, kind, owner_user_id, payload)
+       VALUES (?, ?, 'public-share', ?, ?)`,
+      [activeId, clubId, account.user.id, JSON.stringify({ tokenHash: 'y', expiresAt: activeExpiresAt, scope, createdByUserId: account.user.id })],
+    );
+    // Créés « aujourd'hui » : sans cette purge dédiée, le lien expiré serait
+    // encore là au bout de 89 jours (filet de sécurité `publicShares` = 90 j).
+
+    const dry = await runRetentionPurge(db, { dryRun: true, clubIds: [clubId] });
+    const expiredCategoryDry = dry.categories.find((item) => item.category === 'publicSharesExpired');
+    expect(expiredCategoryDry?.scanned).toBeGreaterThanOrEqual(1);
+    expect(expiredCategoryDry?.deleted).toBe(0);
+    const remainingAfterDry = await db.query('SELECT id FROM planning_records WHERE id IN (?, ?)', [expiredId, activeId]);
+    expect(remainingAfterDry).toHaveLength(2);
+
+    const applied = await runRetentionPurge(db, { dryRun: false, clubIds: [clubId] });
+    expect(applied.success).toBe(true);
+    const remainingIds = (await db.query(
+      'SELECT id FROM planning_records WHERE id IN (?, ?)',
+      [expiredId, activeId],
+    ) as Array<{ id: string }>).map((row) => row.id);
+    expect(remainingIds).toEqual([activeId]);
+
+    const second = await runRetentionPurge(db, { dryRun: false, clubIds: [clubId] });
+    const expiredCategorySecond = second.categories.find((item) => item.category === 'publicSharesExpired');
+    expect(expiredCategorySecond?.deleted).toBe(0);
+  });
 });

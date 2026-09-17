@@ -51,9 +51,9 @@ describe('WhatsApp provider infrastructure (issue #17)', () => {
     })).toBe('webhook');
   });
 
-  it('builds a template payload when an approved template is configured', () => {
+  it('builds a template payload when an approved template is configured, from the allowlisted body only', () => {
     const payload = buildMetaWhatsAppPayload(
-      { to: '33612345678', title: 'Nouvelle affectation', message: 'Match U17 samedi à 15h' },
+      { to: '33612345678', templateId: 'planning' },
       { WHATSAPP_META_TEMPLATE_NAME: 'planning_notification', WHATSAPP_META_TEMPLATE_LANGUAGE: 'fr' },
     );
     expect(payload).toMatchObject({
@@ -64,26 +64,25 @@ describe('WhatsApp provider infrastructure (issue #17)', () => {
     });
   });
 
-  it('omet eventType, eventId et urgence du webhook sauf drapeau explicite', () => {
-    const message = {
-      to: '33612345678',
-      title: 'Titre',
-      message: 'Corps',
-      eventType: 'officiel',
-      eventId: 'match-1',
-      urgency: 'critical',
-    };
+  it('n’envoie jamais de texte libre — seulement le corps du gabarit allowlisté (issue #27)', () => {
+    const payload = buildMetaWhatsAppPayload(
+      { to: '33612345678', templateId: 'planning' },
+      {},
+    ) as { text: { body: string } };
+    expect(payload.text.body).toBe('Une mise à jour de planning vous concerne sur Clubika. Connectez-vous pour la consulter.');
+  });
+
+  it('omet templateId du webhook sauf drapeau explicite, et n’envoie jamais d’eventType/eventId (issue #17, #27)', () => {
+    const message = { to: '33612345678', templateId: 'planning' as const };
     expect(webhookIncludesEventContext({})).toBe(false);
     expect(buildWebhookWhatsAppPayload(message, {})).toEqual({
       to: '33612345678',
-      text: 'Titre\nCorps',
+      text: 'Une mise à jour de planning vous concerne sur Clubika. Connectez-vous pour la consulter.',
     });
     expect(buildWebhookWhatsAppPayload(message, { WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT: 'true' })).toEqual({
       to: '33612345678',
-      text: 'Titre\nCorps',
-      eventType: 'officiel',
-      eventId: 'match-1',
-      urgency: 'critical',
+      text: 'Une mise à jour de planning vous concerne sur Clubika. Connectez-vous pour la consulter.',
+      templateId: 'planning',
     });
   });
 });
@@ -101,7 +100,7 @@ describe('sendWhatsAppNotification', () => {
     vi.stubEnv('WHATSAPP_META_PHONE_NUMBER_ID', '123');
     vi.stubEnv('WHATSAPP_META_ACCESS_TOKEN', 'secret');
     vi.stubEnv('WHATSAPP_META_GRAPH_VERSION', 'v23.0');
-    await sendWhatsAppNotification({ to: '0612345678', title: 'Titre', message: 'Secret' });
+    await sendWhatsAppNotification({ to: '0612345678', templateId: 'planning' });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -117,13 +116,7 @@ describe('sendWhatsAppNotification', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('nope', { status: 502 })));
 
     try {
-      await sendWhatsAppNotification({
-        to: '0612345678',
-        title: 'Affectation confidentielle',
-        message: 'Ne jamais logger ceci',
-        eventType: 'officiel',
-        eventId: 'secret-event',
-      });
+      await sendWhatsAppNotification({ to: '0612345678', templateId: 'planning' });
     } finally {
       process.stderr.write = original;
     }
@@ -133,8 +126,5 @@ describe('sendWhatsAppNotification', () => {
     expect(joined).toMatch(/"status":502/);
     expect(joined).not.toMatch(/0612345678/);
     expect(joined).not.toMatch(/33612345678/);
-    expect(joined).not.toMatch(/Affectation confidentielle/);
-    expect(joined).not.toMatch(/Ne jamais logger/);
-    expect(joined).not.toMatch(/secret-event/);
   });
 });

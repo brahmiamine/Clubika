@@ -1,5 +1,6 @@
 import { logError } from '@/lib/observability/log';
 import { guardedFetch } from '@/lib/compliance/external-services';
+import { renderWhatsAppNotification, type NotificationTemplateId } from './templates';
 
 export type WhatsAppProvider = 'disabled' | 'webhook' | 'meta';
 type WhatsAppEnvironment = Readonly<Record<string, string | undefined>>;
@@ -7,13 +8,14 @@ type WhatsAppEnvironment = Readonly<Record<string, string | undefined>>;
 export const WHATSAPP_PROVIDER_ENV = 'WHATSAPP_PROVIDER';
 export const WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT_ENV = 'WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT';
 
+/**
+ * Message WhatsApp sortant (issue #27) : plus de titre/texte libre — `templateId`
+ * référence un gabarit allowlisté (`templates.ts`), rendu ici même, jamais concaténé
+ * depuis du texte utilisateur ni depuis un identifiant d'événement.
+ */
 export interface WhatsAppNotificationMessage {
   to: string;
-  title: string;
-  message: string;
-  eventType?: string | null;
-  eventId?: string | null;
-  urgency?: string | null;
+  templateId: NotificationTemplateId;
 }
 
 function digits(value: string): string {
@@ -76,6 +78,7 @@ export function buildMetaWhatsAppPayload(
   message: WhatsAppNotificationMessage,
   env: WhatsAppEnvironment = process.env,
 ): Record<string, unknown> {
+  const rendered = renderWhatsAppNotification(message.templateId);
   const templateName = env.WHATSAPP_META_TEMPLATE_NAME?.trim();
   if (templateName) {
     return {
@@ -88,10 +91,7 @@ export function buildMetaWhatsAppPayload(
         language: { code: env.WHATSAPP_META_TEMPLATE_LANGUAGE?.trim() || 'fr' },
         components: [{
           type: 'body',
-          parameters: [
-            { type: 'text', text: message.title.slice(0, 1024) },
-            { type: 'text', text: message.message.slice(0, 1024) },
-          ],
+          parameters: [{ type: 'text', text: rendered.body.slice(0, 1024) }],
         }],
       },
     };
@@ -102,22 +102,26 @@ export function buildMetaWhatsAppPayload(
     recipient_type: 'individual',
     to: message.to,
     type: 'text',
-    text: { body: `${message.title}\n${message.message}`.slice(0, 4096), preview_url: false },
+    text: { body: rendered.body.slice(0, 4096), preview_url: false },
   };
 }
 
+/**
+ * `templateId` (catégorie générique, jamais un identifiant d'événement) n'est ajouté
+ * au payload que si l'administrateur du club l'a explicitement activé
+ * (`WHATSAPP_WEBHOOK_INCLUDE_EVENT_CONTEXT`, issue #17) — jamais par défaut.
+ */
 export function buildWebhookWhatsAppPayload(
   message: WhatsAppNotificationMessage,
   env: WhatsAppEnvironment = process.env,
 ): Record<string, unknown> {
+  const rendered = renderWhatsAppNotification(message.templateId);
   const payload: Record<string, unknown> = {
     to: message.to,
-    text: `${message.title}\n${message.message}`,
+    text: rendered.body,
   };
   if (webhookIncludesEventContext(env)) {
-    payload.eventType = message.eventType ?? null;
-    payload.eventId = message.eventId ?? null;
-    payload.urgency = message.urgency ?? 'normal';
+    payload.templateId = message.templateId;
   }
   return payload;
 }

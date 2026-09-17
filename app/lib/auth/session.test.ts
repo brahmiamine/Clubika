@@ -31,7 +31,6 @@ describe.skipIf(!dbAvailable)('session (integration)', () => {
       planningFunctions: [],
       active: true,
       personLinks: [],
-      icalToken: `ical-${Date.now()}`,
     });
     userId = user.id;
   });

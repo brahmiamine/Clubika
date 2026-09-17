@@ -97,6 +97,31 @@ La migration `0039` (issue #25) ajoute l’état d’offboarding sur `club_tenan
 les tables de restitution / instructions sous-traitants / certificats. Idempotente.
 Voir [tenant-offboarding.md](./tenant-offboarding.md).
 
+La migration `0041` (issue #13) remplace `users.icalToken` (jeton iCal personnel
+stocké en clair) par `icalTokenHash` (empreinte SHA-256 indexée) et
+`icalTokenCreatedAt`. Le backfill (`SHA2(icalToken, 256)`) puis la suppression de
+la colonne en clair se font **dans la même migration**, comme `0013`
+(`invitations.id`) : aucune fenêtre où les deux formats coexistent, aucun
+abonnement iCal existant cassé (l'URL déjà distribuée ne change pas, seule sa
+représentation stockée change). Irréversible une fois appliquée — voir le
+commentaire de la migration dans `schema-migrations.ts` pour le détail du choix
+(backfill immédiat plutôt que rehash-au-prochain-usage ou régénération forcée) et
+la section Rollback ci-dessous. Sauvegarde SQL recommandée avant `db:migrate` sur
+une instance en production. Voir aussi
+[ical-personal-feed-hardening.md](./decisions/ical-personal-feed-hardening.md)
+pour l'ensemble du durcissement du flux (minimisation, cycle de vie du jeton,
+divulgation au fournisseur de calendrier tiers).
+
+La migration `0042` (issue #27) réduit `planning_notification_outbox` au strict
+nécessaire pour livrer et rejouer un envoi : ajout de `template_id` (gabarit
+allowlisté par canal) et `notification_id` (identifiant opaque vers la notification
+in-app, seule source du détail réel), puis suppression de `notification_type`,
+`title`, `message`, `event_type`, `event_id` et `urgency`. Idempotente ; sur une base
+déjà en production, prendre une sauvegarde SQL avant `db:migrate` (les colonnes
+supprimées ne sont pas récupérables). Voir aussi le code applicatif dans
+`app/lib/notifications/outbox.ts`, `app/lib/notifications/templates.ts` et
+`app/api/notifications/[id]/open/route.ts`.
+
 ### Rollback
 
 Les migrations sont à sens unique et sans `down` automatisé. Stratégie :

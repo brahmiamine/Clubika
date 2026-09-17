@@ -1,8 +1,8 @@
-import { randomBytes } from 'node:crypto';
 import type { DataSource, EntityManager } from 'typeorm';
 import type { PrivacyContactChangeEntity, UserEntity } from '@/lib/db/schemas';
 import { revokeAllSessionsForUser } from '@/lib/auth/session';
 import { createNotificationForUser } from '@/lib/notifications/service';
+import { REVOKED_ICAL_TOKEN } from '@/lib/planning/ical-token';
 import { hashPrivacyToken, newPrivacyToken, normalizePrivacyEmail } from './catalog';
 
 type Queryable = DataSource | EntityManager;
@@ -82,7 +82,12 @@ export async function confirmEmailChange(
   if (collision && collision.id !== user.id) throw new Error('Email déjà utilisé dans ce club');
 
   user.email = row.newEmail;
-  user.icalToken = randomBytes(24).toString('hex');
+  // Révocation du flux iCal personnel (issue #13) sur changement d'e-mail, comme
+  // les sessions ci-dessous : l'identité change, le lien de calendrier connu
+  // sous l'ancienne identité ne doit plus fonctionner. L'abonné en régénère un
+  // depuis son profil s'il souhaite se réabonner.
+  user.icalTokenHash = REVOKED_ICAL_TOKEN.icalTokenHash;
+  user.icalTokenCreatedAt = REVOKED_ICAL_TOKEN.icalTokenCreatedAt;
   const saved = await userRepo.save(user);
   row.usedAt = new Date();
   await repo.save(row);

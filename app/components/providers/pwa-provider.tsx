@@ -100,6 +100,29 @@ async function syncSubscription(): Promise<boolean> {
   return true;
 }
 
+/**
+ * Active la préférence serveur `push` dans le même geste que l'abonnement navigateur
+ * (issue #27) : sans cet appel, un abonnement créé via « Activer » resterait silencieux
+ * (push désactivé par défaut). Best-effort — une erreur réseau ne doit jamais casser le
+ * flux d'activation, qui a déjà réussi côté navigateur.
+ */
+async function enablePushPreference(): Promise<void> {
+  try {
+    const response = await fetch('/api/me/notification-preferences', { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = (await response.json()) as { preferences?: Record<string, unknown> };
+    if (!data.preferences) return;
+    await fetch('/api/me/notification-preferences', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data.preferences, inApp: true, push: true }),
+    });
+  } catch {
+    // Best-effort : l'abonnement navigateur reste valide, l'utilisateur peut activer la
+    // préférence depuis les réglages si cet appel échoue.
+  }
+}
+
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   const { user } = useCurrentUser();
   const { settings } = useAppSettings();
@@ -266,6 +289,10 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
       const enabled = await syncSubscription();
       if (enabled) {
+        // Opt-in explicite du canal push (issue #27) : le clic sur « Activer » et la
+        // permission navigateur suffisent à créer l'abonnement, mais l'envoi effectif
+        // reste conditionné à la préférence serveur — activée ici, dans le même geste.
+        await enablePushPreference();
         toast.success('Notifications smartphone activées');
       } else {
         toast.error("Les clés VAPID ne sont pas encore configurées sur le serveur.");
