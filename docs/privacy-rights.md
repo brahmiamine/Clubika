@@ -14,6 +14,15 @@ procédure et modèles de réponse : [#12](https://github.com/brahmiamine/Clubik
 
 L’application **n’invente pas** de délai légal, de prolongation ni de refus. Le bandeau `PRIVACY_NO_LEGAL_PROMISE` le rappelle partout.
 
+## Suppression d’un message de chat ≠ demande RGPD d’effacement du compte
+
+Ces deux actions sont volontairement distinctes et ne doivent pas être confondues :
+
+- **Suppression d’un message** (`deleteMessage`, [`app/lib/chat/service.ts`](../app/lib/chat/service.ts) ; issues [#259](https://github.com/brahmiamine/Clubika/issues/259) et [#10](https://github.com/brahmiamine/Clubika/issues/10)) : action immédiate, en libre-service, déclenchée par l’auteur du message lui-même ou par un administrateur du club depuis l’interface de chat (`chat:delete`). Elle purge le contenu chiffré, la pièce jointe et les réactions d’**un seul message**, et ne conserve qu’un tombstone minimal (`deletedAt`, `deletedByUserId`) nécessaire à l’ordre, la pagination et les compteurs de non-lus. Elle ne touche ni le compte de l’auteur, ni ses autres messages, ni son identité (`senderName` reste affiché).
+- **Demande RGPD d’effacement du compte** (`anonymizeMessagesForDeletedUser`, même fichier ; issue [#11](https://github.com/brahmiamine/Clubika/issues/11), à la charge d’une décision humaine + de la procédure décrite ci-dessus) : porte sur **l’ensemble du compte**, pas un message isolé. Elle anonymise l’attribution (`senderName` → « Utilisateur supprimé ») de tous les messages envoyés ou transférés par la personne, sans purger leur contenu — le contenu des échanges reste visible aux autres participants, seule l’identité de l’auteur est retirée.
+
+En résumé : supprimer un message retire son contenu mais garde l’identité de l’auteur ; l’effacement RGPD du compte garde le contenu des messages mais retire l’identité de l’auteur. Ce ne sont pas des équivalents fonctionnels, et l’un ne dispense pas de l’autre.
+
 ## Migration 0038 `exercice_droits_rgpd`
 
 Tables `privacy_requests`, `privacy_export_tokens`, `privacy_contact_changes` et colonnes `processingRestrictedAt` / `processingOpposedAt`. Idempotente (`IF NOT EXISTS`). Pas de purge destructive.
