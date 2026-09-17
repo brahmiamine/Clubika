@@ -26,7 +26,7 @@ Généré le : 2026-09-17
 
 - `@img/sharp-linux-x64@0.35.4` — https://sharp.pixelplumbing.com
 - `@swc/helpers@0.5.23` — https://swc.rs
-- `baseline-browser-mapping@2.11.21` — https://github.com/web-platform-dx/baseline-browser-mapping#readme
+- `baseline-browser-mapping@2.11.22` — https://github.com/web-platform-dx/baseline-browser-mapping#readme
 - `class-variance-authority@0.7.1` — https://github.com/joe-bell/cva#readme
 - `denque@2.1.0` — https://docs.page/invertase/denque
 - `detect-libc@2.1.2` — https://github.com/lovell/detect-libc#readme
@@ -57,7 +57,6 @@ Généré le : 2026-09-17
 
 ## CC-BY-4.0
 
-- `caniuse-lite@1.0.30001764` — https://github.com/browserslist/caniuse-lite#readme
 - `caniuse-lite@1.0.30001810` — https://github.com/browserslist/caniuse-lite#readme
 
 ## ISC
@@ -79,7 +78,6 @@ Généré le : 2026-09-17
 - `minimatch@9.0.9` — https://github.com/isaacs/minimatch#readme
 - `picocolors@1.1.1` — https://github.com/alexeyraspopov/picocolors#readme
 - `semver@6.3.1` — https://github.com/npm/node-semver#readme
-- `semver@7.7.3` — https://github.com/npm/node-semver#readme
 - `semver@7.8.5` — https://github.com/npm/node-semver#readme
 - `signal-exit@4.1.0` — https://github.com/tapjs/signal-exit#readme
 - `which@2.0.2` — https://github.com/isaacs/node-which#readme
@@ -89,7 +87,7 @@ Généré le : 2026-09-17
 
 ## LGPL-2.1-or-later
 
-- `mariadb@3.5.3` — https://github.com/mariadb-corporation/mariadb-connector-nodejs#readme — ⚠️ review, revue humaine requise
+- `mariadb@3.5.4` — https://github.com/mariadb-corporation/mariadb-connector-nodejs#readme — ⚠️ review, revue humaine requise
 
 ## LGPL-3.0-or-later
 
@@ -118,57 +116,59 @@ Généré le : 2026-09-17
 - `@babel/traverse@7.28.6` — https://babel.dev/docs/en/next/babel-traverse
 - `@babel/types@7.28.6` — https://babel.dev/docs/en/next/babel-types
 - `@esbuild/linux-x64@0.28.2` — https://github.com/evanw/esbuild#readme
-- `@floating-ui/core@1.7.3` — https://floating-ui.com
-- `@floating-ui/dom@1.7.4` — https://floating-ui.com
-- `@floating-ui/react-dom@2.1.6` — https://floating-ui.com/docs/react-dom
-- `@floating-ui/utils@0.2.10` — https://floating-ui.com
+- `@floating-ui/core@1.8.0` — https://floating-ui.com
+- `@floating-ui/dom@1.8.0` — https://floating-ui.com
+- `@floating-ui/react-dom@2.1.9` — https://floating-ui.com/docs/react-dom
+- `@floating-ui/utils@0.2.12` — https://floating-ui.com
 - `@img/colour@1.1.0` — https://github.com/lovell/colour#readme
 - `@jridgewell/gen-mapping@0.3.13` — https://github.com/jridgewell/sourcemaps/tree/main/packages/gen-mapping
 - `@jridgewell/remapping@2.3.5` — https://github.com/jridgewell/sourcemaps/tree/main/packages/remapping
 - `@jridgewell/resolve-uri@3.1.2` — https://github.com/jridgewell/resolve-uri#readme
 - `@jridgewell/sourcemap-codec@1.5.5` — https://github.com/jridgewell/sourcemaps/tree/main/packages/sourcemap-codec
 - `@jridgewell/trace-mapping@0.3.31` — https://github.com/jridgewell/sourcemaps/tree/main/packages/trace-mapping
-- `@next/env@16.3.3` — https://github.com/vercel/next.js#readme
-- `@next/swc-linux-x64-gnu@16.3.3` — https://github.com/vercel/next.js#readme
+- `@next/env@16.3.5` — https://github.com/vercel/next.js#readme
+- `@next/swc-linux-x64-gnu@16.3.5` — https://github.com/vercel/next.js#readme
 - `@pkgjs/parseargs@0.11.0` — https://github.com/pkgjs/parseargs#readme
-- `@radix-ui/primitive@1.1.3` — https://radix-ui.com/primitives
-- `@radix-ui/react-accordion@1.2.12` — https://radix-ui.com/primitives
-- `@radix-ui/react-alert-dialog@1.1.15` — https://radix-ui.com/primitives
-- `@radix-ui/react-arrow@1.1.7` — https://radix-ui.com/primitives
-- `@radix-ui/react-checkbox@1.3.3` — https://radix-ui.com/primitives
-- `@radix-ui/react-collapsible@1.1.12` — https://radix-ui.com/primitives
-- `@radix-ui/react-collection@1.1.7` — https://radix-ui.com/primitives
+- `@radix-ui/primitive@1.1.7` — https://radix-ui.com/primitives
+- `@radix-ui/react-accordion@1.2.20` — https://radix-ui.com/primitives
+- `@radix-ui/react-alert-dialog@1.1.23` — https://radix-ui.com/primitives
+- `@radix-ui/react-arrow@1.1.15` — https://radix-ui.com/primitives
+- `@radix-ui/react-checkbox@1.3.11` — https://radix-ui.com/primitives
+- `@radix-ui/react-collapsible@1.1.20` — https://radix-ui.com/primitives
+- `@radix-ui/react-collection@1.1.15` — https://radix-ui.com/primitives
 - `@radix-ui/react-compose-refs@1.1.2` — https://radix-ui.com/primitives
-- `@radix-ui/react-context@1.1.2` — https://radix-ui.com/primitives
-- `@radix-ui/react-dialog@1.1.15` — https://radix-ui.com/primitives
-- `@radix-ui/react-direction@1.1.1` — https://radix-ui.com/primitives
-- `@radix-ui/react-dismissable-layer@1.1.11` — https://radix-ui.com/primitives
-- `@radix-ui/react-dropdown-menu@2.1.16` — https://radix-ui.com/primitives
-- `@radix-ui/react-focus-guards@1.1.3` — https://radix-ui.com/primitives
-- `@radix-ui/react-focus-scope@1.1.7` — https://radix-ui.com/primitives
+- `@radix-ui/react-compose-refs@1.1.5` — https://radix-ui.com/primitives
+- `@radix-ui/react-context@1.2.2` — https://radix-ui.com/primitives
+- `@radix-ui/react-dialog@1.1.23` — https://radix-ui.com/primitives
+- `@radix-ui/react-direction@1.1.4` — https://radix-ui.com/primitives
+- `@radix-ui/react-dismissable-layer@1.1.19` — https://radix-ui.com/primitives
+- `@radix-ui/react-dropdown-menu@2.1.24` — https://radix-ui.com/primitives
+- `@radix-ui/react-focus-guards@1.1.6` — https://radix-ui.com/primitives
+- `@radix-ui/react-focus-scope@1.1.16` — https://radix-ui.com/primitives
 - `@radix-ui/react-id@1.1.1` — https://radix-ui.com/primitives
-- `@radix-ui/react-label@2.1.8` — https://radix-ui.com/primitives
-- `@radix-ui/react-menu@2.1.16` — https://radix-ui.com/primitives
-- `@radix-ui/react-popover@1.1.15` — https://radix-ui.com/primitives
-- `@radix-ui/react-popper@1.2.8` — https://radix-ui.com/primitives
-- `@radix-ui/react-portal@1.1.9` — https://radix-ui.com/primitives
-- `@radix-ui/react-presence@1.1.5` — https://radix-ui.com/primitives
-- `@radix-ui/react-primitive@2.1.3` — https://radix-ui.com/primitives
+- `@radix-ui/react-id@1.1.4` — https://radix-ui.com/primitives
+- `@radix-ui/react-label@2.1.15` — https://radix-ui.com/primitives
+- `@radix-ui/react-menu@2.1.24` — https://radix-ui.com/primitives
+- `@radix-ui/react-popover@1.1.23` — https://radix-ui.com/primitives
+- `@radix-ui/react-popper@1.3.7` — https://radix-ui.com/primitives
+- `@radix-ui/react-portal@1.1.17` — https://radix-ui.com/primitives
+- `@radix-ui/react-presence@1.1.10` — https://radix-ui.com/primitives
+- `@radix-ui/react-primitive@2.1.10` — https://radix-ui.com/primitives
 - `@radix-ui/react-primitive@2.1.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-roving-focus@1.1.11` — https://radix-ui.com/primitives
-- `@radix-ui/react-slot@1.2.3` — https://radix-ui.com/primitives
+- `@radix-ui/react-roving-focus@1.1.19` — https://radix-ui.com/primitives
 - `@radix-ui/react-slot@1.2.4` — https://radix-ui.com/primitives
-- `@radix-ui/react-switch@1.2.6` — https://radix-ui.com/primitives
-- `@radix-ui/react-tabs@1.1.13` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-callback-ref@1.1.1` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-controllable-state@1.2.2` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-effect-event@0.0.2` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-escape-keydown@1.1.1` — https://radix-ui.com/primitives
+- `@radix-ui/react-slot@1.3.3` — https://radix-ui.com/primitives
+- `@radix-ui/react-switch@1.3.7` — https://radix-ui.com/primitives
+- `@radix-ui/react-tabs@1.1.21` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-callback-ref@1.1.4` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-controllable-state@1.2.6` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-effect-event@0.0.5` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-is-hydrated@0.1.3` — https://radix-ui.com/primitives
 - `@radix-ui/react-use-layout-effect@1.1.1` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-previous@1.1.1` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-rect@1.1.1` — https://radix-ui.com/primitives
-- `@radix-ui/react-use-size@1.1.1` — https://radix-ui.com/primitives
-- `@radix-ui/rect@1.1.1` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-layout-effect@1.1.4` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-rect@1.1.4` — https://radix-ui.com/primitives
+- `@radix-ui/react-use-size@1.1.4` — https://radix-ui.com/primitives
+- `@radix-ui/rect@1.1.3` — https://radix-ui.com/primitives
 - `@socket.io/component-emitter@3.1.2` — https://github.com/socketio/emitter#readme
 - `@sqltools/formatter@1.2.5` — https://github.com/mtxr/vscode-sqltools#readme
 - `@types/cors@2.8.19` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/cors
@@ -251,7 +251,6 @@ Généré le : 2026-09-17
 - `html2canvas@1.4.1` — https://html2canvas.hertzen.com
 - `http_ece@1.2.0` — https://github.com/martinthomson/encrypted-content-encoding
 - `https-proxy-agent@7.0.6` — https://github.com/TooTallNate/proxy-agents#readme
-- `iconv-lite@0.7.2` — https://github.com/pillarjs/iconv-lite
 - `iconv-lite@0.7.3` — https://github.com/pillarjs/iconv-lite
 - `iobuffer@5.4.0` — https://github.com/image-js/iobuffer#readme
 - `is-callable@1.2.7` — https://github.com/inspect-js/is-callable#readme
@@ -277,9 +276,9 @@ Généré le : 2026-09-17
 - `mysql2@3.24.4` — https://sidorares.github.io/node-mysql2/docs
 - `named-placeholders@1.1.6` — https://github.com/mysqljs/named-placeholders#readme
 - `nanoid@3.3.11` — https://github.com/ai/nanoid#readme
-- `nanoid@3.3.18` — https://github.com/ai/nanoid#readme
+- `nanoid@3.3.19` — https://github.com/ai/nanoid#readme
 - `negotiator@0.6.3` — https://github.com/jshttp/negotiator#readme
-- `next@16.3.3` — https://nextjs.org
+- `next@16.3.5` — https://nextjs.org
 - `next-themes@0.4.6` — https://github.com/pacocoursey/next-themes#readme
 - `node-releases@2.0.55` — https://github.com/chicoxyzzy/node-releases#readme
 - `object-assign@4.1.1` — https://github.com/sindresorhus/object-assign#readme
@@ -291,8 +290,8 @@ Généré le : 2026-09-17
 - `postcss@8.5.6` — https://postcss.org/
 - `process-nextick-args@2.0.1` — https://github.com/calvinmetcalf/process-nextick-args
 - `raf@3.4.1` — https://github.com/chrisdickinson/raf#readme
-- `react@19.2.3` — https://react.dev/
-- `react-dom@19.2.3` — https://react.dev/
+- `react@19.3.0` — https://react.dev/
+- `react-dom@19.3.0` — https://react.dev/
 - `react-remove-scroll@2.7.2` — https://github.com/theKashey/react-remove-scroll#readme
 - `react-remove-scroll-bar@2.3.8` — https://github.com/theKashey/react-remove-scroll-bar#readme
 - `react-style-singleton@2.2.3` — https://github.com/theKashey/react-style-singleton#readme
@@ -303,7 +302,7 @@ Généré le : 2026-09-17
 - `safe-buffer@5.1.2` — https://github.com/feross/safe-buffer
 - `safe-buffer@5.2.1` — https://github.com/feross/safe-buffer
 - `safer-buffer@2.1.2` — https://github.com/ChALkeR/safer-buffer#readme
-- `scheduler@0.27.0` — https://react.dev/
+- `scheduler@0.28.0` — https://react.dev/
 - `set-function-length@1.2.2` — https://github.com/ljharb/set-function-length#readme
 - `shebang-command@2.0.0` — https://github.com/kevva/shebang-command#readme
 - `shebang-regex@3.0.0` — https://github.com/sindresorhus/shebang-regex#readme
@@ -311,7 +310,7 @@ Généré le : 2026-09-17
 - `socket.io-adapter@2.5.8` — https://github.com/socketio/socket.io/tree/main/packages/socket.io-adapter#readme
 - `socket.io-client@4.8.3` — https://github.com/socketio/socket.io/tree/main/packages/socket.io-client#readme
 - `socket.io-parser@4.2.7` — https://github.com/socketio/socket.io/tree/main/packages/socket.io-client#readme
-- `sonner@2.0.7` — https://sonner.emilkowal.ski/
+- `sonner@2.0.8` — https://sonner.emilkowal.ski/
 - `sql-escaper@1.5.1` — https://github.com/mysqljs/sql-escaper#readme
 - `sql-highlight@6.1.0` — https://github.com/scriptcoded/sql-highlight#readme
 - `sqlstring@2.3.1` — https://github.com/mysqljs/sqlstring#readme
@@ -323,10 +322,10 @@ Généré le : 2026-09-17
 - `strip-ansi@7.2.0` — https://github.com/chalk/strip-ansi#readme
 - `styled-jsx@5.1.6` — https://github.com/vercel/styled-jsx#readme
 - `svg-pathdata@6.0.3` — https://github.com/nfroidure/svg-pathdata#readme
-- `tailwind-merge@3.4.0` — https://github.com/dcastil/tailwind-merge
+- `tailwind-merge@3.6.0` — https://github.com/dcastil/tailwind-merge
 - `text-segmentation@1.0.3` — https://github.com/niklasvh/text-segmentation
 - `to-buffer@1.2.2` — https://github.com/browserify/to-buffer
-- `tsx@4.23.12` — https://tsx.hirok.io
+- `tsx@4.23.13` — https://tsx.hirok.io
 - `typed-array-buffer@1.0.3` — https://github.com/inspect-js/typed-array-buffer#readme
 - `typeorm@0.3.31` — https://typeorm.io
 - `undici-types@6.21.0` — https://undici.nodejs.org
@@ -347,7 +346,7 @@ Généré le : 2026-09-17
 
 ## MIT-0
 
-- `nodemailer@9.1.1` — https://nodemailer.com/
+- `nodemailer@10.0.9` — https://nodemailer.com/
 
 ## MPL-2.0
 

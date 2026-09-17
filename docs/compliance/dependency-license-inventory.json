@@ -1,10 +1,10 @@
 {
   "note": "Inventaire automatisé (issue #39). Outil d'aide, pas un avis juridique. Toute ligne reste soumise à revue humaine avant commercialisation.",
-  "generatedAt": "2026-09-17T16:27:59.041Z",
+  "generatedAt": "2026-09-17T19:37:51.885Z",
   "generatedBy": "scripts/audit-dependencies.mjs --licenses (pnpm licenses list --json)",
-  "packageCount": 634,
+  "packageCount": 633,
   "tierCounts": {
-    "allowed": 626,
+    "allowed": 625,
     "review": 8,
     "blocked": 0
   },
@@ -431,7 +431,7 @@
     },
     {
       "name": "@floating-ui/core",
-      "version": "1.7.3",
+      "version": "1.8.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "atomiks",
@@ -441,7 +441,7 @@
     },
     {
       "name": "@floating-ui/dom",
-      "version": "1.7.4",
+      "version": "1.8.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "atomiks",
@@ -451,7 +451,7 @@
     },
     {
       "name": "@floating-ui/react-dom",
-      "version": "2.1.6",
+      "version": "2.1.9",
       "license": "MIT",
       "tier": "allowed",
       "author": "atomiks",
@@ -461,7 +461,7 @@
     },
     {
       "name": "@floating-ui/utils",
-      "version": "0.2.10",
+      "version": "0.2.12",
       "license": "MIT",
       "tier": "allowed",
       "author": "atomiks",
@@ -601,7 +601,7 @@
     },
     {
       "name": "@next/env",
-      "version": "16.3.3",
+      "version": "16.3.5",
       "license": "MIT",
       "tier": "allowed",
       "author": "Next.js Team",
@@ -621,7 +621,7 @@
     },
     {
       "name": "@next/swc-linux-x64-gnu",
-      "version": "16.3.3",
+      "version": "16.3.5",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -701,7 +701,7 @@
     },
     {
       "name": "@radix-ui/primitive",
-      "version": "1.1.3",
+      "version": "1.1.7",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -711,7 +711,7 @@
     },
     {
       "name": "@radix-ui/react-accordion",
-      "version": "1.2.12",
+      "version": "1.2.20",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -721,7 +721,7 @@
     },
     {
       "name": "@radix-ui/react-alert-dialog",
-      "version": "1.1.15",
+      "version": "1.1.23",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -731,7 +731,7 @@
     },
     {
       "name": "@radix-ui/react-arrow",
-      "version": "1.1.7",
+      "version": "1.1.15",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -741,7 +741,7 @@
     },
     {
       "name": "@radix-ui/react-checkbox",
-      "version": "1.3.3",
+      "version": "1.3.11",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -751,7 +751,7 @@
     },
     {
       "name": "@radix-ui/react-collapsible",
-      "version": "1.1.12",
+      "version": "1.1.20",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -761,7 +761,7 @@
     },
     {
       "name": "@radix-ui/react-collection",
-      "version": "1.1.7",
+      "version": "1.1.15",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -780,8 +780,18 @@
       "scope": "transitive-prod"
     },
     {
+      "name": "@radix-ui/react-compose-refs",
+      "version": "1.1.5",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "",
+      "homepage": "https://radix-ui.com/primitives",
+      "description": "",
+      "scope": "transitive-prod"
+    },
+    {
       "name": "@radix-ui/react-context",
-      "version": "1.1.2",
+      "version": "1.2.2",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -791,7 +801,7 @@
     },
     {
       "name": "@radix-ui/react-dialog",
-      "version": "1.1.15",
+      "version": "1.1.23",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -801,7 +811,7 @@
     },
     {
       "name": "@radix-ui/react-direction",
-      "version": "1.1.1",
+      "version": "1.1.4",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -811,7 +821,7 @@
     },
     {
       "name": "@radix-ui/react-dismissable-layer",
-      "version": "1.1.11",
+      "version": "1.1.19",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -821,7 +831,7 @@
     },
     {
       "name": "@radix-ui/react-dropdown-menu",
-      "version": "2.1.16",
+      "version": "2.1.24",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -831,7 +841,7 @@
     },
     {
       "name": "@radix-ui/react-focus-guards",
-      "version": "1.1.3",
+      "version": "1.1.6",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -841,7 +851,7 @@
     },
     {
       "name": "@radix-ui/react-focus-scope",
-      "version": "1.1.7",
+      "version": "1.1.16",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -860,8 +870,18 @@
       "scope": "transitive-prod"
     },
     {
+      "name": "@radix-ui/react-id",
+      "version": "1.1.4",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "",
+      "homepage": "https://radix-ui.com/primitives",
+      "description": "",
+      "scope": "transitive-prod"
+    },
+    {
       "name": "@radix-ui/react-label",
-      "version": "2.1.8",
+      "version": "2.1.15",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -871,7 +891,7 @@
     },
     {
       "name": "@radix-ui/react-menu",
-      "version": "2.1.16",
+      "version": "2.1.24",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -881,7 +901,7 @@
     },
     {
       "name": "@radix-ui/react-popover",
-      "version": "1.1.15",
+      "version": "1.1.23",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -891,7 +911,7 @@
     },
     {
       "name": "@radix-ui/react-popper",
-      "version": "1.2.8",
+      "version": "1.3.7",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -901,7 +921,7 @@
     },
     {
       "name": "@radix-ui/react-portal",
-      "version": "1.1.9",
+      "version": "1.1.17",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -911,7 +931,7 @@
     },
     {
       "name": "@radix-ui/react-presence",
-      "version": "1.1.5",
+      "version": "1.1.10",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -921,7 +941,7 @@
     },
     {
       "name": "@radix-ui/react-primitive",
-      "version": "2.1.3",
+      "version": "2.1.10",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -941,23 +961,13 @@
     },
     {
       "name": "@radix-ui/react-roving-focus",
-      "version": "1.1.11",
+      "version": "1.1.19",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
       "homepage": "https://radix-ui.com/primitives",
       "description": "",
       "scope": "transitive-prod"
-    },
-    {
-      "name": "@radix-ui/react-slot",
-      "version": "1.2.3",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "",
-      "homepage": "https://radix-ui.com/primitives",
-      "description": "",
-      "scope": "direct-prod"
     },
     {
       "name": "@radix-ui/react-slot",
@@ -970,8 +980,18 @@
       "scope": "direct-prod"
     },
     {
+      "name": "@radix-ui/react-slot",
+      "version": "1.3.3",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "",
+      "homepage": "https://radix-ui.com/primitives",
+      "description": "",
+      "scope": "direct-prod"
+    },
+    {
       "name": "@radix-ui/react-switch",
-      "version": "1.2.6",
+      "version": "1.3.7",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -981,7 +1001,7 @@
     },
     {
       "name": "@radix-ui/react-tabs",
-      "version": "1.1.13",
+      "version": "1.1.21",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -991,7 +1011,7 @@
     },
     {
       "name": "@radix-ui/react-use-callback-ref",
-      "version": "1.1.1",
+      "version": "1.1.4",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1001,7 +1021,7 @@
     },
     {
       "name": "@radix-ui/react-use-controllable-state",
-      "version": "1.2.2",
+      "version": "1.2.6",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1011,7 +1031,7 @@
     },
     {
       "name": "@radix-ui/react-use-effect-event",
-      "version": "0.0.2",
+      "version": "0.0.5",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1020,8 +1040,8 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "@radix-ui/react-use-escape-keydown",
-      "version": "1.1.1",
+      "name": "@radix-ui/react-use-is-hydrated",
+      "version": "0.1.3",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1040,8 +1060,8 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "@radix-ui/react-use-previous",
-      "version": "1.1.1",
+      "name": "@radix-ui/react-use-layout-effect",
+      "version": "1.1.4",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1051,7 +1071,7 @@
     },
     {
       "name": "@radix-ui/react-use-rect",
-      "version": "1.1.1",
+      "version": "1.1.4",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1061,7 +1081,7 @@
     },
     {
       "name": "@radix-ui/react-use-size",
-      "version": "1.1.1",
+      "version": "1.1.4",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1071,7 +1091,7 @@
     },
     {
       "name": "@radix-ui/rect",
-      "version": "1.1.1",
+      "version": "1.1.3",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1341,7 +1361,7 @@
     },
     {
       "name": "@types/react",
-      "version": "19.2.8",
+      "version": "19.3.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1351,7 +1371,7 @@
     },
     {
       "name": "@types/react-dom",
-      "version": "19.2.3",
+      "version": "19.3.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1951,7 +1971,7 @@
     },
     {
       "name": "baseline-browser-mapping",
-      "version": "2.11.21",
+      "version": "2.11.22",
       "license": "Apache-2.0",
       "tier": "allowed",
       "author": "",
@@ -2088,16 +2108,6 @@
       "homepage": "https://github.com/sindresorhus/callsites#readme",
       "description": "Get callsites from the V8 stack trace API",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "caniuse-lite",
-      "version": "1.0.30001764",
-      "license": "CC-BY-4.0",
-      "tier": "allowed",
-      "author": "Ben Briggs",
-      "homepage": "https://github.com/browserslist/caniuse-lite#readme",
-      "description": "A smaller version of caniuse-db, with only the essentials!",
-      "scope": "transitive-prod"
     },
     {
       "name": "caniuse-lite",
@@ -3451,16 +3461,6 @@
     },
     {
       "name": "iconv-lite",
-      "version": "0.7.2",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Alexander Shtuchkin",
-      "homepage": "https://github.com/pillarjs/iconv-lite",
-      "description": "Convert character encodings in pure javascript.",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "iconv-lite",
       "version": "0.7.3",
       "license": "MIT",
       "tier": "allowed",
@@ -4221,7 +4221,7 @@
     },
     {
       "name": "mariadb",
-      "version": "3.5.3",
+      "version": "3.5.4",
       "license": "LGPL-2.1-or-later",
       "tier": "review",
       "author": "Diego Dupin",
@@ -4391,7 +4391,7 @@
     },
     {
       "name": "nanoid",
-      "version": "3.3.18",
+      "version": "3.3.19",
       "license": "MIT",
       "tier": "allowed",
       "author": "Andrey Sitnik",
@@ -4431,7 +4431,7 @@
     },
     {
       "name": "next",
-      "version": "16.3.3",
+      "version": "16.3.5",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -4461,7 +4461,7 @@
     },
     {
       "name": "nodemailer",
-      "version": "9.1.1",
+      "version": "10.0.9",
       "license": "MIT-0",
       "tier": "allowed",
       "author": "Andris Reinman",
@@ -4881,7 +4881,7 @@
     },
     {
       "name": "react",
-      "version": "19.2.3",
+      "version": "19.3.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -4891,7 +4891,7 @@
     },
     {
       "name": "react-dom",
-      "version": "19.2.3",
+      "version": "19.3.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -5171,7 +5171,7 @@
     },
     {
       "name": "scheduler",
-      "version": "0.27.0",
+      "version": "0.28.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -5182,16 +5182,6 @@
     {
       "name": "semver",
       "version": "6.3.1",
-      "license": "ISC",
-      "tier": "allowed",
-      "author": "GitHub Inc.",
-      "homepage": "https://github.com/npm/node-semver#readme",
-      "description": "The semantic version parser used by npm.",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "semver",
-      "version": "7.7.3",
       "license": "ISC",
       "tier": "allowed",
       "author": "GitHub Inc.",
@@ -5381,7 +5371,7 @@
     },
     {
       "name": "sonner",
-      "version": "2.0.7",
+      "version": "2.0.8",
       "license": "MIT",
       "tier": "allowed",
       "author": "Emil Kowalski",
@@ -5661,7 +5651,7 @@
     },
     {
       "name": "tailwind-merge",
-      "version": "3.4.0",
+      "version": "3.6.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "Dany Castillo",
@@ -5851,7 +5841,7 @@
     },
     {
       "name": "tsx",
-      "version": "4.23.12",
+      "version": "4.23.13",
       "license": "MIT",
       "tier": "allowed",
       "author": "Hiroki Osame",
