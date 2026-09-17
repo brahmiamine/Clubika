@@ -140,6 +140,8 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] (integration)', 
     );
 
     expect(response.status).toBe(200);
+    // Jamais mis en cache par un intermédiaire ni réutilisé après révocation (issue #14).
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store, max-age=0');
     const body = await response.json();
     expect(body.club).not.toHaveProperty('id');
     expect(body.club.primaryColor).toMatch(/^#/);

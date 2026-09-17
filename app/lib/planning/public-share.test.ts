@@ -2,9 +2,13 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { PlanningEventSnapshot } from './event-store';
 import {
+  DEFAULT_PUBLIC_SHARE_MAX_EXPIRY_DAYS,
   FORBIDDEN_PUBLIC_PLANNING_KEYS,
   PUBLIC_PLANNING_ITEM_KEYS,
+  PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY,
+  clampShareExpiryDays,
   hashShareToken,
+  publicShareMaxExpiryDays,
   publicSportsVenueAddress,
   toPublicPlanningItem,
 } from './public-share';
@@ -114,6 +118,40 @@ describe('public planning shares', () => {
     expect(JSON.stringify(item)).not.toContain('Marie Dupont');
     expect(item.stadium).toBeNull();
     expect(item.address).toBeNull();
+  });
+});
+
+describe('durée maximale des liens de partage public (issue #14)', () => {
+  it('propose 30 jours par défaut, réduit depuis 90', () => {
+    expect(DEFAULT_PUBLIC_SHARE_MAX_EXPIRY_DAYS).toBe(30);
+    expect(publicShareMaxExpiryDays({})).toBe(30);
+  });
+
+  it('reste configurable par variable d’environnement, plafonnée à l’ancien maximum (90 j)', () => {
+    expect(publicShareMaxExpiryDays({ [PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY]: '14' })).toBe(14);
+    expect(publicShareMaxExpiryDays({ [PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY]: '9000' })).toBe(90);
+    expect(publicShareMaxExpiryDays({ [PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY]: '0' })).toBe(30);
+    expect(publicShareMaxExpiryDays({ [PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY]: '-5' })).toBe(30);
+    expect(publicShareMaxExpiryDays({ [PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY]: 'nope' })).toBe(30);
+  });
+
+  it.each([
+    // [libellé, valeur brute, résultat attendu]
+    ['0', 0, 1],
+    ['une valeur négative', -5, 1],
+    ['une valeur non numérique', 'nope', 7],
+    ['une valeur non numérique (NaN direct)', Number.NaN, 7],
+    ['absente (undefined)', undefined, 7],
+    ['30 jours (limite)', 30, 30],
+    ['plus de 30 jours', 45, 30],
+    ['largement plus de 30 jours', 365, 30],
+    ['1 jour (minimum)', 1, 1],
+  ])('clampe une durée « %s » (%s) vers %i jour(s)', (_label, raw, expected) => {
+    expect(clampShareExpiryDays(raw, 30)).toBe(expected);
+  });
+
+  it('utilise le maximum configuré par défaut quand aucun plafond explicite n’est fourni', () => {
+    expect(clampShareExpiryDays(45)).toBe(publicShareMaxExpiryDays());
   });
 });
 

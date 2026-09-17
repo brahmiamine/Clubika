@@ -4,7 +4,7 @@ import { PRIVACY_CATALOG_VERSION } from './catalog';
 
 const FORBIDDEN_PAYLOAD_KEYS = new Set([
   'token', 'tokenhash', 'tokenHash', 'secret', 'password', 'passwordHash',
-  'icalToken', 'auth', 'p256dh', 'endpoint', 'signedUrl',
+  'icalToken', 'icalTokenHash', 'auth', 'p256dh', 'endpoint', 'signedUrl',
 ]);
 
 function stripSecrets(value: unknown): unknown {

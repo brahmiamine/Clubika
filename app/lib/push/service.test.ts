@@ -26,15 +26,13 @@ import { triggerPushForUser, type PushNotificationPayload } from './service';
 
 const db = {} as DataSource;
 
-function payload(notificationId: string): PushNotificationPayload {
+function payload(notificationId: number): PushNotificationPayload {
   return {
     notificationId,
-    type: 'assignment',
-    title: `Notification ${notificationId}`,
-    message: `Message ${notificationId}`,
-    eventType: 'amical',
-    eventId: 'match-1',
-    url: '/notifications',
+    templateId: 'planning',
+    title: 'Clubika',
+    message: 'Une mise à jour de planning vous concerne. Ouvrez l’application pour la consulter.',
+    url: `/api/notifications/${notificationId}/open`,
     clubId: 'us-biotoise',
   };
 }
@@ -47,13 +45,13 @@ describe('triggerPushForUser (issue #219)', () => {
   });
 
   it('encrypts and sends the correlated payload for every notification', async () => {
-    await triggerPushForUser(db, 7, payload('delivery-1'));
-    await triggerPushForUser(db, 7, payload('delivery-2'));
+    await triggerPushForUser(db, 7, payload(101));
+    await triggerPushForUser(db, 7, payload(102));
 
     expect(mocks.sendNotification).toHaveBeenCalledTimes(2);
     expect(mocks.sendNotification.mock.calls.map((call) => JSON.parse(String(call[1])).notificationId)).toEqual([
-      'delivery-1',
-      'delivery-2',
+      101,
+      102,
     ]);
     expect(JSON.parse(String(mocks.sendNotification.mock.calls[0]?.[1])).icon).toBe(
       '/api/pwa/icon?clubId=us-biotoise&size=192&variant=plain',
@@ -73,5 +71,14 @@ describe('triggerPushForUser (issue #219)', () => {
         vapidDetails: expect.objectContaining({ subject: 'mailto:test@example.com' }),
       }),
     );
+  });
+
+  it('never transmits an event identifier — only the opaque notification id and the resolver URL (issue #27)', async () => {
+    await triggerPushForUser(db, 7, payload(101));
+
+    const sent = JSON.parse(String(mocks.sendNotification.mock.calls[0]?.[1])) as Record<string, unknown>;
+    expect(sent).not.toHaveProperty('eventType');
+    expect(sent).not.toHaveProperty('eventId');
+    expect(sent.url).toBe('/api/notifications/101/open');
   });
 });

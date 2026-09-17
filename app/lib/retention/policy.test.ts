@@ -30,6 +30,15 @@ describe('retention policy (issue #9)', () => {
     }
   });
 
+  it('purge les liens de partage expirés peu après leur échéance, séparément du filet de sécurité sur la création (issue #14)', () => {
+    const expired = RETENTION_CATEGORIES.find((item) => item.id === 'publicSharesExpired');
+    const safetyNet = RETENTION_CATEGORIES.find((item) => item.id === 'publicShares');
+    if (!expired || !safetyNet) throw new Error('publicSharesExpired/publicShares category missing');
+    expect(expired.defaultDays).toBe(7);
+    expect(expired.envKey).toBe('RETENTION_PUBLIC_SHARES_EXPIRED_DAYS');
+    expect(expired.defaultDays).toBeLessThan(safetyNet.defaultDays);
+  });
+
   it('reads env overrides and rejects non-positive values', () => {
     const chat = RETENTION_CATEGORIES.find((item) => item.id === 'chat');
     if (!chat) throw new Error('chat category missing');

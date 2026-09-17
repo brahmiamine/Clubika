@@ -129,7 +129,6 @@ describe.skipIf(!dbAvailable)('POST /api/invitations — ciblage d\'un profil sa
       planningFunctions,
       active: true,
       claimedAt: null,
-      icalToken: randomBytes(12).toString('hex'),
     });
   }
 
