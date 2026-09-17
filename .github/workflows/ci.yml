@@ -83,6 +83,69 @@ jobs:
       - run: pnpm run test
       - run: pnpm run routes:coverage -- --check
 
+  privacy-invariants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mariadb:
+        image: mariadb:11.4.13@sha256:80494b9810694179889f7281ec44ca928241df577159c0356a1070e2e94616a1
+        env:
+          MARIADB_DATABASE: clubika
+          MARIADB_USER: clubika_user
+          MARIADB_PASSWORD: clubika_password
+          MARIADB_ROOT_PASSWORD: root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_NAME: clubika
+      DB_USER: clubika_user
+      DB_PASSWORD: clubika_password
+      BOOTSTRAP_SUPERADMIN_EMAIL: test-admin@example.com
+      BOOTSTRAP_SUPERADMIN_PASSWORD: test-password-123
+      REQUIRE_DB_TESTS: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Historique complet requis : la garde anti-PII (scripts/check-privacy-fixtures.mjs)
+          # diffe contre `origin/<base>`, pas juste le commit courant (issue #41).
+          fetch-depth: 0
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run db:migrate
+      - name: Fabrique de données sentinelles + heuristiques PII (unitaire)
+        run: pnpm exec vitest run app/lib/privacy-invariants/pii-heuristics.test.ts app/lib/privacy-invariants/public-schema-allowlist.test.ts
+      - name: Matrice des frontières (public settings, partages, invitations, iCal, exports, notifications, logs, audit, erreurs, prestataires, service worker)
+        run: pnpm exec vitest run app/lib/privacy-invariants/boundaries.test.ts app/lib/privacy-invariants/network-guard.test.ts app/lib/privacy-invariants/service-worker-boundary.test.ts
+      - name: Isolation multi-tenant (table-driven) + scénarios de cycle de vie
+        run: pnpm exec vitest run app/lib/privacy-invariants/multi-tenant.integration.test.ts app/lib/privacy-invariants/lifecycle.integration.test.ts
+      - name: Aucune donnée personnelle réaliste ajoutée aux fixtures/snapshots
+        run: pnpm run privacy:fixtures
+      - name: Rapport (sans valeur personnelle)
+        if: always()
+        run: |
+          {
+            echo "## Privacy invariants (issue #41)"
+            echo ""
+            echo "Frontières couvertes : public settings, partages planning, invitations, iCal, exports RGPD, notifications/push, logs, audit, erreurs, prestataires externes, service worker."
+            echo ""
+            echo "Résultat des étapes ci-dessus (déterministe, aucune valeur personnelle) :"
+            echo "- fabrique sentinelle + heuristiques PII : ${{ job.status }}"
+            echo "- matrice des frontières : voir logs de l'étape dédiée"
+            echo "- isolation multi-tenant + cycle de vie : voir logs de l'étape dédiée"
+            echo "- scan anti-PII des fixtures/snapshots ajoutés : voir logs de l'étape dédiée"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   e2e:
     runs-on: ubuntu-latest
     services:
