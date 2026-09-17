@@ -29,6 +29,8 @@
     "audit:deps": "node scripts/audit-dependencies.mjs",
     "audit:actions": "node scripts/check-action-pins.mjs",
     "audit:exceptions": "node scripts/check-exceptions.mjs",
+    "audit:licenses": "node scripts/audit-dependencies.mjs --licenses",
+    "audit:assets": "node scripts/check-asset-registry.mjs",
     "privacy:fixtures": "node scripts/check-privacy-fixtures.mjs",
     "postinstall": "npx playwright install chromium --with-deps || echo 'Playwright installation skipped'",
     "db:migrate": "tsx scripts/run-migrations.ts",
