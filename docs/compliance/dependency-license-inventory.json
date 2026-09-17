@@ -1,24 +1,14 @@
 {
   "note": "Inventaire automatisé (issue #39). Outil d'aide, pas un avis juridique. Toute ligne reste soumise à revue humaine avant commercialisation.",
-  "generatedAt": "2026-09-17T19:37:51.885Z",
+  "generatedAt": "2026-09-17T19:41:36.672Z",
   "generatedBy": "scripts/audit-dependencies.mjs --licenses (pnpm licenses list --json)",
-  "packageCount": 633,
+  "packageCount": 605,
   "tierCounts": {
-    "allowed": 625,
+    "allowed": 597,
     "review": 8,
     "blocked": 0
   },
   "dependencies": [
-    {
-      "name": "@acemir/cssom",
-      "version": "0.9.31",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Nikita Vasilyev",
-      "homepage": "https://github.com/acemir/CSSOM#readme",
-      "description": "CSS Object Model implementation and CSS parser",
-      "scope": "transitive-dev"
-    },
     {
       "name": "@alloc/quick-lru",
       "version": "5.2.0",
@@ -31,7 +21,7 @@
     },
     {
       "name": "@asamuzakjp/css-color",
-      "version": "4.1.2",
+      "version": "7.0.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "asamuzaK",
@@ -41,33 +31,13 @@
     },
     {
       "name": "@asamuzakjp/dom-selector",
-      "version": "6.8.1",
+      "version": "9.1.4",
       "license": "MIT",
       "tier": "allowed",
       "author": "asamuzaK",
       "homepage": "https://github.com/asamuzaK/domSelector#readme",
       "description": "A CSS selector engine.",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "@asamuzakjp/nwsapi",
-      "version": "2.3.9",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Diego Perini",
-      "homepage": "http://javascript.nwbox.com/nwsapi/",
-      "description": "Fast CSS Selectors API Engine",
-      "scope": "transitive-dev"
-    },
-    {
-      "name": "@babel/code-frame",
-      "version": "7.28.6",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "The Babel Team",
-      "homepage": "https://babel.dev/docs/en/next/babel-code-frame",
-      "description": "Generate errors that contain a code frame that point to source locations.",
-      "scope": "transitive-prod"
     },
     {
       "name": "@babel/code-frame",
@@ -161,16 +131,6 @@
     },
     {
       "name": "@babel/helper-validator-identifier",
-      "version": "7.28.5",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "The Babel Team",
-      "homepage": "https://github.com/babel/babel#readme",
-      "description": "Validate identifier/keywords name",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "@babel/helper-validator-identifier",
       "version": "7.29.7",
       "license": "MIT",
       "tier": "allowed",
@@ -260,6 +220,16 @@
       "scope": "transitive-prod"
     },
     {
+      "name": "@bramus/specificity",
+      "version": "2.4.2",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "Bramus Van Damme",
+      "homepage": "https://github.com/bramus/specificity#readme",
+      "description": "Calculate specificity of a CSS Selector",
+      "scope": "transitive-dev"
+    },
+    {
       "name": "@csstools/color-helpers",
       "version": "6.1.1",
       "license": "MIT-0",
@@ -301,7 +271,7 @@
     },
     {
       "name": "@csstools/css-syntax-patches-for-csstree",
-      "version": "1.1.8",
+      "version": "1.1.14",
       "license": "MIT-0",
       "tier": "allowed",
       "author": "",
@@ -540,16 +510,6 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "@isaacs/cliui",
-      "version": "8.0.2",
-      "license": "ISC",
-      "tier": "allowed",
-      "author": "Ben Coe",
-      "homepage": "https://github.com/yargs/cliui#readme",
-      "description": "easily create complex multi-column command-line-interfaces",
-      "scope": "transitive-prod"
-    },
-    {
       "name": "@jridgewell/gen-mapping",
       "version": "0.3.13",
       "license": "MIT",
@@ -611,7 +571,7 @@
     },
     {
       "name": "@next/eslint-plugin-next",
-      "version": "16.3.3",
+      "version": "16.3.5",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -678,16 +638,6 @@
       "homepage": "https://oxc.rs",
       "description": "Types for Oxc AST nodes",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "@pkgjs/parseargs",
-      "version": "0.11.0",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "",
-      "homepage": "https://github.com/pkgjs/parseargs#readme",
-      "description": "Polyfill of future proposal for `util.parseArgs()`",
-      "scope": "transitive-prod"
     },
     {
       "name": "@playwright/test",
@@ -1221,7 +1171,7 @@
     },
     {
       "name": "@testing-library/react",
-      "version": "16.3.2",
+      "version": "16.3.3",
       "license": "MIT",
       "tier": "allowed",
       "author": "Kent C. Dodds",
@@ -1321,7 +1271,7 @@
     },
     {
       "name": "@types/node",
-      "version": "20.19.30",
+      "version": "26.6.1",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -1531,7 +1481,7 @@
     },
     {
       "name": "@vitejs/plugin-react",
-      "version": "6.0.5",
+      "version": "6.1.1",
       "license": "MIT",
       "tier": "allowed",
       "author": "Evan You",
@@ -1720,16 +1670,6 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "app-root-path",
-      "version": "3.1.0",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Chris Morrell",
-      "homepage": "https://github.com/inxilpro/node-app-root-path",
-      "description": "Determine an app's root path from anywhere inside the app",
-      "scope": "transitive-prod"
-    },
-    {
       "name": "argparse",
       "version": "2.0.1",
       "license": "Python-2.0",
@@ -1897,7 +1837,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/inspect-js/available-typed-arrays#readme",
       "description": "Returns an array of Typed Array names that are available in the current environment",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "aws-ssl-profiles",
@@ -1937,7 +1877,7 @@
       "author": "Julian Gruber",
       "homepage": "https://github.com/juliangruber/balanced-match",
       "description": "Match balanced character pairs, like \"{\" and \"}\"",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "base64-arraybuffer",
@@ -1947,16 +1887,6 @@
       "author": "Niklas von Hertzen",
       "homepage": "https://github.com/niklasvh/base64-arraybuffer",
       "description": "Encode/decode base64 data into ArrayBuffers",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "base64-js",
-      "version": "1.5.1",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "T. Jameson Little",
-      "homepage": "https://github.com/beatgammit/base64-js",
-      "description": "Base64 encoding/decoding in pure JS",
       "scope": "transitive-prod"
     },
     {
@@ -1981,7 +1911,7 @@
     },
     {
       "name": "bidi-js",
-      "version": "1.0.3",
+      "version": "1.1.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "Jason Johnston",
@@ -2017,7 +1947,7 @@
       "author": "Julian Gruber",
       "homepage": "https://github.com/juliangruber/brace-expansion",
       "description": "Brace expansion as known from sh/bash",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "brace-expansion",
@@ -2027,7 +1957,7 @@
       "author": "Julian Gruber",
       "homepage": "https://github.com/juliangruber/brace-expansion",
       "description": "Brace expansion as known from sh/bash",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "braces",
@@ -2050,16 +1980,6 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "buffer",
-      "version": "6.0.3",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Feross Aboukhadijeh",
-      "homepage": "https://github.com/feross/buffer",
-      "description": "Node.js Buffer API, for the browser",
-      "scope": "transitive-prod"
-    },
-    {
       "name": "buffer-equal-constant-time",
       "version": "1.0.1",
       "license": "BSD-3-Clause",
@@ -2077,7 +1997,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/call-bind#readme",
       "description": "Robustly `.call.bind()` a function",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "call-bind-apply-helpers",
@@ -2087,7 +2007,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/call-bind-apply-helpers#readme",
       "description": "Helper functions around Function call/apply/bind, for use in `call-bind`",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "call-bound",
@@ -2097,7 +2017,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/call-bound#readme",
       "description": "Robust call-bound JavaScript intrinsics, using `call-bind` and `get-intrinsic`.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "callsites",
@@ -2171,7 +2091,7 @@
     },
     {
       "name": "cliui",
-      "version": "8.0.1",
+      "version": "9.0.1",
       "license": "ISC",
       "tier": "allowed",
       "author": "Ben Coe",
@@ -2207,7 +2127,7 @@
       "author": "Heather Arthur",
       "homepage": "https://github.com/Qix-/color-convert#readme",
       "description": "Plain color conversion functions",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "color-name",
@@ -2217,7 +2137,7 @@
       "author": "DY",
       "homepage": "https://github.com/colorjs/color-name",
       "description": "A list of color names and its values",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "concat-map",
@@ -2287,7 +2207,7 @@
       "author": "André Cruz",
       "homepage": "https://github.com/moxystudio/node-cross-spawn",
       "description": "Cross platform child_process#spawn and child_process#spawnSync",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "css-line-break",
@@ -2307,16 +2227,6 @@
       "author": "Roman Dvornov",
       "homepage": "https://github.com/csstree/csstree#readme",
       "description": "A tool set for CSS: fast detailed parser (CSS → AST), walker (AST traversal), generator (AST → CSS) and lexer (validation and matching) based on specs and browser implementations",
-      "scope": "transitive-dev"
-    },
-    {
-      "name": "cssstyle",
-      "version": "5.3.7",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "",
-      "homepage": "https://github.com/jsdom/cssstyle#readme",
-      "description": "An implementation of the CSSStyleDeclaration class from the CSS Object Model specification",
       "scope": "transitive-dev"
     },
     {
@@ -2341,7 +2251,7 @@
     },
     {
       "name": "data-urls",
-      "version": "6.0.1",
+      "version": "7.0.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "Domenic Denicola",
@@ -2447,7 +2357,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/define-data-property#readme",
       "description": "Define a data property on an object. Will fall back to assignment in an engine without descriptors.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "define-properties",
@@ -2530,16 +2440,6 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "dotenv",
-      "version": "16.6.1",
-      "license": "BSD-2-Clause",
-      "tier": "allowed",
-      "author": "",
-      "homepage": "https://github.com/motdotla/dotenv#readme",
-      "description": "Loads environment variables from .env file",
-      "scope": "transitive-prod"
-    },
-    {
       "name": "dunder-proto",
       "version": "1.0.1",
       "license": "MIT",
@@ -2547,17 +2447,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/es-shims/dunder-proto#readme",
       "description": "If available, the `Object.prototype.__proto__` accessor and mutator, call-bound",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "eastasianwidth",
-      "version": "0.2.0",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Masaki Komagata",
-      "homepage": "https://github.com/komagata/eastasianwidth#readme",
-      "description": "Get East Asian Width from a character.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "ecdsa-sig-formatter",
@@ -2581,7 +2471,7 @@
     },
     {
       "name": "emoji-regex",
-      "version": "8.0.0",
+      "version": "10.6.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "Mathias Bynens",
@@ -2667,7 +2557,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/es-define-property#readme",
       "description": "`Object.defineProperty`, but not IE 8's broken one.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "es-errors",
@@ -2677,7 +2567,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/es-errors#readme",
       "description": "A simple cache for a few of the JS Error constructors.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "es-iterator-helpers",
@@ -2707,7 +2597,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/es-object-atoms#readme",
       "description": "ES Object-related atoms: Object, ToObject, RequireObjectCoercible",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "es-set-tostringtag",
@@ -2781,7 +2671,7 @@
     },
     {
       "name": "eslint-config-next",
-      "version": "16.3.3",
+      "version": "16.3.5",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -3027,7 +2917,7 @@
       "author": "thecodrr",
       "homepage": "https://github.com/thecodrr/fdir#readme",
       "description": "The fastest directory crawler & globbing alternative to glob, fast-glob, & tiny-glob. Crawls 1m files in < 1s",
-      "scope": "transitive-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "fflate",
@@ -3097,17 +2987,7 @@
       "author": "Raynos",
       "homepage": "https://github.com/Raynos/for-each",
       "description": "A better forEach",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "foreground-child",
-      "version": "3.3.1",
-      "license": "ISC",
-      "tier": "allowed",
-      "author": "Isaac Z. Schlueter",
-      "homepage": "https://github.com/tapjs/foreground-child#readme",
-      "description": "Run a child as if it's the foreground process. Give it stdio. Exit when it exits.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "function-bind",
@@ -3117,7 +2997,7 @@
       "author": "Raynos",
       "homepage": "https://github.com/Raynos/function-bind",
       "description": "Implementation of Function.prototype.bind",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "function.prototype.name",
@@ -3180,6 +3060,16 @@
       "scope": "transitive-prod"
     },
     {
+      "name": "get-east-asian-width",
+      "version": "1.7.0",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "Sindre Sorhus",
+      "homepage": "https://github.com/sindresorhus/get-east-asian-width#readme",
+      "description": "Determine the East Asian Width of a Unicode character",
+      "scope": "transitive-prod"
+    },
+    {
       "name": "get-intrinsic",
       "version": "1.3.0",
       "license": "MIT",
@@ -3187,7 +3077,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/get-intrinsic#readme",
       "description": "Get and robustly cache all JS language-level intrinsics at first require time",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "get-nonce",
@@ -3207,7 +3097,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/get-proto#readme",
       "description": "Robustly get the [[Prototype]] of an object",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "get-symbol-description",
@@ -3228,16 +3118,6 @@
       "homepage": "https://github.com/privatenumber/get-tsconfig#readme",
       "description": "Find and parse the tsconfig.json file from a directory path",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "glob",
-      "version": "10.5.0",
-      "license": "ISC",
-      "tier": "allowed",
-      "author": "Isaac Z. Schlueter",
-      "homepage": "https://github.com/isaacs/node-glob#readme",
-      "description": "the most correct and second fastest glob implementation in JavaScript",
-      "scope": "transitive-prod"
     },
     {
       "name": "glob-parent",
@@ -3307,7 +3187,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/gopd#readme",
       "description": "`Object.getOwnPropertyDescriptor`, but accounts for IE's broken implementation.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "graceful-fs",
@@ -3347,7 +3227,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/inspect-js/has-property-descriptors#readme",
       "description": "Does the environment have full property descriptor support? Handles IE 8's broken defineProperty/gOPD.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "has-proto",
@@ -3367,7 +3247,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/has-symbols#readme",
       "description": "Determine if the JS environment has Symbol support. Supports spec, or shams.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "has-tostringtag",
@@ -3377,7 +3257,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/inspect-js/has-tostringtag#readme",
       "description": "Determine if the JS environment has `Symbol.toStringTag` support. Supports spec, or shams.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "hasown",
@@ -3387,7 +3267,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/inspect-js/hasOwn#readme",
       "description": "A robust, ES3 compatible, \"has own property\" predicate.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "hermes-estree",
@@ -3440,16 +3320,6 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "http-proxy-agent",
-      "version": "7.0.2",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Nathan Rajlich",
-      "homepage": "https://github.com/TooTallNate/proxy-agents#readme",
-      "description": "An HTTP(s) proxy `http.Agent` implementation for HTTP",
-      "scope": "transitive-dev"
-    },
-    {
       "name": "https-proxy-agent",
       "version": "7.0.6",
       "license": "MIT",
@@ -3467,16 +3337,6 @@
       "author": "Alexander Shtuchkin",
       "homepage": "https://github.com/pillarjs/iconv-lite",
       "description": "Convert character encodings in pure javascript.",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "ieee754",
-      "version": "1.2.1",
-      "license": "BSD-3-Clause",
-      "tier": "allowed",
-      "author": "Feross Aboukhadijeh",
-      "homepage": "https://github.com/feross/ieee754#readme",
-      "description": "Read/write IEEE754 floating point numbers from/to a Buffer or array-like object",
       "scope": "transitive-prod"
     },
     {
@@ -3607,7 +3467,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/inspect-js/is-callable#readme",
       "description": "Is this JS value callable? Works with Functions and GeneratorFunctions, despite ES6 @@toStringTag.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "is-core-module",
@@ -3658,16 +3518,6 @@
       "homepage": "https://github.com/inspect-js/is-finalizationregistry#readme",
       "description": "Is this value a JS FinalizationRegistry? This module works cross-realm/iframe, and despite ES6 @@toStringTag.",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "is-fullwidth-code-point",
-      "version": "3.0.0",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Sindre Sorhus",
-      "homepage": "https://github.com/sindresorhus/is-fullwidth-code-point#readme",
-      "description": "Check if the character represented by a given Unicode code point is fullwidth",
-      "scope": "transitive-prod"
     },
     {
       "name": "is-generator-function",
@@ -3807,7 +3657,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/inspect-js/is-typed-array#readme",
       "description": "Is this value a JS Typed Array? This module works cross-realm/iframe, does not depend on `instanceof` or mutable properties, and despite ES6 Symbol.toStringTag.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "is-weakmap",
@@ -3867,7 +3717,7 @@
       "author": "Isaac Z. Schlueter",
       "homepage": "https://github.com/isaacs/isexe#readme",
       "description": "Minimal module to check if a file is executable.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "iterator.prototype",
@@ -3878,16 +3728,6 @@
       "homepage": "https://github.com/ljharb/Iterator.prototype#readme",
       "description": "`Iterator.prototype`, or a shared object to use.",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "jackspeak",
-      "version": "3.4.3",
-      "license": "BlueOak-1.0.0",
-      "tier": "allowed",
-      "author": "Isaac Z. Schlueter",
-      "homepage": "https://github.com/isaacs/jackspeak#readme",
-      "description": "A very strict and proper argument parser.",
-      "scope": "transitive-prod"
     },
     {
       "name": "jiti",
@@ -3921,7 +3761,7 @@
     },
     {
       "name": "jsdom",
-      "version": "27.4.0",
+      "version": "30.1.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -4151,16 +3991,6 @@
     },
     {
       "name": "lru-cache",
-      "version": "10.4.3",
-      "license": "ISC",
-      "tier": "allowed",
-      "author": "Isaac Z. Schlueter",
-      "homepage": "https://github.com/isaacs/node-lru-cache#readme",
-      "description": "A cache object that deletes the least-recently-used items.",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "lru-cache",
       "version": "11.5.2",
       "license": "BlueOak-1.0.0",
       "tier": "allowed",
@@ -4191,7 +4021,7 @@
     },
     {
       "name": "lucide-react",
-      "version": "0.562.0",
+      "version": "1.47.0",
       "license": "ISC",
       "tier": "allowed",
       "author": "Eric Fennis",
@@ -4237,7 +4067,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/es-shims/math-intrinsics#readme",
       "description": "ES Math-related intrinsics and helpers, robustly cached.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "mdn-data",
@@ -4307,7 +4137,7 @@
       "author": "Isaac Z. Schlueter",
       "homepage": "https://github.com/isaacs/minimatch#readme",
       "description": "a glob matcher in javascript",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "minimatch",
@@ -4317,7 +4147,7 @@
       "author": "Isaac Z. Schlueter",
       "homepage": "https://github.com/isaacs/minimatch#readme",
       "description": "a glob matcher in javascript",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "minimist",
@@ -4327,16 +4157,6 @@
       "author": "James Halliday",
       "homepage": "https://github.com/minimistjs/minimist",
       "description": "parse argument options",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "minipass",
-      "version": "7.1.3",
-      "license": "BlueOak-1.0.0",
-      "tier": "allowed",
-      "author": "Isaac Z. Schlueter",
-      "homepage": "https://github.com/isaacs/minipass#readme",
-      "description": "minimal implementation of a PassThrough stream",
       "scope": "transitive-prod"
     },
     {
@@ -4600,16 +4420,6 @@
       "scope": "transitive-dev"
     },
     {
-      "name": "package-json-from-dist",
-      "version": "1.0.1",
-      "license": "BlueOak-1.0.0",
-      "tier": "allowed",
-      "author": "Isaac Z. Schlueter",
-      "homepage": "https://github.com/isaacs/package-json-from-dist#readme",
-      "description": "Load the local package.json from either src or dist folder",
-      "scope": "transitive-prod"
-    },
-    {
       "name": "pako",
       "version": "2.1.0",
       "license": "(MIT AND Zlib)",
@@ -4657,7 +4467,7 @@
       "author": "Sindre Sorhus",
       "homepage": "https://github.com/sindresorhus/path-key#readme",
       "description": "Get the PATH environment variable key cross-platform",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "path-parse",
@@ -4668,16 +4478,6 @@
       "homepage": "https://github.com/jbgutierrez/path-parse#readme",
       "description": "Node.js path.parse() ponyfill",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "path-scurry",
-      "version": "1.11.1",
-      "license": "BlueOak-1.0.0",
-      "tier": "allowed",
-      "author": "Isaac Z. Schlueter",
-      "homepage": "https://github.com/isaacs/path-scurry#readme",
-      "description": "walk paths fast and efficiently",
-      "scope": "transitive-prod"
     },
     {
       "name": "pathe",
@@ -4717,7 +4517,7 @@
       "author": "Jon Schlinkert",
       "homepage": "https://github.com/micromatch/picomatch",
       "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
-      "scope": "transitive-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "picomatch",
@@ -4727,17 +4527,7 @@
       "author": "Jon Schlinkert",
       "homepage": "https://github.com/micromatch/picomatch",
       "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
-      "scope": "transitive-dev"
-    },
-    {
-      "name": "picomatch",
-      "version": "4.0.5",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Jon Schlinkert",
-      "homepage": "https://github.com/micromatch/picomatch",
-      "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
-      "scope": "transitive-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "picomatch",
@@ -4747,7 +4537,7 @@
       "author": "Jon Schlinkert",
       "homepage": "https://github.com/micromatch/picomatch",
       "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
-      "scope": "transitive-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "playwright",
@@ -4777,7 +4567,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/possible-typed-array-names#readme",
       "description": "A simple list of possible Typed Array names.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "postcss",
@@ -5000,16 +4790,6 @@
       "scope": "transitive-dev"
     },
     {
-      "name": "require-directory",
-      "version": "2.1.1",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Troy Goode",
-      "homepage": "https://github.com/troygoode/node-require-directory/",
-      "description": "Recursively iterates over specified directory, require()'ing each file, and returning a nested hash structure containing those modules.",
-      "scope": "transitive-prod"
-    },
-    {
       "name": "require-from-string",
       "version": "2.0.2",
       "license": "MIT",
@@ -5207,7 +4987,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/ljharb/set-function-length#readme",
       "description": "Set a function's length property",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "set-function-name",
@@ -5230,16 +5010,6 @@
       "scope": "transitive-dev"
     },
     {
-      "name": "sha.js",
-      "version": "2.4.12",
-      "license": "(MIT AND BSD-3-Clause)",
-      "tier": "allowed",
-      "author": "Dominic Tarr",
-      "homepage": "https://github.com/crypto-browserify/sha.js",
-      "description": "Streamable SHA hashes in pure javascript",
-      "scope": "transitive-prod"
-    },
-    {
       "name": "sharp",
       "version": "0.35.4",
       "license": "Apache-2.0",
@@ -5257,7 +5027,7 @@
       "author": "Kevin Mårtensson",
       "homepage": "https://github.com/kevva/shebang-command#readme",
       "description": "Get the command from a shebang",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "shebang-regex",
@@ -5267,7 +5037,7 @@
       "author": "Sindre Sorhus",
       "homepage": "https://github.com/sindresorhus/shebang-regex#readme",
       "description": "Regular expression for matching a shebang line",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "side-channel",
@@ -5318,16 +5088,6 @@
       "homepage": "https://github.com/emilbayes/siginfo#readme",
       "description": "Utility module to print pretty messages on SIGINFO/SIGUSR1",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "signal-exit",
-      "version": "4.1.0",
-      "license": "ISC",
-      "tier": "allowed",
-      "author": "Ben Coe",
-      "homepage": "https://github.com/tapjs/signal-exit#readme",
-      "description": "when you want to fire an event no matter how a process exits.",
-      "scope": "transitive-prod"
     },
     {
       "name": "socket.io",
@@ -5481,7 +5241,7 @@
     },
     {
       "name": "string-width",
-      "version": "4.2.3",
+      "version": "7.2.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "Sindre Sorhus",
@@ -5491,7 +5251,7 @@
     },
     {
       "name": "string-width",
-      "version": "5.1.2",
+      "version": "8.2.2",
       "license": "MIT",
       "tier": "allowed",
       "author": "Sindre Sorhus",
@@ -5558,16 +5318,6 @@
       "homepage": "https://github.com/es-shims/String.prototype.trimStart#readme",
       "description": "ES2019 spec-compliant String.prototype.trimStart shim.",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "strip-ansi",
-      "version": "6.0.1",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Sindre Sorhus",
-      "homepage": "https://github.com/chalk/strip-ansi#readme",
-      "description": "Strip ANSI escape codes from a string",
-      "scope": "transitive-prod"
     },
     {
       "name": "strip-ansi",
@@ -5640,16 +5390,6 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "symbol-tree",
-      "version": "3.2.4",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Joris van der Wel",
-      "homepage": "https://github.com/jsdom/js-symbol-tree#symbol-tree",
-      "description": "Turn any collection of objects into its own efficient tree or linked list using Symbol",
-      "scope": "transitive-dev"
-    },
-    {
       "name": "tailwind-merge",
       "version": "3.6.0",
       "license": "MIT",
@@ -5717,7 +5457,7 @@
       "author": "Superchupu",
       "homepage": "https://superchupu.dev/tinyglobby",
       "description": "A fast and minimal alternative to globby and fast-glob",
-      "scope": "transitive-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "tinyglobby",
@@ -5727,7 +5467,7 @@
       "author": "Superchupu",
       "homepage": "https://superchupu.dev/tinyglobby",
       "description": "A fast and minimal alternative to globby and fast-glob",
-      "scope": "transitive-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "tinyrainbow",
@@ -5758,16 +5498,6 @@
       "homepage": "https://github.com/remusao/tldts#readme",
       "description": "tldts core primitives (internal module)",
       "scope": "transitive-dev"
-    },
-    {
-      "name": "to-buffer",
-      "version": "1.2.2",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Mathias Buus",
-      "homepage": "https://github.com/browserify/to-buffer",
-      "description": "Pass in a string, array, Buffer, Data View, or Uint8Array, and get a Buffer back.",
-      "scope": "transitive-prod"
     },
     {
       "name": "to-regex-range",
@@ -5867,7 +5597,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/inspect-js/typed-array-buffer#readme",
       "description": "Get the ArrayBuffer out of a TypedArray, robustly.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "typed-array-byte-length",
@@ -5901,12 +5631,12 @@
     },
     {
       "name": "typeorm",
-      "version": "0.3.31",
+      "version": "1.1.1",
       "license": "MIT",
       "tier": "allowed",
       "author": "TypeORM",
       "homepage": "https://typeorm.io",
-      "description": "Data-Mapper ORM for TypeScript and ES2021+. Supports MySQL/MariaDB, PostgreSQL, MS SQL Server, Oracle, SAP HANA, SQLite, MongoDB databases.",
+      "description": "Data-Mapper ORM for TypeScript and ES2023+. Supports MySQL/MariaDB, PostgreSQL, MS SQL Server, Oracle, SAP HANA, SQLite, MongoDB databases.",
       "scope": "direct-prod"
     },
     {
@@ -5940,8 +5670,18 @@
       "scope": "transitive-dev"
     },
     {
+      "name": "undici",
+      "version": "8.10.2",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "",
+      "homepage": "https://undici.nodejs.org",
+      "description": "An HTTP/1.1 client, written from scratch for Node.js",
+      "scope": "transitive-dev"
+    },
+    {
       "name": "undici-types",
-      "version": "6.21.0",
+      "version": "8.10.2",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -5951,7 +5691,7 @@
     },
     {
       "name": "undici-types",
-      "version": "8.10.2",
+      "version": "8.9.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -6030,16 +5770,6 @@
       "scope": "transitive-prod"
     },
     {
-      "name": "uuid",
-      "version": "11.1.1",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "",
-      "homepage": "https://github.com/uuidjs/uuid#readme",
-      "description": "RFC9562 UUIDs",
-      "scope": "transitive-prod"
-    },
-    {
       "name": "vary",
       "version": "1.1.2",
       "license": "MIT",
@@ -6111,16 +5841,6 @@
     },
     {
       "name": "whatwg-mimetype",
-      "version": "4.0.0",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Domenic Denicola",
-      "homepage": "https://github.com/jsdom/whatwg-mimetype#readme",
-      "description": "Parses, serializes, and manipulates MIME types, according to the WHATWG MIME Sniffing Standard",
-      "scope": "transitive-dev"
-    },
-    {
-      "name": "whatwg-mimetype",
       "version": "5.0.0",
       "license": "MIT",
       "tier": "allowed",
@@ -6131,7 +5851,17 @@
     },
     {
       "name": "whatwg-url",
-      "version": "15.1.0",
+      "version": "16.0.1",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "Sebastian Mayr",
+      "homepage": "https://github.com/jsdom/whatwg-url#readme",
+      "description": "An implementation of the WHATWG URL Standard's URL API and parsing machinery",
+      "scope": "transitive-dev"
+    },
+    {
+      "name": "whatwg-url",
+      "version": "17.1.1",
       "license": "MIT",
       "tier": "allowed",
       "author": "Sebastian Mayr",
@@ -6147,7 +5877,7 @@
       "author": "Isaac Z. Schlueter",
       "homepage": "https://github.com/isaacs/node-which#readme",
       "description": "Like which(1) unix command. Find the first instance of an executable in the PATH.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "which-boxed-primitive",
@@ -6187,7 +5917,7 @@
       "author": "Jordan Harband",
       "homepage": "https://github.com/inspect-js/which-typed-array#readme",
       "description": "Which kind of Typed Array is this JavaScript value? Works cross-realm, without `instanceof`, and despite Symbol.toStringTag.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "why-is-node-running",
@@ -6211,17 +5941,7 @@
     },
     {
       "name": "wrap-ansi",
-      "version": "7.0.0",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Sindre Sorhus",
-      "homepage": "https://github.com/chalk/wrap-ansi#readme",
-      "description": "Wordwrap a string with ANSI escape codes",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "wrap-ansi",
-      "version": "8.1.0",
+      "version": "9.0.2",
       "license": "MIT",
       "tier": "allowed",
       "author": "Sindre Sorhus",
@@ -6291,7 +6011,7 @@
     },
     {
       "name": "yargs",
-      "version": "17.7.3",
+      "version": "18.1.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -6301,7 +6021,7 @@
     },
     {
       "name": "yargs-parser",
-      "version": "21.1.1",
+      "version": "22.0.0",
       "license": "ISC",
       "tier": "allowed",
       "author": "Ben Coe",
