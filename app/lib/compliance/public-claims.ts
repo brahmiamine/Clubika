@@ -136,7 +136,7 @@ export const LANDING_SECURITY_ITEMS: LandingSecurityItem[] = [
   },
   {
     title: 'Liens de partage',
-    copy: "Les liens publics expirent (1 à 90 jours) ; seul le SHA-256 du jeton est enregistré. Le calendrier public peut encore afficher les noms des personnes affectées. Les téléphones, identifiants internes, commentaires, rapports et journaux d'audit n'y figurent pas.",
+    copy: "Les liens publics expirent (1 à 30 jours) ; seul le SHA-256 du jeton est enregistré. Le calendrier public peut encore afficher les noms des personnes affectées. Les téléphones, identifiants internes, commentaires, rapports et journaux d'audit n'y figurent pas.",
   },
   {
     title: 'Isolation par club',
@@ -163,7 +163,7 @@ export const LANDING_FAQ_ITEMS: LandingFaqItem[] = [
   },
   {
     q: 'Peut-on exporter ou partager le planning ?',
-    a: "Oui : export CSV et PDF pour les administrateurs, abonnement iCal personnel, et liens publics temporaires de 1 à 90 jours. Un lien public peut encore afficher les noms des personnes affectées.",
+    a: "Oui : export CSV et PDF pour les administrateurs, abonnement iCal personnel, et liens publics temporaires de 1 à 30 jours. Un lien public peut encore afficher les noms des personnes affectées.",
   },
   {
     q: 'Quelles notifications reçoivent les utilisateurs ?',
@@ -191,7 +191,7 @@ export const RETAINED_PUBLIC_CLAIMS: RetainedPublicClaim[] = [
   {
     id: 'share-token-sha256',
     surface: 'landing-security + README',
-    statement: 'Seul le SHA-256 du jeton de partage public est enregistré ; les liens expirent de 1 à 90 jours.',
+    statement: 'Seul le SHA-256 du jeton de partage public est enregistré ; les liens expirent de 1 à 30 jours.',
     proof: 'app/lib/planning/public-share.test.ts',
     reviewOwner: 'engineering',
   },

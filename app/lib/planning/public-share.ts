@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { Match } from '@/types/match';
+import { parsePositiveInt } from '@/lib/retention/policy';
 import type { PlanningEventSnapshot, PlanningEventType } from './event-store';
 import type { TeamLogoResolver } from './team-logos';
 
@@ -80,6 +81,41 @@ export interface PublicShareScope {
   eventTypes: PlanningEventType[];
   fromDate: string | null;
   toDate: string | null;
+}
+
+/**
+ * Fenêtre d'exposition d'un lien de partage public (issue #14) : réduite de 90 à
+ * 30 jours par défaut pour limiter les conséquences d'un lien transféré ou oublié,
+ * sans présenter cette valeur comme une obligation légale. Configurable par
+ * `PUBLIC_SHARE_MAX_EXPIRY_DAYS` (voir docs/retention.md), plafonnée à l'ancien
+ * maximum historique (90 j) pour qu'une configuration erronée ne puisse jamais
+ * dépasser la fenêtre déjà couverte par le contrat public existant.
+ */
+export const PUBLIC_SHARE_DEFAULT_EXPIRY_DAYS = 7;
+export const PUBLIC_SHARE_MIN_EXPIRY_DAYS = 1;
+export const DEFAULT_PUBLIC_SHARE_MAX_EXPIRY_DAYS = 30;
+export const PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY = 'PUBLIC_SHARE_MAX_EXPIRY_DAYS';
+const HISTORICAL_PUBLIC_SHARE_MAX_EXPIRY_DAYS = 90;
+
+export function publicShareMaxExpiryDays(env: Record<string, string | undefined> = process.env): number {
+  return parsePositiveInt(
+    env[PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY],
+    DEFAULT_PUBLIC_SHARE_MAX_EXPIRY_DAYS,
+    HISTORICAL_PUBLIC_SHARE_MAX_EXPIRY_DAYS,
+  );
+}
+
+/**
+ * Normalise une durée de partage brute (`expiryDays` du corps de requête) :
+ * jamais en dessous de 1 jour, jamais au-dessus du maximum configuré, et repli
+ * sur la valeur par défaut (7 j) si la valeur fournie n'est pas exploitable
+ * (absente, non numérique, `NaN`…). Couvre explicitement 0, une valeur
+ * négative, une valeur non numérique, 30 et plus de 30 jours (issue #14).
+ */
+export function clampShareExpiryDays(rawValue: unknown, maxDays: number = publicShareMaxExpiryDays()): number {
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) return PUBLIC_SHARE_DEFAULT_EXPIRY_DAYS;
+  return Math.max(PUBLIC_SHARE_MIN_EXPIRY_DAYS, Math.min(Math.round(parsed), maxDays));
 }
 
 export function newShareToken(): string {

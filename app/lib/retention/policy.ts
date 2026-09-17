@@ -22,7 +22,8 @@ export type RetentionCategoryId =
   | 'scraperRuns'
   | 'outbox'
   | 'rateLimits'
-  | 'publicShares';
+  | 'publicShares'
+  | 'publicSharesExpired';
 
 export interface RetentionCategory {
   id: RetentionCategoryId;
@@ -136,8 +137,19 @@ export const RETENTION_CATEGORIES: readonly RetentionCategory[] = [
     id: 'publicShares',
     envKey: 'RETENTION_PUBLIC_SHARES_DAYS',
     defaultDays: 90,
-    purpose: 'Liens de partage public expirés ou anciens',
+    purpose: 'Filet de sécurité : tout enregistrement de partage public ancien (créé il y a plus de N jours), expiré ou non',
     access: 'jeton, puis admin',
+    scope: 'club',
+  },
+  {
+    id: 'publicSharesExpired',
+    envKey: 'RETENTION_PUBLIC_SHARES_EXPIRED_DAYS',
+    defaultDays: 7,
+    // Issue #14 : purge technique courte, sur `expiresAt` (pas `createdAt`), pour retirer
+    // un lien expiré peu après son expiration plutôt que d'attendre la fenêtre générale
+    // de `publicShares` (90 j par défaut, basée sur la date de création).
+    purpose: 'Purge technique courte des liens de partage déjà expirés (basée sur leur échéance)',
+    access: 'système',
     scope: 'club',
   },
 ] as const;
