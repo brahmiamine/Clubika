@@ -91,7 +91,10 @@ describe('planning analytics', () => {
       },
     });
 
-    const result = computePlanningAnalytics([snapshot(), training]);
+    // `now` fixé juste après les événements de la fixture : la fenêtre d'analyse par
+    // défaut (issue #16) ne doit pas dépendre de la date d'exécution du test.
+    const now = new Date('2026-08-20T00:00:00.000Z');
+    const result = computePlanningAnalytics([snapshot(), training], undefined, { now });
 
     expect(result.acceptanceRate).toBeCloseTo(66.67, 1);
     expect(result.attendanceRate).toBe(50);
@@ -131,7 +134,7 @@ describe('planning analytics', () => {
       },
     });
 
-    const result = computePlanningAnalytics([covered]);
+    const result = computePlanningAnalytics([covered], undefined, { now: new Date('2026-08-20T00:00:00.000Z') });
 
     expect(result.replacementRate).toBe(0);
     expect(result.missingCoverageRate).toBe(0);
@@ -143,5 +146,56 @@ describe('planning analytics', () => {
     expect(fairnessCoefficient([2, 2])).toBe(1);
     expect(fairnessCoefficient([4, 0])).toBe(0.5);
     expect(fairnessCoefficient([])).toBe(1);
+  });
+
+  it('exposes only the assignment count nominatively — no individual decline/presence/absence (issue #16)', () => {
+    const now = new Date('2026-08-20T00:00:00.000Z');
+    const result = computePlanningAnalytics([snapshot()], undefined, { now });
+
+    expect(result.workload.length).toBeGreaterThan(0);
+    // Forme minimale : uniquement identity/nom/assignments, jamais accepted/declined/present/absent.
+    for (const item of result.workload) {
+      expect(Object.keys(item).sort()).toEqual(['assignments', 'identity', 'nom']);
+      expect(item).not.toHaveProperty('declined');
+      expect(item).not.toHaveProperty('present');
+      expect(item).not.toHaveProperty('absent');
+      expect(item).not.toHaveProperty('accepted');
+    }
+    // Les agrégats globaux (jamais nominatifs) restent disponibles pour couverture/équité.
+    expect(result).toHaveProperty('acceptanceRate');
+    expect(result).toHaveProperty('attendanceRate');
+    expect(result).toHaveProperty('declineRate');
+  });
+
+  it('bounds the analyzed period and excludes events older than it (issue #16)', () => {
+    const now = new Date('2026-08-20T00:00:00.000Z');
+    const recent = snapshot();
+    const old = snapshot({
+      eventId: 'event-old',
+      date: '01/01/2020',
+      assignments: {
+        arbitre: [{
+          nom: 'Vieil arbitre', numero: '', personType: 'officiel', personId: 999, status: 'accepted',
+        }],
+        encadrant: [],
+        accompagnateur: [],
+      },
+    });
+
+    const result = computePlanningAnalytics([recent, old], undefined, { now, periodDays: 90 });
+
+    expect(result.events).toBe(1);
+    expect(result.workload.some((item) => item.identity === 'officiel:999')).toBe(false);
+    expect(result.analyzedPeriod).toEqual({
+      days: 90,
+      from: new Date('2026-05-22T00:00:00.000Z').toISOString(),
+      to: now.toISOString(),
+    });
+  });
+
+  it('applies the default analysis period when none is given', () => {
+    const now = new Date('2026-08-20T00:00:00.000Z');
+    const result = computePlanningAnalytics([snapshot()], undefined, { now });
+    expect(result.analyzedPeriod.days).toBe(180);
   });
 });
