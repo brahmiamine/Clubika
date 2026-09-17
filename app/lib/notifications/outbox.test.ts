@@ -6,12 +6,8 @@ function baseInput() {
   return {
     userId: 1,
     channel: 'push' as const,
-    type: 'planning-published-added',
-    title: 'Nouvelle affectation',
-    message: 'Vous êtes affecté',
-    eventType: 'amical',
-    eventId: 'evt-1',
-    urgency: 'normal' as const,
+    templateId: 'planning' as const,
+    notificationId: 501,
   };
 }
 
@@ -28,6 +24,23 @@ describe('enqueueNotificationDelivery — idempotence (issue #276)', () => {
     expect(item.attempts).toBe(0);
   });
 
+  it('ne persiste plus jamais de texte libre ni d’identifiant d’événement (issue #27)', async () => {
+    // Régression : l'outbox ne doit conserver que template-id + identifiants opaques.
+    // Ce test échoue dès qu'une colonne `title`/`message`/`event_type`/`event_id` est
+    // réintroduite dans l'INSERT.
+    const query = vi.fn(async (_sql: string, _params?: unknown[]) => ({ affectedRows: 1 }));
+    const db = { query } as unknown as DataSource;
+    await enqueueNotificationDelivery(db, baseInput());
+    const [sql, params] = query.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('template_id');
+    expect(sql).toContain('notification_id');
+    expect(sql).not.toMatch(/\btitle\b/);
+    expect(sql).not.toMatch(/\bmessage\b/);
+    expect(sql).not.toMatch(/event_type|event_id/);
+    expect(typeof params[0]).toBe('string');
+    expect(params.slice(1)).toEqual([1, 'push', 'planning', 501, null]);
+  });
+
   it('relit la ligne existante par clé d’idempotence au lieu de renvoyer un identifiant fantôme', async () => {
     // Simule une collision d'idempotence : l'INSERT ... ON DUPLICATE KEY UPDATE ne crée
     // rien (id = id, no-op), puis le SELECT qui suit retrouve la ligne déjà présente,
@@ -38,12 +51,8 @@ describe('enqueueNotificationDelivery — idempotence (issue #276)', () => {
         id: 'existing-outbox-id',
         userId: 1,
         channel: 'push',
-        type: 'planning-published-added',
-        title: 'Nouvelle affectation',
-        message: 'Vous êtes affecté',
-        eventType: 'amical',
-        eventId: 'evt-1',
-        urgency: 'normal',
+        templateId: 'planning',
+        notificationId: 501,
         attempts: 2,
       }];
     });

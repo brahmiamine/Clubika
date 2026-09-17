@@ -1,5 +1,4 @@
 import { logError } from '@/lib/observability/log';
-import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
@@ -76,7 +75,9 @@ export async function POST(request: NextRequest) {
       // Profil créé sans identifiants : la prise de contrôle passe par une invitation (issue #32).
       claimedAt: null,
       telephone: typeof telephone === 'string' && telephone.trim() ? telephone.trim() : null,
-      icalToken: randomBytes(24).toString('hex'),
+      // Pas de flux iCal généré à la création (issue #13) : l'abonné en génère
+      // un depuis son profil le jour où il veut s'abonner — voir
+      // `app/lib/planning/ical-token.ts`.
     });
 
     const users = await repo.find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });

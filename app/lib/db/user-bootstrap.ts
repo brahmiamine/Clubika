@@ -1,5 +1,4 @@
 import { logWarn } from '@/lib/observability/log';
-import { randomBytes } from 'node:crypto';
 import { DataSource } from 'typeorm';
 import { UserEntity } from './schemas';
 import { hashPassword } from '@/lib/auth/password';
@@ -68,7 +67,8 @@ export async function ensureAdminBootstrap(dataSource: DataSource): Promise<void
       active: true,
       // Compte bootstrap : accès actif immédiat (issue #204).
       claimedAt: new Date(),
-      icalToken: randomBytes(24).toString('hex'),
+      // Pas de flux iCal généré au bootstrap (issue #13) — voir
+      // `app/lib/planning/ical-token.ts`.
     });
   } catch (error) {
     if (isDuplicateEntryError(error) && await repo.findOneBy({ email })) return;

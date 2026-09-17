@@ -45,9 +45,9 @@ describe.skipIf(!dbAvailable)('referential integrity (issue #350)', () => {
 
     const orphanUserId = 9_000_000 + Math.floor(Math.random() * 100_000);
     const user = await db.query(
-      `INSERT INTO users (clubId, email, passwordHash, nom, accessRole, planningFunctions, active, icalToken)
-       VALUES (?, ?, 'hash', 'FK Test User', 'dirigeant', '[]', 1, ?)`,
-      [scratchPrefix, `${scratchPrefix}@example.com`, `ical-${scratchPrefix}`],
+      `INSERT INTO users (clubId, email, passwordHash, nom, accessRole, planningFunctions, active)
+       VALUES (?, ?, 'hash', 'FK Test User', 'dirigeant', '[]', 1)`,
+      [scratchPrefix, `${scratchPrefix}@example.com`],
     );
     userId = Number((user as { insertId?: number }).insertId);
 

@@ -40,12 +40,8 @@ describe.skipIf(!dbAvailable)('planning_notification_outbox — contrainte d\'id
     return {
       userId,
       channel: 'push' as const,
-      type: 'planning-published-added',
-      title: 'Nouvelle affectation',
-      message: 'Vous êtes affecté',
-      eventType: 'amical',
-      eventId: 'evt-1',
-      urgency: 'normal' as const,
+      templateId: 'planning' as const,
+      notificationId: null,
     };
   }
 

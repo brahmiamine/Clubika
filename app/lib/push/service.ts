@@ -29,13 +29,18 @@ async function sendWakeUpPush(endpoint: string): Promise<Response> {
   });
 }
 
+/**
+ * Contenu strictement générique (issue #27) : `title`/`message` sont déjà rendus depuis
+ * un gabarit allowlisté (jamais de texte libre), `notificationId` est un identifiant
+ * opaque vers la notification in-app (pas d'`eventType`/`eventId` en clair), et `url`
+ * pointe vers `/api/notifications/[id]/open`, résolu seulement après authentification
+ * et contrôle tenant/objet.
+ */
 export interface PushNotificationPayload {
-  notificationId: string;
-  type: string;
+  notificationId: number | null;
+  templateId: string;
   title: string;
   message: string;
-  eventType: string | null;
-  eventId: string | null;
   url?: string;
   clubId?: string;
   icon?: string;

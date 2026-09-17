@@ -830,13 +830,15 @@ describe.skipIf(!dbAvailable)('chat service integration', () => {
     }
   });
 
-  it('rejects message deletion by a non-admin', async () => {
+  it('rejects message deletion by a non-admin who is not the author (issue #10)', async () => {
     const admin = await createTestUserAndSession('admin', { clubId: 'afp' });
     const member = await createTestUserAndSession('dirigeant', { clubId: 'afp' }, ['arbitre_club']);
+    const otherMember = await createTestUserAndSession('dirigeant', { clubId: 'afp' }, ['arbitre_club']);
     try {
       const adminSession = await getSessionUser(admin.token);
       const memberSession = await getSessionUser(member.token);
-      const room = await createChannel(await getDb(), adminSession!, { name: 'Modération 2' }, [member.user.id]);
+      const otherMemberSession = await getSessionUser(otherMember.token);
+      const room = await createChannel(await getDb(), adminSession!, { name: 'Modération 2' }, [member.user.id, otherMember.user.id]);
       roomIds.push(room.id);
       const posted = await appendMessage(await getDb(), memberSession!, {
         roomId: room.id,
@@ -845,8 +847,156 @@ describe.skipIf(!dbAvailable)('chat service integration', () => {
         attachment: null,
       });
 
+      await expect(deleteMessage(await getDb(), otherMemberSession!, room.id, posted.message.id))
+        .rejects.toBeInstanceOf(ChatAccessError);
+
+      const history = await listMessages(await getDb(), memberSession!, room.id);
+      const stillThere = history.messages.find((m) => m.id === posted.message.id);
+      expect(stillThere?.deletedAt).toBeNull();
+    } finally {
+      await admin.cleanup();
+      await member.cleanup();
+      await otherMember.cleanup();
+    }
+  });
+
+  it('lets a non-admin author delete their own message (issue #10)', async () => {
+    const admin = await createTestUserAndSession('admin', { clubId: 'afp' });
+    const member = await createTestUserAndSession('dirigeant', { clubId: 'afp' }, ['arbitre_club']);
+    let attachmentId: string | null = null;
+    try {
+      const adminSession = await getSessionUser(admin.token);
+      const memberSession = await getSessionUser(member.token);
+      const room = await createChannel(await getDb(), adminSession!, { name: 'Auteur' }, [member.user.id]);
+      roomIds.push(room.id);
+
+      const attachment = await saveChatAttachment(await getDb(), {
+        clubId: memberSession!.clubId,
+        roomId: room.id,
+        kind: 'image',
+        fileName: 'photo.png',
+        mimeType: 'image/png',
+        content: Buffer.from('photo-bytes'),
+        uploadedByUserId: member.user.id,
+      });
+      attachmentId = attachment.id;
+
+      const posted = await appendMessage(await getDb(), memberSession!, {
+        roomId: room.id,
+        clientMessageId: '550e8400-e29b-41d4-a716-446655449904',
+        content: 'Mon message',
+        attachment: {
+          type: 'image',
+          url: `/api/chat/attachments/${attachment.id}`,
+          mimeType: 'image/png',
+          name: 'photo.png',
+          size: 11,
+        },
+      });
+
+      // L'auteur (non-admin) supprime son propre message : pas de requireAdmin.
+      const result = await deleteMessage(await getDb(), memberSession!, room.id, posted.message.id);
+      expect(result.message.content).toBe('');
+      expect(result.message.attachment).toBeNull();
+      expect(result.message.deletedAt).not.toBeNull();
+      expect(await getChatAttachment(await getDb(), attachment.id)).toBeNull();
+
+      const history = await listMessages(await getDb(), adminSession!, room.id);
+      const stillThere = history.messages.find((m) => m.id === posted.message.id);
+      expect(stillThere).toBeDefined();
+      expect(stillThere!.content).toBe('');
+      expect(stillThere!.deletedAt).not.toBeNull();
+    } finally {
+      if (attachmentId) {
+        await (await getDb()).query('DELETE FROM chat_attachments WHERE id = ?', [attachmentId]);
+      }
+      await admin.cleanup();
+      await member.cleanup();
+    }
+  });
+
+  it('rejects self-deletion by an author who no longer has access to the room (issue #10)', async () => {
+    const admin = await createTestUserAndSession('admin', { clubId: 'afp' });
+    const member = await createTestUserAndSession('dirigeant', { clubId: 'afp' }, ['arbitre_club']);
+    try {
+      const adminSession = await getSessionUser(admin.token);
+      const memberSession = await getSessionUser(member.token);
+      const room = await createChannel(await getDb(), adminSession!, { name: 'Auteur retiré' }, [member.user.id]);
+      roomIds.push(room.id);
+      const posted = await appendMessage(await getDb(), memberSession!, {
+        roomId: room.id,
+        clientMessageId: '550e8400-e29b-41d4-a716-446655449905',
+        content: 'Avant retrait',
+        attachment: null,
+      });
+
+      // Un admin retire le membre du canal : il ne participe plus au salon.
+      await (await getDb()).getRepository('ChatParticipant').delete({ roomId: room.id, userId: member.user.id });
+
       await expect(deleteMessage(await getDb(), memberSession!, room.id, posted.message.id))
         .rejects.toBeInstanceOf(ChatAccessError);
+    } finally {
+      await admin.cleanup();
+      await member.cleanup();
+    }
+  });
+
+  it('still lets an admin delete another member\'s message (issue #259 unchanged)', async () => {
+    const admin = await createTestUserAndSession('admin', { clubId: 'afp' });
+    const member = await createTestUserAndSession('dirigeant', { clubId: 'afp' }, ['arbitre_club']);
+    try {
+      const adminSession = await getSessionUser(admin.token);
+      const memberSession = await getSessionUser(member.token);
+      const room = await createChannel(await getDb(), adminSession!, { name: 'Modération admin' }, [member.user.id]);
+      roomIds.push(room.id);
+      const posted = await appendMessage(await getDb(), memberSession!, {
+        roomId: room.id,
+        clientMessageId: '550e8400-e29b-41d4-a716-446655449906',
+        content: 'Message modérable',
+        attachment: null,
+      });
+
+      const result = await deleteMessage(await getDb(), adminSession!, room.id, posted.message.id);
+      expect(result.message.deletedAt).not.toBeNull();
+    } finally {
+      await admin.cleanup();
+      await member.cleanup();
+    }
+  });
+
+  it('never reexposes a deleted message\'s content or author through a reply preview (issue #10)', async () => {
+    const admin = await createTestUserAndSession('admin', { clubId: 'afp' });
+    const member = await createTestUserAndSession('dirigeant', { clubId: 'afp' }, ['arbitre_club']);
+    try {
+      const adminSession = await getSessionUser(admin.token);
+      const memberSession = await getSessionUser(member.token);
+      const room = await createChannel(await getDb(), adminSession!, { name: 'Réponse' }, [member.user.id]);
+      roomIds.push(room.id);
+
+      const original = await appendMessage(await getDb(), memberSession!, {
+        roomId: room.id,
+        clientMessageId: '550e8400-e29b-41d4-a716-446655449907',
+        content: 'Contenu sensible',
+        attachment: null,
+      });
+      const reply = await appendMessage(await getDb(), adminSession!, {
+        roomId: room.id,
+        clientMessageId: '550e8400-e29b-41d4-a716-446655449908',
+        content: 'En réponse',
+        attachment: null,
+        replyToMessageId: original.message.id,
+      });
+      expect(reply.message.replyTo?.deleted).toBe(false);
+      expect(reply.message.replyTo?.snippet).toBe('Contenu sensible');
+
+      // L'auteur supprime le message original après coup.
+      await deleteMessage(await getDb(), memberSession!, room.id, original.message.id);
+
+      const history = await listMessages(await getDb(), adminSession!, room.id);
+      const replyAfterDeletion = history.messages.find((m) => m.id === reply.message.id);
+      expect(replyAfterDeletion?.replyTo?.deleted).toBe(true);
+      expect(replyAfterDeletion?.replyTo?.authorName).toBe('');
+      expect(replyAfterDeletion?.replyTo?.snippet).toBe('');
     } finally {
       await admin.cleanup();
       await member.cleanup();

@@ -137,7 +137,7 @@ export function LandingPage() {
               <p className={styles.statLabel}>Relances automatiques avant chaque échéance</p>
             </div>
             <div className={styles.statCard}>
-              <p className={styles.statValue}>1–90 jours</p>
+              <p className={styles.statValue}>1–30 jours</p>
               <p className={styles.statLabel}>Durée des liens de partage public du planning</p>
             </div>
             <div className={styles.statCard}>

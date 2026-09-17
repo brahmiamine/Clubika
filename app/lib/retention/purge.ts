@@ -316,6 +316,33 @@ const clubRunners: Record<Exclude<RetentionCategoryId, 'rateLimits'>, ClubRunner
       deleteParams: [clubId, cutoff],
     });
   },
+  /**
+   * Purge technique courte des liens de partage déjà expirés (issue #14), sur leur
+   * échéance (`payload.expiresAt`, jamais indexée en colonne) plutôt que sur leur
+   * date de création — le filet de sécurité `publicShares` ci-dessus (90 j par
+   * défaut) continue de couvrir tout enregistrement ancien restant, expiré ou non.
+   * `expiresAt` est comparé en tant que chaîne ISO-8601 (`toISOString()`, toujours
+   * millisecondes sur 3 chiffres) : l'ordre lexical correspond alors exactement à
+   * l'ordre chronologique, sans dépendre du format de sérialisation `Date` du driver
+   * SQL pour la comparaison.
+   */
+  async publicSharesExpired(db, clubId, cutoff, dryRun, batchSize) {
+    if (!await tableExists(db, 'planning_records')) return { scanned: 0, deleted: 0 };
+    const cutoffIso = cutoff.toISOString();
+    return purgeByCountAndDelete(db, {
+      dryRun,
+      batchSize,
+      countSql: `SELECT COUNT(*) AS n FROM planning_records
+        WHERE club_id = ? AND kind = 'public-share'
+          AND JSON_UNQUOTE(JSON_EXTRACT(payload, '$.expiresAt')) < ?`,
+      countParams: [clubId, cutoffIso],
+      deleteSql: `DELETE FROM planning_records
+        WHERE club_id = ? AND kind = 'public-share'
+          AND JSON_UNQUOTE(JSON_EXTRACT(payload, '$.expiresAt')) < ?
+        LIMIT ?`,
+      deleteParams: [clubId, cutoffIso],
+    });
+  },
 };
 
 async function purgePlatformSessions(db: DataSource, cutoff: Date, dryRun: boolean, batchSize: number) {
