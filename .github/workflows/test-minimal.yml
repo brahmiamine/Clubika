@@ -1,0 +1,14 @@
+name: Test Minimal
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo test
+        run: echo "Testing if workflows can run"
