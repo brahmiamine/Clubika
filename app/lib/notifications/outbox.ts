@@ -1,22 +1,27 @@
 import { randomUUID } from 'node:crypto';
 import type { DataSource, EntityManager } from 'typeorm';
 import { serializeOutboxError } from '@/lib/observability/redact';
-import type { NotificationUrgency } from './preferences';
+import type { NotificationTemplateId } from './templates';
 
 type Queryable = DataSource | EntityManager;
 
 export type OutboxChannel = 'push' | 'email' | 'whatsapp';
 
+/**
+ * L'outbox ne conserve plus que ce qui est strictement nécessaire pour livrer et
+ * rejouer un envoi (issue #27) : un identifiant de gabarit allowlisté (`templateId`,
+ * jamais de texte libre) et des identifiants opaques (`id` de la ligne, `notificationId`
+ * qui pointe vers la notification in-app — seule source du détail réel, résolue après
+ * authentification + contrôle tenant/objet par `/api/notifications/[id]/open`). Plus de
+ * `title`/`message`/`eventType`/`eventId` en clair dans cette table (migration `0041`).
+ */
 export interface NotificationOutboxItem {
   id: string;
   userId: number;
   channel: OutboxChannel;
-  type: string;
-  title: string;
-  message: string;
-  eventType: string | null;
-  eventId: string | null;
-  urgency: NotificationUrgency;
+  templateId: NotificationTemplateId;
+  /** Identifiant opaque de la notification in-app correspondante (table `notifications`), le cas échéant. */
+  notificationId: number | null;
   attempts: number;
 }
 
@@ -36,15 +41,14 @@ export async function enqueueNotificationDelivery(
   const item: NotificationOutboxItem = { ...input, id: randomUUID(), attempts: 0 };
   await db.query(
     `INSERT INTO planning_notification_outbox
-      (id, user_id, channel, notification_type, title, message, event_type, event_id, urgency, idempotency_key)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (id, user_id, channel, template_id, notification_id, idempotency_key)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE id = id`,
-    [item.id, item.userId, item.channel, item.type, item.title, item.message, item.eventType, item.eventId, item.urgency, idempotencyKey ?? null],
+    [item.id, item.userId, item.channel, item.templateId, item.notificationId, idempotencyKey ?? null],
   );
   if (!idempotencyKey) return item;
   const rows = (await db.query(
-    `SELECT id, user_id AS userId, channel, notification_type AS type, title, message,
-            event_type AS eventType, event_id AS eventId, urgency, attempts
+    `SELECT id, user_id AS userId, channel, template_id AS templateId, notification_id AS notificationId, attempts
        FROM planning_notification_outbox WHERE idempotency_key = ? LIMIT 1`,
     [idempotencyKey],
   )) as Array<Record<string, unknown>>;
@@ -54,12 +58,8 @@ export async function enqueueNotificationDelivery(
     id: String(row.id),
     userId: Number(row.userId),
     channel: row.channel as OutboxChannel,
-    type: String(row.type),
-    title: String(row.title),
-    message: String(row.message),
-    eventType: row.eventType === null || row.eventType === undefined ? null : String(row.eventType),
-    eventId: row.eventId === null || row.eventId === undefined ? null : String(row.eventId),
-    urgency: row.urgency as NotificationUrgency,
+    templateId: row.templateId as NotificationTemplateId,
+    notificationId: row.notificationId === null || row.notificationId === undefined ? null : Number(row.notificationId),
     attempts: Number(row.attempts),
   };
 }
@@ -95,8 +95,7 @@ export async function listDueNotificationDeliveries(db: DataSource, limit = 100)
        WHERE status = 'processing' AND next_attempt_at <= CURRENT_TIMESTAMP(6)`,
     );
     const claimed = await manager.query(
-      `SELECT id, user_id AS userId, channel, notification_type AS type, title, message,
-         event_type AS eventType, event_id AS eventId, urgency, attempts
+      `SELECT id, user_id AS userId, channel, template_id AS templateId, notification_id AS notificationId, attempts
        FROM planning_notification_outbox
        WHERE status = 'pending' AND next_attempt_at <= CURRENT_TIMESTAMP(6)
        ORDER BY created_at ASC LIMIT ${safeLimit} FOR UPDATE`,
@@ -116,12 +115,8 @@ export async function listDueNotificationDeliveries(db: DataSource, limit = 100)
     id: String(row.id),
     userId: Number(row.userId),
     channel: row.channel as OutboxChannel,
-    type: String(row.type),
-    title: String(row.title),
-    message: String(row.message),
-    eventType: row.eventType === null ? null : String(row.eventType),
-    eventId: row.eventId === null ? null : String(row.eventId),
-    urgency: row.urgency as NotificationUrgency,
+    templateId: row.templateId as NotificationTemplateId,
+    notificationId: row.notificationId === null || row.notificationId === undefined ? null : Number(row.notificationId),
     attempts: Number(row.attempts),
   }));
 }

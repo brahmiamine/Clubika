@@ -112,6 +112,16 @@ une instance en production. Voir aussi
 pour l'ensemble du durcissement du flux (minimisation, cycle de vie du jeton,
 divulgation au fournisseur de calendrier tiers).
 
+La migration `0042` (issue #27) réduit `planning_notification_outbox` au strict
+nécessaire pour livrer et rejouer un envoi : ajout de `template_id` (gabarit
+allowlisté par canal) et `notification_id` (identifiant opaque vers la notification
+in-app, seule source du détail réel), puis suppression de `notification_type`,
+`title`, `message`, `event_type`, `event_id` et `urgency`. Idempotente ; sur une base
+déjà en production, prendre une sauvegarde SQL avant `db:migrate` (les colonnes
+supprimées ne sont pas récupérables). Voir aussi le code applicatif dans
+`app/lib/notifications/outbox.ts`, `app/lib/notifications/templates.ts` et
+`app/api/notifications/[id]/open/route.ts`.
+
 ### Rollback
 
 Les migrations sont à sens unique et sans `down` automatisé. Stratégie :
