@@ -828,4 +828,27 @@ export const schemaMigrations: readonly SchemaMigration[] = [
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
     ],
   },
+  {
+    version: '0041',
+    name: 'notifications_outbox_gabarits_minimaux',
+    // Issue #27 : l'outbox ne conserve plus de texte libre (`title`/`message`) ni
+    // d'identifiants d'événement en clair (`event_type`/`event_id`/`notification_type`).
+    // Elle ne garde que `template_id` (gabarit allowlisté) et `notification_id`
+    // (identifiant opaque de la notification in-app, seule source du détail réel,
+    // résolue après authentification + contrôle tenant/objet — voir
+    // `app/api/notifications/[id]/open/route.ts`). `last_error` contient déjà un code
+    // assaini depuis la migration 0028 (issue #9), inchangé ici.
+    statements: [
+      'ALTER TABLE planning_notification_outbox ADD COLUMN IF NOT EXISTS template_id VARCHAR(32) NULL AFTER channel',
+      'ALTER TABLE planning_notification_outbox ADD COLUMN IF NOT EXISTS notification_id INT NULL AFTER template_id',
+      "UPDATE planning_notification_outbox SET template_id = 'generic' WHERE template_id IS NULL",
+      'CREATE INDEX IF NOT EXISTS idx_notification_outbox_notification ON planning_notification_outbox (notification_id)',
+      'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS notification_type',
+      'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS title',
+      'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS message',
+      'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS event_type',
+      'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS event_id',
+      'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS urgency',
+    ],
+  },
 ];

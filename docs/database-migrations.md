@@ -97,6 +97,16 @@ La migration `0039` (issue #25) ajoute l’état d’offboarding sur `club_tenan
 les tables de restitution / instructions sous-traitants / certificats. Idempotente.
 Voir [tenant-offboarding.md](./tenant-offboarding.md).
 
+La migration `0041` (issue #27) réduit `planning_notification_outbox` au strict
+nécessaire pour livrer et rejouer un envoi : ajout de `template_id` (gabarit
+allowlisté par canal) et `notification_id` (identifiant opaque vers la notification
+in-app, seule source du détail réel), puis suppression de `notification_type`,
+`title`, `message`, `event_type`, `event_id` et `urgency`. Idempotente ; sur une base
+déjà en production, prendre une sauvegarde SQL avant `db:migrate` (les colonnes
+supprimées ne sont pas récupérables). Voir aussi le code applicatif dans
+`app/lib/notifications/outbox.ts`, `app/lib/notifications/templates.ts` et
+`app/api/notifications/[id]/open/route.ts`.
+
 ### Rollback
 
 Les migrations sont à sens unique et sans `down` automatisé. Stratégie :

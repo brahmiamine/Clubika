@@ -1,0 +1,145 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`gabarits de notification externes (issue #27) > gabarit "account" — WhatsApp par défaut est générique et sûr 1`] = `
+{
+  "body": "Une mise à jour concernant votre compte Clubika est disponible. Connectez-vous pour la consulter.",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "account" — aperçu détaillé (opt-in) reste générique et sûr 1`] = `
+{
+  "email": {
+    "body": "Une mise à jour concernant votre compte est disponible. Connectez-vous à Clubika pour en consulter le détail.",
+    "subject": "Compte — Mise à jour de votre compte Clubika",
+  },
+  "push": {
+    "body": "Une mise à jour concernant votre compte est disponible. Ouvrez l’application pour la consulter.",
+    "title": "Compte",
+  },
+  "whatsapp": {
+    "body": "Compte : Une mise à jour concernant votre compte Clubika est disponible. Connectez-vous pour la consulter.",
+  },
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "account" — email par défaut est générique et sûr 1`] = `
+{
+  "body": "Une mise à jour concernant votre compte est disponible. Connectez-vous à Clubika pour en consulter le détail.",
+  "subject": "Mise à jour de votre compte Clubika",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "account" — push par défaut est générique et sûr 1`] = `
+{
+  "body": "Une mise à jour concernant votre compte est disponible. Ouvrez l’application pour la consulter.",
+  "title": "Clubika",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "activity" — WhatsApp par défaut est générique et sûr 1`] = `
+{
+  "body": "Une nouvelle activité vous concerne sur Clubika. Connectez-vous pour la consulter.",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "activity" — aperçu détaillé (opt-in) reste générique et sûr 1`] = `
+{
+  "email": {
+    "body": "Une nouvelle activité vous concerne. Connectez-vous à Clubika pour en consulter le détail.",
+    "subject": "Activité — Nouvelle activité Clubika",
+  },
+  "push": {
+    "body": "Une nouvelle activité vous concerne. Ouvrez l’application pour la consulter.",
+    "title": "Activité",
+  },
+  "whatsapp": {
+    "body": "Activité : Une nouvelle activité vous concerne sur Clubika. Connectez-vous pour la consulter.",
+  },
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "activity" — email par défaut est générique et sûr 1`] = `
+{
+  "body": "Une nouvelle activité vous concerne. Connectez-vous à Clubika pour en consulter le détail.",
+  "subject": "Nouvelle activité Clubika",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "activity" — push par défaut est générique et sûr 1`] = `
+{
+  "body": "Une nouvelle activité vous concerne. Ouvrez l’application pour la consulter.",
+  "title": "Clubika",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "generic" — WhatsApp par défaut est générique et sûr 1`] = `
+{
+  "body": "Vous avez une nouvelle notification Clubika. Connectez-vous à l’application pour la consulter.",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "generic" — aperçu détaillé (opt-in) reste générique et sûr 1`] = `
+{
+  "email": {
+    "body": "Une mise à jour vous concerne. Connectez-vous à Clubika pour en consulter le détail.",
+    "subject": "Clubika — Nouvelle notification Clubika",
+  },
+  "push": {
+    "body": "Vous avez une nouvelle notification. Ouvrez l’application pour la consulter.",
+    "title": "Clubika",
+  },
+  "whatsapp": {
+    "body": "Clubika : Vous avez une nouvelle notification Clubika. Connectez-vous à l’application pour la consulter.",
+  },
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "generic" — email par défaut est générique et sûr 1`] = `
+{
+  "body": "Une mise à jour vous concerne. Connectez-vous à Clubika pour en consulter le détail.",
+  "subject": "Nouvelle notification Clubika",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "generic" — push par défaut est générique et sûr 1`] = `
+{
+  "body": "Vous avez une nouvelle notification. Ouvrez l’application pour la consulter.",
+  "title": "Clubika",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "planning" — WhatsApp par défaut est générique et sûr 1`] = `
+{
+  "body": "Une mise à jour de planning vous concerne sur Clubika. Connectez-vous pour la consulter.",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "planning" — aperçu détaillé (opt-in) reste générique et sûr 1`] = `
+{
+  "email": {
+    "body": "Le planning a été mis à jour. Connectez-vous à Clubika pour en consulter le détail.",
+    "subject": "Planning — Mise à jour de planning",
+  },
+  "push": {
+    "body": "Une mise à jour de planning vous concerne. Ouvrez l’application pour la consulter.",
+    "title": "Planning",
+  },
+  "whatsapp": {
+    "body": "Planning : Une mise à jour de planning vous concerne sur Clubika. Connectez-vous pour la consulter.",
+  },
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "planning" — email par défaut est générique et sûr 1`] = `
+{
+  "body": "Le planning a été mis à jour. Connectez-vous à Clubika pour en consulter le détail.",
+  "subject": "Mise à jour de planning",
+}
+`;
+
+exports[`gabarits de notification externes (issue #27) > gabarit "planning" — push par défaut est générique et sûr 1`] = `
+{
+  "body": "Une mise à jour de planning vous concerne. Ouvrez l’application pour la consulter.",
+  "title": "Clubika",
+}
+`;

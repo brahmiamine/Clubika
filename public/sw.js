@@ -14,11 +14,34 @@ self.addEventListener('install', (event) => {
   );
 });
 
+/** Une notification système affichée plus longtemps que cette durée est considérée obsolète. */
+const STALE_NOTIFICATION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Nettoie les notifications système obsolètes (issue #27) : au réveil du service worker
+ * et avant chaque nouvel affichage, referme toute notification encore visible dont
+ * l'horodatage dépasse `STALE_NOTIFICATION_MAX_AGE_MS` — jamais de contenu périmé qui
+ * traîne sur l'écran verrouillé au-delà de sa pertinence.
+ */
+async function clearStaleNotifications() {
+  if (typeof self.registration?.getNotifications !== 'function') return;
+  try {
+    const shown = await self.registration.getNotifications();
+    const now = Date.now();
+    for (const notification of shown) {
+      const at = typeof notification.timestamp === 'number' ? notification.timestamp : now;
+      if (now - at > STALE_NOTIFICATION_MAX_AGE_MS) notification.close();
+    }
+  } catch (error) {
+    console.error('Unable to clear stale notifications:', error);
+  }
+}
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => Promise.all(
       keys.filter((key) => key !== CACHE_NAME && key !== PENDING_NOTIFICATION_CACHE).map((key) => caches.delete(key)),
-    )).then(() => self.clients.claim()),
+    )).then(() => clearStaleNotifications()).then(() => self.clients.claim()),
   );
 });
 
@@ -104,11 +127,9 @@ function resolveNotificationUrl(rawUrl) {
 }
 
 function notificationOptions(notification) {
-  const fallbackTag = [
-    notification.type || 'notification',
-    notification.eventType || '',
-    notification.eventId || '',
-  ].join(':');
+  // Gabarit générique uniquement (issue #27) : plus de type/eventType/eventId d'origine
+  // métier dans le tag — seulement l'identifiant opaque ou la catégorie de gabarit.
+  const fallbackTag = notification.templateId || 'notification';
   return {
     body: notification.message || 'Vous avez une nouvelle notification.',
     icon: clubNotificationIcon(notification),
@@ -125,6 +146,7 @@ function notificationOptions(notification) {
 }
 
 async function revealIncomingNotification(notification) {
+  await clearStaleNotifications();
   const title = notification.title || 'Clubika';
   const options = notificationOptions(notification);
   const windowClients = typeof self.clients?.matchAll === 'function'
@@ -168,6 +190,14 @@ async function showPushNotification(pushData) {
   await showLatestNotification();
 }
 
+/**
+ * Compatibilité avec les abonnements historiques sans clés de chiffrement (issue #219) :
+ * un simple réveil sans payload, sans aucune information sur la notification. Le contenu
+ * affiché doit rester générique par défaut (issue #27) — jamais le titre/message réel de
+ * `/api/notifications`, qui resterait affiché sur l'écran verrouillé sans authentification
+ * ni aperçu détaillé opt-in. Le clic ouvre l'identifiant opaque de la notification la plus
+ * récente, résolu après authentification par `/api/notifications/[id]/open`.
+ */
 async function showLatestNotification() {
   try {
     const response = await fetch('/api/notifications', {
@@ -180,9 +210,15 @@ async function showLatestNotification() {
 
     const data = await response.json();
     const notification = Array.isArray(data.notifications) ? data.notifications[0] : null;
-    if (!notification) return;
+    if (!notification || !notification.id) return;
 
-    await revealIncomingNotification({ ...notification, notificationId: String(notification.id || '') });
+    await revealIncomingNotification({
+      notificationId: String(notification.id),
+      title: 'Clubika',
+      message: 'Vous avez une nouvelle notification. Ouvrez l’application pour la consulter.',
+      url: `/api/notifications/${encodeURIComponent(notification.id)}/open`,
+      clubId: notification.clubId,
+    });
   } catch (error) {
     console.error('Unable to display push notification:', error);
   }
