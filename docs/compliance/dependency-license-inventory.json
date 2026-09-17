@@ -1,6 +1,6 @@
 {
   "note": "Inventaire automatisé (issue #39). Outil d'aide, pas un avis juridique. Toute ligne reste soumise à revue humaine avant commercialisation.",
-  "generatedAt": "2026-09-17T20:00:55.797Z",
+  "generatedAt": "2026-09-17T19:43:16.710Z",
   "generatedBy": "scripts/audit-dependencies.mjs --licenses (pnpm licenses list --json)",
   "packageCount": 605,
   "tierCounts": {
