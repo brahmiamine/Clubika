@@ -255,7 +255,14 @@ export interface UserEntity {
   closedByUserId: number | null;
   telephone: string | null;
   indisponibilites: OfficielIndisponibilite[] | null;
-  icalToken: string;
+  /**
+   * Empreinte SHA-256 du jeton iCal personnel (issue #13), jamais le jeton brut
+   * — voir `app/lib/planning/ical-token.ts`. `null` = pas de flux actif (jamais
+   * généré, révoqué, ou compte fermé/désactivé).
+   */
+  icalTokenHash: string | null;
+  /** Date de génération du jeton iCal actif ; `null` si aucun jeton actif. */
+  icalTokenCreatedAt: Date | null;
   notifyChannel: string;
   /** Restriction de traitements non essentiels (issue #22). */
   processingRestrictedAt?: Date | null;
@@ -291,7 +298,8 @@ export const UserSchema = new EntitySchema<UserEntity>({
     closedByUserId: { type: Number, nullable: true },
     telephone: { type: String, nullable: true },
     indisponibilites: { type: 'simple-json', nullable: true },
-    icalToken: { type: String, unique: true },
+    icalTokenHash: { type: String, nullable: true, unique: true },
+    icalTokenCreatedAt: { type: 'datetime', nullable: true },
     notifyChannel: { type: String, default: 'push' },
     processingRestrictedAt: { type: 'datetime', nullable: true },
     processingOpposedAt: { type: 'datetime', nullable: true },

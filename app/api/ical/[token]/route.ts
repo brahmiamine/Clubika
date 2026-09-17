@@ -6,6 +6,7 @@ import { UserEntity } from '@/lib/db/schemas';
 import { Match, Entrainement, Plateau, type PersonType } from '@/types/match';
 import { MatchExtras } from '@/hooks/useMatchExtras';
 import { generateIcal, type IcalIdentity } from '@/lib/utils/ical-export';
+import { hashIcalToken } from '@/lib/planning/ical-token';
 import { getOfficialMatchesMeta } from '@/lib/db/json-migrator';
 import { normalizePlanningFunctions } from '@/lib/auth/roles';
 import { readAppSettings } from '@/lib/settings-store';
@@ -62,7 +63,10 @@ export async function GET(
     const tokenBlocked = await checkCapabilityTokenRateLimit(db, RATE_LIMIT_ROUTE_KEY, token);
     if (tokenBlocked) return tokenBlocked;
 
-    const user = await db.getRepository<UserEntity>('User').findOneBy({ icalToken: token });
+    // Recherche par empreinte (issue #13) : le jeton brut n'est jamais stocké ni
+    // comparé directement — voir app/lib/planning/ical-token.ts et la migration
+    // 0041 pour la transition des jetons déjà distribués.
+    const user = await db.getRepository<UserEntity>('User').findOneBy({ icalTokenHash: hashIcalToken(token) });
     if (!user || !user.active) {
       return rejectInvalidIcalFeed(db, request, token);
     }

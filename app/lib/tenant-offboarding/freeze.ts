@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import type { DataSource } from 'typeorm';
 import type { ClubTenantEntity } from '@/lib/db/schemas';
 import { revokeAllSessionsForClub } from '@/lib/auth/session';
@@ -29,11 +28,13 @@ async function revokeCapabilities(db: DataSource, clubId: string): Promise<void>
   }
 
   if (await tableExists(db, 'users')) {
-    const users = await db.query('SELECT id FROM users WHERE clubId = ?', [clubId]) as Array<{ id: number }>;
-    for (const user of users) {
-      const token = `revoked-${clubId}-${user.id}-${randomBytes(8).toString('hex')}`;
-      await db.query('UPDATE users SET icalToken = ? WHERE id = ?', [token, user.id]);
-    }
+    // Révocation du flux iCal personnel (issue #13) : plus de jeton actif pour
+    // aucun utilisateur du club gelé, plutôt qu'une rotation vers une valeur
+    // jamais restituée.
+    await db.query(
+      'UPDATE users SET icalTokenHash = NULL, icalTokenCreatedAt = NULL WHERE clubId = ?',
+      [clubId],
+    );
   }
 
   if (await tableExists(db, 'push_subscriptions')) {

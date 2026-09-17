@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { IsNull, type DataSource, type EntityManager } from 'typeorm';
 import type {
   InvitationEntity,
@@ -8,6 +8,7 @@ import type {
 } from '@/lib/db/schemas';
 import { findUserReferences } from '@/lib/planning/user-references';
 import { removeAllPushSubscriptionsForUser } from '@/lib/push/store';
+import { REVOKED_ICAL_TOKEN } from '@/lib/planning/ical-token';
 import { anonymizePersonEverywhere } from './anonymize';
 import {
   ANONYMIZED_DISPLAY_NAME,
@@ -222,7 +223,11 @@ export async function closeAccount(
   target.active = false;
   target.claimedAt = null;
   target.accessRole = 'dirigeant';
-  target.icalToken = randomBytes(24).toString('hex');
+  // Révocation du flux iCal personnel (issue #13) : plus de flux actif du tout,
+  // plutôt qu'une rotation vers un jeton jamais restitué — même effet (l'ancienne
+  // URL cesse de fonctionner) sans générer de secret inutile.
+  target.icalTokenHash = REVOKED_ICAL_TOKEN.icalTokenHash;
+  target.icalTokenCreatedAt = REVOKED_ICAL_TOKEN.icalTokenCreatedAt;
   target.closedAt = now;
   target.closureRequestedAt = requestedAt;
   target.closedByUserId = input.processedByUserId;

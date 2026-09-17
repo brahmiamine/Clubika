@@ -4,10 +4,19 @@ import { UserEntity } from '@/lib/db/schemas';
 import { requireAuth } from '@/lib/auth/require';
 import { setCurrentClubId } from '@/lib/auth/club-context';
 import { planningFeatureGuard } from '@/lib/planning/feature-guard';
-import { resolveCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
-import { buildIcalFeedUrl } from '@/lib/planning/ical-link';
 
-/** Flux volontaire pour récupérer l’URL iCal personnelle (issue #382) — hors `/api/auth/me`. */
+/**
+ * État de l'abonnement iCal personnel (issue #382, durci par l'issue #13) —
+ * hors `/api/auth/me`.
+ *
+ * Ne renvoie plus l'URL du flux : depuis la migration `0041`, seule l'empreinte
+ * du jeton est stockée, le jeton brut n'est donc plus récupérable après coup.
+ * Il n'est restitué qu'une fois, à sa génération — voir
+ * `POST /api/users/[id]/regenerate-ical-token`. Cette route ne renvoie que des
+ * métadonnées (date de création, présence d'un flux actif) pour permettre à
+ * l'abonné de gérer son flux (voir, révoquer, régénérer) sans jamais réexposer
+ * le secret.
+ */
 export async function GET(request: NextRequest) {
   const auth = await requireAuth(request);
   if ('error' in auth) {
@@ -27,11 +36,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
   }
 
-  const origin = resolveCanonicalPublicOrigin() ?? (process.env.NODE_ENV === 'production' ? null : 'http://localhost:3000');
-  if (!origin) {
-    return NextResponse.json({ error: 'APP_BASE_URL est requis pour générer un lien iCal' }, { status: 503 });
-  }
   return NextResponse.json({
-    feedUrl: buildIcalFeedUrl(origin, user.icalToken),
+    hasToken: Boolean(user.icalTokenHash),
+    createdAt: user.icalTokenCreatedAt,
   });
 }

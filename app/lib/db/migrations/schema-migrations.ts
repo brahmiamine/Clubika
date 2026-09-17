@@ -830,6 +830,54 @@ export const schemaMigrations: readonly SchemaMigration[] = [
   },
   {
     version: '0041',
+    name: 'ical_token_hash',
+    // Issue #13 : le jeton iCal personnel (`users.icalToken`) n'est plus stocké en
+    // clair. Comme `invitations.id` (migration 0013), on bascule sur une empreinte
+    // SHA-256 indexée : `/api/ical/[token]` hache le jeton reçu et cherche par
+    // empreinte au lieu de comparer la valeur brute stockée en base.
+    //
+    // Stratégie de transition retenue — backfill immédiat plutôt que « rehash au
+    // prochain usage » ou régénération forcée :
+    //   - le jeton brut existe déjà en clair en base à cet instant précis (avant
+    //     `DROP COLUMN`) : son empreinte SHA-256 peut donc être calculée une fois
+    //     pour toutes par le SGBD (`SHA2(icalToken, 256)`), sans action de
+    //     l'abonné ni fenêtre où l'ancien format resterait accepté en parallèle ;
+    //   - l'URL déjà distribuée aux applications calendrier des abonnés (le jeton
+    //     brut) ne change pas : seule sa représentation stockée change. Aucun
+    //     abonnement existant n'est cassé — contrairement à une régénération
+    //     forcée, qui aurait invalidé toutes les URL iCal actives d'un coup, à
+    //     l'opposé du principe explicite de l'issue (« une expiration courte
+    //     automatique n'est pas imposée ici : elle casserait les abonnements ») ;
+    //   - un « rehash au prochain usage » (garder le jeton en clair jusqu'à la
+    //     première requête suivante) aurait laissé indéfiniment en clair les
+    //     jetons des abonnés peu actifs (flux consultés une fois par jour par le
+    //     client calendrier, donc rehachés vite en pratique, mais sans garantie
+    //     pour un abonné inactif plusieurs semaines) — le gain de sécurité de
+    //     cette migration doit s'appliquer à toutes les lignes dès son exécution,
+    //     pas seulement aux comptes qui se reconnectent.
+    //
+    // Idempotence : la clause `WHERE ... AND icalTokenHash IS NULL` du backfill ne
+    // retraite jamais une ligne déjà migrée ; toutes les autres instructions sont
+    // `IF [NOT] EXISTS`. Rejouable sans effet après un premier passage complet.
+    //
+    // Irréversible : `icalToken` (colonne et index) est supprimé après le
+    // backfill, dans la même migration — comme 0013 et 0032 avant elle. Un
+    // rollback applicatif (redéploiement de la version précédente du code) ne
+    // retrouve donc pas de jeton en clair : voir docs/database-migrations.md
+    // (section Rollback) et la description de la PR #13 pour la procédure
+    // (restauration depuis une sauvegarde prise avant migration, ou avancer avec
+    // un correctif plutôt que revenir en arrière).
+    statements: [
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS icalTokenHash CHAR(64) NULL AFTER icalToken',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS icalTokenCreatedAt DATETIME(6) NULL AFTER icalTokenHash',
+      "UPDATE users SET icalTokenHash = SHA2(icalToken, 256), icalTokenCreatedAt = COALESCE(icalTokenCreatedAt, createdAt) WHERE icalToken IS NOT NULL AND icalToken <> '' AND icalTokenHash IS NULL",
+      'ALTER TABLE users DROP INDEX IF EXISTS uq_users_ical_token',
+      'ALTER TABLE users DROP COLUMN IF EXISTS icalToken',
+      'CREATE UNIQUE INDEX IF NOT EXISTS uq_users_ical_token_hash ON users (icalTokenHash)',
+    ],
+  },
+  {
+    version: '0042',
     name: 'notifications_outbox_gabarits_minimaux',
     // Issue #27 : l'outbox ne conserve plus de texte libre (`title`/`message`) ni
     // d'identifiants d'événement en clair (`event_type`/`event_id`/`notification_type`).

@@ -2,8 +2,9 @@ import type { DataSource } from 'typeorm';
 import type { AssignmentContact } from '@/types/match';
 import { getCurrentClubId } from '@/lib/auth/club-context';
 import { readAppSettings } from '@/lib/settings-store';
+import { parsePositiveInt, retentionCutoff } from '@/lib/retention/policy';
 import { listPlanningEventSnapshots, type PlanningEventSnapshot } from './event-store';
-import { assignmentStatus, attendanceStatus, isVisiblePublicationStatus, needsReplacement } from './p0-rules';
+import { assignmentStatus, attendanceStatus, eventStartTimestamp, isVisiblePublicationStatus, needsReplacement } from './p0-rules';
 import {
   listPublishedPlanningEventSnapshots,
 } from './published-planning';
@@ -14,23 +15,53 @@ import {
   type PublicationRoleRequirements,
 } from './validation';
 
+/**
+ * Fenêtre glissante par défaut de l'analyse (issue #16) : les statistiques nominatives
+ * et globales ne portent jamais sur tout l'historique du planning, seulement sur les
+ * `periodDays` derniers jours (les événements futurs déjà publiés restent inclus, la
+ * borne ne porte que sur le passé). Alignée sur l'ordre de grandeur d'une saison sportive.
+ * Configurable par club via la variable d'environnement ci-dessous, à la manière des
+ * politiques de rétention (`app/lib/retention/policy.ts`).
+ */
+export const PLANNING_ANALYTICS_PERIOD_ENV_KEY = 'PLANNING_ANALYTICS_PERIOD_DAYS';
+export const DEFAULT_PLANNING_ANALYTICS_PERIOD_DAYS = 180;
+
+export function planningAnalyticsPeriodDays(env: Record<string, string | undefined> = process.env): number {
+  return parsePositiveInt(env[PLANNING_ANALYTICS_PERIOD_ENV_KEY], DEFAULT_PLANNING_ANALYTICS_PERIOD_DAYS);
+}
+
+/**
+ * Indicateur nominatif minimal (issue #16 — « Minimiser les statistiques nominatives du
+ * planning »). Le seul champ individuel conservé est le nombre d'affectations : il suffit
+ * à équilibrer la charge entre les personnes (répartir les sollicitations) sans exposer de
+ * classement de performance individuelle. Les refus, présences et absences nominatifs ont
+ * été retirés de l'API : ils n'étaient pas affichés côté client et ne sont pas justifiés
+ * pour l'objectif de couverture/équité poursuivi ici. Leurs équivalents agrégés restent
+ * disponibles sur `PlanningAnalytics` (acceptanceRate, attendanceRate, declineRate...).
+ */
 export interface PlanningWorkloadMetric {
+  /** Identifiant stable de la personne (type + id, ou nom normalisé en repli), interne au club. */
   identity: string;
+  /** Nom affiché à l'admin pour situer la charge — jamais utilisé pour classer les personnes. */
   nom: string;
+  /** Nombre d'affectations sur la période analysée (cf. `PlanningAnalytics.analyzedPeriod`). */
   assignments: number;
-  accepted: number;
-  declined: number;
-  present: number;
-  absent: number;
 }
 
 export interface PlanningAnalytics {
+  /** Nombre d'événements visibles (publiés/modifiés) dans la période analysée. */
   events: number;
+  /** Nombre de créneaux de rôle requis sur la période (mesure la charge de couverture à assurer). */
   requiredRoles: number;
+  /** Rôles requis jamais assignés sur la période (distinct des remplacements, cf. missingCoverageRate). */
   missingRoles: number;
+  /** Nombre total d'affectations (tous statuts) sur la période — indicateur de charge globale. */
   assignments: number;
+  /** Affectations ayant reçu une réponse (acceptée ou refusée) sur la période. */
   respondedAssignments: number;
+  /** Taux d'acceptation global — indicateur d'équité/adhésion, jamais nominatif. */
   acceptanceRate: number;
+  /** Taux de présence global — indicateur de couverture réelle, jamais nominatif. */
   attendanceRate: number;
   averageResponseDelayMinutes: number | null;
   /** Part des rôles requis restés sans couverture active après refus (cf. needsReplacement()). */
@@ -38,8 +69,22 @@ export interface PlanningAnalytics {
   /** Taux de refus brut (déclinés / affectations ayant répondu) — pas un indicateur de besoin réel de remplacement. */
   declineRate: number;
   missingCoverageRate: number;
+  /** Coefficient d'équité de charge (1 = répartition parfaite) — dérivé de `workload`, jamais un classement. */
   fairnessCoefficient: number;
+  /** Vue nominative minimale (issue #16) : uniquement le nombre d'affectations par personne. */
   workload: PlanningWorkloadMetric[];
+  /**
+   * Période effectivement analysée (issue #16) : les indicateurs ci-dessus, y compris
+   * `workload`, ne portent jamais sur tout l'historique — uniquement sur cette fenêtre.
+   */
+  analyzedPeriod: {
+    /** Nombre de jours en amont de `to` pris en compte. */
+    days: number;
+    /** Borne basse (ISO 8601) — les événements antérieurs sont exclus. */
+    from: string;
+    /** Borne haute (ISO 8601), généralement l'instant du calcul. */
+    to: string;
+  };
 }
 
 function identity(contact: AssignmentContact): string {
@@ -65,11 +110,36 @@ export function fairnessCoefficient(loads: number[]): number {
   return Math.round((1 - gini) * 10_000) / 10_000;
 }
 
+export interface PlanningAnalyticsOptions {
+  /** Nombre de jours de recul pris en compte (défaut : `DEFAULT_PLANNING_ANALYTICS_PERIOD_DAYS`). */
+  periodDays?: number;
+  /** Instant de référence pour la borne haute de la période (défaut : `new Date()`). Utile pour des tests déterministes. */
+  now?: Date;
+  /** Fuseau horaire utilisé pour dater les événements (défaut : `'UTC'`). */
+  timeZone?: string;
+}
+
 export function computePlanningAnalytics(
   snapshots: PlanningEventSnapshot[],
   requirements: PublicationRoleRequirements = DEFAULT_PUBLICATION_ROLE_REQUIREMENTS,
+  options: PlanningAnalyticsOptions = {},
 ): PlanningAnalytics {
-  const visible = snapshots.filter((snapshot) => isVisiblePublicationStatus(snapshot.planningStatus));
+  const periodDays = options.periodDays ?? DEFAULT_PLANNING_ANALYTICS_PERIOD_DAYS;
+  const now = options.now ?? new Date();
+  const timeZone = options.timeZone ?? 'UTC';
+  const cutoff = retentionCutoff(periodDays, now);
+  const cutoffMs = cutoff.getTime();
+  const nowMs = now.getTime();
+
+  // Fenêtre bornée (issue #16) : on n'agrège jamais tout l'historique. Un événement dont la
+  // date ne peut pas être interprétée est conservé par défaut plutôt que silencieusement
+  // exclu, pour ne pas fausser la couverture en cas de donnée legacy malformée.
+  const withinPeriod = snapshots.filter((snapshot) => {
+    const start = eventStartTimestamp(snapshot.date, snapshot.time, timeZone);
+    return start === null || start >= cutoffMs;
+  });
+
+  const visible = withinPeriod.filter((snapshot) => isVisiblePublicationStatus(snapshot.planningStatus));
   let requiredRoleCount = 0;
   let missingRoles = 0;
   let replacementsNeeded = 0;
@@ -118,29 +188,26 @@ export function computePlanningAnalytics(
         if (attendance !== 'unknown' && attendance !== 'replaced') knownAttendance += 1;
         if (attendance === 'present') present += 1;
 
+        // Vue nominative volontairement minimale (issue #16) : seul le décompte des
+        // affectations est conservé par personne. Les refus/présences/absences individuels
+        // ne sont ni calculés ni exposés ici — leurs agrégats globaux le sont plus haut.
         const key = identity(contact);
         const current = workload.get(key) ?? {
           identity: key,
           nom: contact.nom,
           assignments: 0,
-          accepted: 0,
-          declined: 0,
-          present: 0,
-          absent: 0,
         };
         current.assignments += 1;
-        if (status === 'accepted') current.accepted += 1;
-        if (status === 'declined') current.declined += 1;
-        if (attendance === 'present') current.present += 1;
-        if (attendance === 'absent') current.absent += 1;
         workload.set(key, current);
       }
     }
   }
 
   const respondedAssignments = accepted + declined;
+  // Tri alphabétique, jamais par charge décroissante (issue #16) : la vue nominative ne doit
+  // pas se lire comme un classement de performance individuelle.
   const workloadList = Array.from(workload.values())
-    .sort((a, b) => b.assignments - a.assignments || a.nom.localeCompare(b.nom, 'fr'));
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 
   return {
     events: visible.length,
@@ -158,6 +225,11 @@ export function computePlanningAnalytics(
     missingCoverageRate: percent(missingRoles, requiredRoleCount),
     fairnessCoefficient: fairnessCoefficient(workloadList.map((item) => item.assignments)),
     workload: workloadList,
+    analyzedPeriod: {
+      days: periodDays,
+      from: cutoff.toISOString(),
+      to: new Date(nowMs).toISOString(),
+    },
   };
 }
 
@@ -179,5 +251,8 @@ export async function buildPlanningAnalytics(db: DataSource): Promise<PlanningAn
   const source = publishedSnapshots
     ? await hydratePlanningAssignmentStates(db, publishedSnapshots, clubId)
     : snapshots;
-  return computePlanningAnalytics(source, requirements);
+  return computePlanningAnalytics(source, requirements, {
+    periodDays: planningAnalyticsPeriodDays(),
+    timeZone: settings.timeZone,
+  });
 }

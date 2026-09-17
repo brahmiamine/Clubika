@@ -118,8 +118,8 @@ function messageDto(
   reactions: ChatReactionSummary[] = [],
 ): ChatMessageDto {
   const replySource = message.replyToMessageId ? replyById?.get(message.replyToMessageId) : undefined;
-  // Message supprimé par un admin : contenu et pièce jointe déjà purgés en base
-  // (deleteMessage), donc rien à déchiffrer/exposer ici — juste le marqueur.
+  // Message supprimé (auteur ou admin, issue #10/#259) : contenu et pièce jointe déjà
+  // purgés en base (deleteMessage), donc rien à déchiffrer/exposer ici — juste le marqueur.
   if (message.deletedAt) {
     return {
       id: message.id,
@@ -154,8 +154,11 @@ function messageDto(
         size: message.attachmentSize ?? 0,
       }
       : null,
+    // Le message cité peut avoir été supprimé depuis (par son auteur ou un admin) sans
+    // que cette réponse-ci le soit : on ne doit alors réexposer ni son contenu déjà
+    // purgé, ni même l'identité de son auteur (issue #10).
     replyTo: message.replyToMessageId
-      ? (replySource
+      ? (replySource && !replySource.deletedAt
         ? { id: replySource.id, authorName: replySource.senderName, snippet: replySnippet(replySource), deleted: false }
         : { id: message.replyToMessageId, authorName: '', snippet: '', deleted: true })
       : null,
@@ -866,11 +869,16 @@ export async function appendMessage(
 }
 
 /**
- * Modération admin (issue #259) : purge le contenu et la pièce jointe d'un message,
- * conserve la ligne (identifiant, expéditeur, séquence) pour ne pas perturber la
- * pagination ni le compteur de non-lus. Réservé aux administrateurs du club, et
- * seulement pour un salon auquel ils ont eux-mêmes accès (un admin ne peut pas
- * modérer une conversation privée dont il n'est pas participant).
+ * Suppression d'un message (issue #259 pour la modération admin, issue #10 pour
+ * l'auteur) : purge le contenu et la pièce jointe, conserve la ligne (identifiant,
+ * expéditeur, séquence) pour ne pas perturber la pagination ni le compteur de
+ * non-lus — seul un tombstone minimal (deletedAt/deletedByUserId) survit. Autorisé
+ * pour l'auteur du message ou un administrateur du club, et seulement pour un salon
+ * auquel l'appelant a lui-même encore accès (un admin ne peut pas modérer une
+ * conversation privée dont il n'est pas participant ; un auteur exclu du salon ne
+ * peut plus supprimer ses anciens messages). Ne fait jamais confiance au client :
+ * club, salon, accès et identité de l'auteur sont revérifiés côté serveur à partir
+ * de la session et de la ligne persistée.
  */
 export async function deleteMessage(
   db: DataSource,
@@ -878,7 +886,6 @@ export async function deleteMessage(
   roomId: string,
   messageId: string,
 ): Promise<{ room: ChatRoomEntity; participantUserIds: number[]; message: ChatMessageDto }> {
-  requireAdmin(user);
   return db.transaction(async (manager) => {
     const room = await manager
       .getRepository<ChatRoomEntity>('ChatRoom')
@@ -891,6 +898,10 @@ export async function deleteMessage(
     const messageRepository = manager.getRepository<ChatMessageEntity>('ChatMessage');
     const message = await messageRepository.findOneBy({ id: messageId, roomId });
     if (!message) throw new ChatValidationError('Message introuvable');
+    const isAuthor = message.senderUserId === user.id;
+    if (!isAuthor && user.accessRole !== 'admin') {
+      throw new ChatAccessError('Suppression réservée à l\'auteur du message ou à un administrateur');
+    }
     if (!message.deletedAt) {
       // Purge aussi le blob en base (chat_attachments), pas seulement la référence sur
       // le message : sinon l'URL reste servable par quiconque l'a conservée, et le
