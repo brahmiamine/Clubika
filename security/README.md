@@ -58,7 +58,10 @@ n’est pas validé sur le dépôt (résidu). Ne pas y mettre de secret.
 ## Coordination
 
 - Digests runtime app/MariaDB/Caddy : issue #36.
-- Licences / provenance : ticket dédié, hors périmètre.
+- Licences / provenance : issue #39, voir `docs/compliance/README.md`,
+  `THIRD_PARTY_NOTICES.md` et le job `license-and-asset-provenance` de
+  `supply-chain.yml` (hors périmètre de ce fichier, qui couvre les
+  vulnérabilités).
 - Prestataires : issue #30 (pas de nouveau SaaS ici).
 - Image Node officielle : HIGH Debian / npm embarqué npm CLI → Dependabot docker + #36.
 - Code scanning GitHub (onglet Security) : à activer dans les réglages du dépôt ; le job CodeQL produit déjà un SARIF.

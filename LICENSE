@@ -1,0 +1,33 @@
+Copyright (c) 2026 Clubika. All rights reserved.
+
+This is a placeholder proprietary notice, not a final license choice.
+
+No part of this repository's original source code, design, or content may
+be used, copied, modified, merged, published, distributed, sublicensed,
+and/or sold without the express prior written permission of the copyright
+holder, except as explicitly permitted by a separate written agreement.
+
+Third-party dependencies bundled with this software remain under their own
+respective licenses — see THIRD_PARTY_NOTICES.md and
+docs/compliance/dependency-license-inventory.json.
+
+---
+
+NOTE FOR HUMAN LEGAL REVIEW (issue #39, needs:legal-review, p0):
+
+This file was added as a safe, reversible default so the repository is not
+left with zero license terms. It intentionally does NOT decide Clubika's
+final licensing model. A human legal/IP decision is required on at least:
+
+  - Whether "All Rights Reserved" proprietary is the intended final choice,
+    or whether Clubika should adopt an OSI license for parts of the code
+    (and if so, which one, and for which parts).
+  - Whether this file, or any part of the repository, should ever become
+    publicly readable — this notice must not be read as authorization to
+    change repository visibility. No code path in this change makes the
+    repository more visible than it already is.
+  - Whether contributor/employee IP assignment terms exist and are
+    consistent with the license chosen here.
+
+No AI agent can make this legal determination. Do not treat this file as a
+final answer; treat it as a placeholder pending that review.
