@@ -102,12 +102,10 @@ describe('frontière: payload Web Push minimisé (issue #30 / #219)', () => {
     const db = {} as DataSource;
 
     await triggerPushForUser(db, 42, {
-      notificationId: 'delivery-sentinel-1',
-      type: 'assignment',
+      notificationId: 1001,
+      templateId: 'assignment',
       title: sentinelName('Notification'),
       message: 'Vous avez une nouvelle affectation.',
-      eventType: 'amical',
-      eventId: 'match-sentinel-1',
       url: '/notifications',
       clubId: sentinelClubId('push'),
     });
@@ -116,7 +114,7 @@ describe('frontière: payload Web Push minimisé (issue #30 / #219)', () => {
     const call = pushMocks.sendNotification.mock.calls[0] as unknown[] | undefined;
     const sentBody = JSON.parse(String(call?.[1]));
     expect(Object.keys(sentBody).sort()).toEqual(
-      ['badge', 'clubId', 'eventId', 'eventType', 'icon', 'message', 'notificationId', 'title', 'type', 'url'].sort(),
+      ['badge', 'clubId', 'icon', 'message', 'notificationId', 'templateId', 'title', 'url'].sort(),
     );
     // Le titre sentinelle est un texte de notification légitime (pas un secret) : seule
     // la présence de champs *hors* de cette allowlist serait une fuite. On vérifie
@@ -129,12 +127,10 @@ describe('frontière: payload Web Push minimisé (issue #30 / #219)', () => {
     const { triggerPushForUser } = await import('@/lib/push/service');
     const db = {} as DataSource;
     await triggerPushForUser(db, 42, {
-      notificationId: 'delivery-sentinel-2',
-      type: 'assignment',
+      notificationId: 1002,
+      templateId: 'assignment',
       title: 'x',
       message: sentinelEmail('should-not-be-sent'),
-      eventType: null,
-      eventId: null,
     });
     expect(pushMocks.sendNotification).not.toHaveBeenCalled();
   });
