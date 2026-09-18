@@ -3,3 +3,10 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: true
+
+# Versionnage Playwright : l'ancien champ `pnpm.overrides` du package.json n'est
+# plus lu par pnpm 10.x. Le pinning doit vivre ici pour rester appliqué.
+overrides:
+  '@playwright/test': 1.63.0
+  playwright: 1.63.0
+  playwright-core: 1.63.0

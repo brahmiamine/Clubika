@@ -89,12 +89,5 @@
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.11"
-  },
-  "pnpm": {
-    "overrides": {
-      "@playwright/test": "1.63.0",
-      "playwright": "1.63.0",
-      "playwright-core": "1.63.0"
-    }
   }
 }
