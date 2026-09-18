@@ -15,7 +15,8 @@ import {
   StatusPill,
   type StatusTone,
 } from '@/app/components/layout/page-primitives';
-import { Check, Copy, Link2, Trash2 } from 'lucide-react';
+import { Link2, Trash2 } from 'lucide-react';
+import { PublicShareLinkRow } from '@/app/components/planning/PublicShareLinkRow';
 import { toast } from 'sonner';
 import { useInvitations } from '@/app/hooks/useInvitations';
 import { apiGet, apiPost, apiDelete } from '@/lib/utils/api';
@@ -50,30 +51,6 @@ const STATUS_TONE: Record<Exclude<StatusFilter, 'all'>, StatusTone> = {
 };
 
 const INVITATION_COLS = 'minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.6fr) minmax(0,1.1fr) auto auto 2.75rem';
-
-function CopyableUrlField({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      toast.success('Lien copié');
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error('Impossible de copier le lien');
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-2">
-      <Input value={url} readOnly className="font-mono text-xs" />
-      <Button type="button" variant="outline" size="icon" onClick={handleCopy}>
-        {copied ? <Check className="h-4 w-4 text-green-600 dark:text-green-400" /> : <Copy className="h-4 w-4" />}
-      </Button>
-    </div>
-  );
-}
 
 export default function InvitationsPage() {
   const { invitations, isLoading, reload } = useInvitations();
@@ -230,9 +207,13 @@ export default function InvitationsPage() {
           </Button>
 
           {lastInviteUrl && (
-            <div className="pt-2 space-y-1">
+            <div className="space-y-2 pt-2">
               <Label>Lien généré</Label>
-              <CopyableUrlField url={lastInviteUrl} />
+              <PublicShareLinkRow
+                url={lastInviteUrl}
+                shareTitle="Invitation Clubika"
+                shareText="Rejoignez le club via ce lien d'invitation."
+              />
             </div>
           )}
         </div>
