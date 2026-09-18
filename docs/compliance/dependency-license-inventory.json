@@ -1,9 +1,9 @@
 {
   "note": "Inventaire automatisé (issue #39). Outil d'aide, pas un avis juridique. Toute ligne reste soumise à revue humaine avant commercialisation.",
   "generatedBy": "scripts/audit-dependencies.mjs --licenses (pnpm licenses list --json)",
-  "packageCount": 605,
+  "packageCount": 607,
   "tierCounts": {
-    "allowed": 597,
+    "allowed": 599,
     "review": 8,
     "blocked": 0
   },
@@ -20,7 +20,7 @@
     },
     {
       "name": "@asamuzakjp/css-color",
-      "version": "7.0.0",
+      "version": "5.1.11",
       "license": "MIT",
       "tier": "allowed",
       "author": "asamuzaK",
@@ -30,12 +30,32 @@
     },
     {
       "name": "@asamuzakjp/dom-selector",
-      "version": "9.1.4",
+      "version": "7.1.1",
       "license": "MIT",
       "tier": "allowed",
       "author": "asamuzaK",
       "homepage": "https://github.com/asamuzaK/domSelector#readme",
       "description": "A CSS selector engine.",
+      "scope": "transitive-dev"
+    },
+    {
+      "name": "@asamuzakjp/generational-cache",
+      "version": "1.0.1",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "asamuzaK",
+      "homepage": "https://github.com/asamuzaK/generationalCache",
+      "description": "A generational pseudo-LRU cache with strict maximum size limits.",
+      "scope": "transitive-dev"
+    },
+    {
+      "name": "@asamuzakjp/nwsapi",
+      "version": "2.3.9",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "Diego Perini",
+      "homepage": "http://javascript.nwbox.com/nwsapi/",
+      "description": "Fast CSS Selectors API Engine",
       "scope": "transitive-dev"
     },
     {
@@ -3760,7 +3780,7 @@
     },
     {
       "name": "jsdom",
-      "version": "30.1.0",
+      "version": "29.1.1",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -5389,6 +5409,16 @@
       "scope": "transitive-prod"
     },
     {
+      "name": "symbol-tree",
+      "version": "3.2.4",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "Joris van der Wel",
+      "homepage": "https://github.com/jsdom/js-symbol-tree#symbol-tree",
+      "description": "Turn any collection of objects into its own efficient tree or linked list using Symbol",
+      "scope": "transitive-dev"
+    },
+    {
       "name": "tailwind-merge",
       "version": "3.6.0",
       "license": "MIT",
@@ -5670,7 +5700,7 @@
     },
     {
       "name": "undici",
-      "version": "8.10.2",
+      "version": "7.29.1",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -5851,16 +5881,6 @@
     {
       "name": "whatwg-url",
       "version": "16.0.1",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Sebastian Mayr",
-      "homepage": "https://github.com/jsdom/whatwg-url#readme",
-      "description": "An implementation of the WHATWG URL Standard's URL API and parsing machinery",
-      "scope": "transitive-dev"
-    },
-    {
-      "name": "whatwg-url",
-      "version": "17.1.1",
       "license": "MIT",
       "tier": "allowed",
       "author": "Sebastian Mayr",
