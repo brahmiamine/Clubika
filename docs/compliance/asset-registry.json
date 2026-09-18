@@ -1,0 +1,159 @@
+{
+  "note": "Registre des actifs (issue #39, needs:legal-review). Chaque champ 'author_source', 'license_authorization' et 'proof' ne contient que des faits vérifiés (git, métadonnées techniques). Aucune entrée n'est déclarée « libre de droits » ou « autorisée pour un usage commercial » par un agent : c'est une décision humaine. 'status: needs_human_review' est la valeur par défaut ; seule une revue humaine documentée peut la faire passer à 'authorized' ou 'removed'.",
+  "generatedBy": "Inventaire initial constitué manuellement (issue #39) à partir de `git log --diff-filter=A`, `strings <fichier> | grep -i c2pa`, `sha256sum`. Vérifié par `scripts/check-asset-registry.mjs` (CI) qui exige une entrée par fichier sous public/ mais ne peut pas, lui, établir la provenance : il vérifie seulement que l'entrée existe et est renseignée.",
+  "assets": [
+    {
+      "path": "public/branding/clubika-icon.png",
+      "type": "image/png",
+      "role": "Icône de marque Clubika (header, login, notifications, PWA)",
+      "author_source": "Provenance unknown — needs human review. Métadonnées C2PA/XMP intégrées attribuent la génération à « OpenAI Media Service API » (émetteur de certificat : OpenAI OpCo, LLC ; urn:c2pa:8786b08d-a4f7-4e8b-9149-d86ab53a7f92). Cela indique l'outil de génération, pas le titulaire des droits ni une autorisation d'usage commercial pour la marque Clubika.",
+      "date": "Ajouté au dépôt le 2026-09-11 (commit 0a0878b, auteur git brahmiamine). Date de création réelle de l'image inconnue.",
+      "license_authorization": "Provenance unknown — needs human review. Aucun enregistrement d'autorisation ou de contrat de génération/rachat de droits au dossier.",
+      "modifications": "Aucune modification connue après ajout au dépôt (non vérifiable au-delà de l'historique git).",
+      "proof": "strings public/branding/clubika-icon.png | grep -i openai (bloc C2PA JUMBF confirmé). sha256sum: c9fe4303b4ed66d3665be740fe2521b7f37e085d71370c73c408b83cea4f6aa0.",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/branding/clubika-logo.png",
+      "type": "image/png",
+      "role": "Logo Clubika (variante claire) — non référencé dans le code applicatif au moment de l'inventaire",
+      "author_source": "Provenance unknown — needs human review. Métadonnées C2PA/XMP intégrées attribuent la génération à « OpenAI Media Service API » (OpenAI OpCo, LLC ; urn:c2pa:7ef5218e-d446-4a26-b48c-1aabfcabb42c).",
+      "date": "Ajouté au dépôt le 2026-09-11 (commit 0a0878b, auteur git brahmiamine).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Aucune modification connue après ajout au dépôt.",
+      "proof": "strings public/branding/clubika-logo.png | grep -i openai. sha256sum: 92a5944b9100795e825ae2476f8515d718f9c9c1298172ccc8f02a5ec8ea4d20. Recherche `grep -rl clubika-logo.png` sur app/ et components/ : aucune référence trouvée — fichier actuellement inutilisé par l'application (conservé, pas un boilerplate Next/Vercel : hors périmètre de suppression automatique de cette issue).",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/branding/clubika-logo-dark.png",
+      "type": "image/png",
+      "role": "Logo Clubika (variante sombre) — non référencé dans le code applicatif au moment de l'inventaire",
+      "author_source": "Provenance unknown — needs human review. Métadonnées C2PA/XMP intégrées attribuent la génération à « OpenAI Media Service API » (OpenAI OpCo, LLC ; urn:c2pa:e0f6541e-3508-40d1-b962-92cbb7b07c78).",
+      "date": "Ajouté au dépôt le 2026-09-11 (commit 0a0878b, auteur git brahmiamine).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Aucune modification connue après ajout au dépôt.",
+      "proof": "strings public/branding/clubika-logo-dark.png | grep -i openai. sha256sum: 5f1c0137b7b1b7823545c3c236c7dcb7a0e8655a781cd08df4a99dee63fc12e5. Recherche `grep -rl clubika-logo-dark.png` sur app/ et components/ : aucune référence trouvée — fichier actuellement inutilisé par l'application (conservé, pas un boilerplate Next/Vercel : hors périmètre de suppression automatique de cette issue).",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/branding/icon.png",
+      "type": "image/png",
+      "role": "Icône PWA / manifest (fallback, app/lib/pwa/branding.ts)",
+      "author_source": "Provenance unknown — needs human review. Aucune métadonnée C2PA/XMP détectée dans ce fichier précis (strings ne renvoie aucun marqueur OpenAI/c2pa), mais l'absence de métadonnée n'est jamais traitée comme preuve de liberté d'usage. Le fichier appartient au même jeu d'actifs de marque que public/branding/clubika-icon.png (qui, lui, porte des métadonnées C2PA OpenAI) ; un ré-encodage/redimensionnement peut avoir supprimé les métadonnées sans changer la provenance réelle.",
+      "date": "Ajouté au dépôt le 2026-09-11 (commit 7fbfd68, auteur git Cursor Agent ; premier ajout du fichier 5f252ab, auteur git brahmiamine, même date).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Redimensionnement/ré-encodage possible par rapport à clubika-icon.png (non confirmé).",
+      "proof": "strings public/branding/icon.png | grep -i openai → aucun résultat. sha256sum: 7389411a4422b7e55afded83d5c208c8652b403b37071a7997640d72d00e5ba2.",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/branding/icon-512.png",
+      "type": "image/png",
+      "role": "Icône PWA 512×512 (app/lib/pwa/branding.ts)",
+      "author_source": "Provenance unknown — needs human review. Aucune métadonnée C2PA/XMP détectée dans ce fichier précis. Même famille d'actifs que public/branding/icon.png / clubika-icon.png.",
+      "date": "Ajouté au dépôt le 2026-09-11 (commit 7fbfd68, auteur git Cursor Agent ; premier ajout du fichier 5f252ab, auteur git brahmiamine, même date).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Redimensionnement/ré-encodage possible (non confirmé).",
+      "proof": "strings public/branding/icon-512.png | grep -i openai → aucun résultat. sha256sum: 77e897d96e6ba7e5093a56774519ba95dab8e213ab3fdd25b0c0de94141dde45.",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/pwa/icon-192.png",
+      "type": "image/png",
+      "role": "Icône de notification push PWA (public/sw.js, app/lib/pwa/icons.ts)",
+      "author_source": "Provenance unknown — needs human review. Métadonnées C2PA/XMP intégrées attribuent la génération à « OpenAI Media Service API » (OpenAI OpCo, LLC ; urn:c2pa:37c27673-d3f3-4fdc-aed6-3e34893e7027).",
+      "date": "Ajouté au dépôt le 2026-09-10 (commit 5bc4bde, auteur git cursor[bot]).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Aucune modification connue après ajout au dépôt.",
+      "proof": "strings public/pwa/icon-192.png | grep -i openai. sha256sum: 5a04fc8320272bbf050b2e7b7ff8f1e5bed324d6a30bed47d2a4d0e384fb40fd.",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/pwa/icon-512.png",
+      "type": "image/png",
+      "role": "Icône PWA 512×512 déclarée dans le manifest",
+      "author_source": "Provenance unknown — needs human review. Fichier strictement identique (sha256 égal) à public/pwa/icon-192.png : même métadonnées C2PA OpenAI, même urn. Noté pour information : ce n'est pas réellement une image 512×512 distincte, c'est une copie octet pour octet de l'icône 192.",
+      "date": "Ajouté au dépôt le 2026-09-10 (commit 5bc4bde, auteur git cursor[bot]).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Copie identique de public/pwa/icon-192.png.",
+      "proof": "sha256sum public/pwa/icon-192.png public/pwa/icon-512.png → même hash 5a04fc8320272bbf050b2e7b7ff8f1e5bed324d6a30bed47d2a4d0e384fb40fd.",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/favicon.png",
+      "type": "image/png",
+      "role": "Favicon PNG (app/lib/pwa/document-head.ts, app/lib/pwa/branding.ts)",
+      "author_source": "Provenance unknown — needs human review. Aucune métadonnée C2PA/XMP détectée dans ce fichier.",
+      "date": "Ajouté au dépôt le 2026-09-12 (commit 59cab39, auteur git brahmiamine).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Inconnu.",
+      "proof": "strings public/favicon.png | grep -iE \"openai|c2pa|creator|copyright\" → aucun résultat. sha256sum: be3e1d15e5ba90cddeb3fa68a549ed6dbc4e69a86dab474f65c518089dee907b.",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/favicon.ico",
+      "type": "image/x-icon",
+      "role": "Favicon .ico (onglet navigateur)",
+      "author_source": "Provenance unknown — needs human review. Aucune métadonnée C2PA/XMP détectée dans ce fichier (le format .ico ne porte généralement pas ce type de métadonnée).",
+      "date": "Ajouté au dépôt le 2026-09-12 (commit 59cab39, auteur git brahmiamine).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Inconnu.",
+      "proof": "strings public/favicon.ico | grep -iE \"openai|c2pa|creator|copyright\" → aucun résultat. sha256sum: 818ceee025e0f4ae714c7ff7116d898914261571ebc7bccbe634556c6128e4bf.",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/sounds/chat-received.wav",
+      "type": "audio/wav",
+      "role": "Son de notification — message reçu (app/lib/chat/chatSound.ts)",
+      "author_source": "Provenance unknown — needs human review. Fichier RIFF/WAVE brut sans chunk LIST/INFO (pas de champ auteur, logiciel ou copyright intégré). L'absence de métadonnée n'est jamais traitée comme une preuve de liberté d'usage.",
+      "date": "Ajouté au dépôt le 2026-09-10 (commit 5bc4bde, auteur git cursor[bot]).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Inconnu.",
+      "proof": "strings public/sounds/chat-received.wav → en-tête RIFF/WAVEfmt/data seulement, aucun chunk de métadonnée exploitable.",
+      "status": "needs_human_review"
+    },
+    {
+      "path": "public/sounds/chat-sent.wav",
+      "type": "audio/wav",
+      "role": "Son de notification — message envoyé (app/lib/chat/chatSound.ts)",
+      "author_source": "Provenance unknown — needs human review. Fichier RIFF/WAVE brut sans chunk LIST/INFO (pas de champ auteur, logiciel ou copyright intégré).",
+      "date": "Ajouté au dépôt le 2026-09-10 (commit 5bc4bde, auteur git cursor[bot]).",
+      "license_authorization": "Provenance unknown — needs human review.",
+      "modifications": "Inconnu.",
+      "proof": "strings public/sounds/chat-sent.wav → en-tête RIFF/WAVEfmt/data seulement, aucun chunk de métadonnée exploitable.",
+      "status": "needs_human_review"
+    }
+  ],
+  "removed_assets": [
+    {
+      "path": "public/next.svg",
+      "reason": "Boilerplate `create-next-app` par défaut (Next.js/Vercel). Aucune référence dans le dépôt (recherche `grep -r next.svg` sur app/, components/, public/*.js — 0 résultat). Supprimé par cette issue (#39, critère « Assets Next/Vercel/template inutiles supprimés »)."
+    },
+    {
+      "path": "public/vercel.svg",
+      "reason": "Boilerplate `create-next-app` par défaut. Aucune référence dans le dépôt. Supprimé."
+    },
+    {
+      "path": "public/file.svg",
+      "reason": "Boilerplate `create-next-app` par défaut. Aucune référence dans le dépôt. Supprimé."
+    },
+    {
+      "path": "public/globe.svg",
+      "reason": "Boilerplate `create-next-app` par défaut. Aucune référence dans le dépôt. Supprimé."
+    },
+    {
+      "path": "public/window.svg",
+      "reason": "Boilerplate `create-next-app` par défaut. Aucune référence dans le dépôt. Supprimé."
+    }
+  ],
+  "non_static_provenance_items": [
+    {
+      "item": "Logos de clubs adverses (app/components/plateforme/OpponentClubsSection.tsx)",
+      "note": "Ne sont pas des fichiers du dépôt : chaque club saisit manuellement une URL de logo (champ « URL du logo »). Aucun scraping ni import/proxy automatique constaté dans le code actuel — l'image casse silencieusement (onError masque l'élément) plutôt que d'être re-téléchargée ou mise en cache côté serveur. Reste needs_human_review au niveau gouvernance : aucune trace dans le code d'une vérification d'autorisation du représentant du club adverse, de finalité ni de durée avant qu'une URL de logo soit affichée. Politique de gouvernance à formaliser humainement (voir docs/compliance/README.md) ; aucune modification de code effectuée ici (hors périmètre outillage/inventaire de cette issue)."
+    },
+    {
+      "item": "Logos du club propriétaire du tenant (upload club / configuration)",
+      "note": "Même remarque : les logos de club sont fournis par un compte club (représentant présumé autorisé par le fait d'avoir un compte admin), pas scrapés. Aucune preuve d'autorisation de marque documentée dans le dépôt. À couvrir par une politique humaine (mandat écrit, finalité, durée, procédure de retrait) — hors périmètre technique de cette issue."
+    }
+  ]
+}
