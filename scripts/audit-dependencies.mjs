@@ -123,24 +123,123 @@ export function classifyLicenseToken(token) {
   return 'review';
 }
 
-/** Découpe une expression SPDX composée ("(MPL-2.0 OR Apache-2.0)") en tiers. */
+const TIER_RANK = { allowed: 0, review: 1, blocked: 2 };
+
+function tierFromRank(rank) {
+  if (rank <= TIER_RANK.allowed) return 'allowed';
+  if (rank === TIER_RANK.review) return 'review';
+  return 'blocked';
+}
+
+/**
+ * Découpe une expression SPDX en jetons (parenthèses, opérateurs AND/OR/WITH,
+ * identifiants). Un identifiant peut contenir des espaces (ex. « Apache 2.0 ») :
+ * on ne coupe donc jamais sur un simple espace, uniquement autour des
+ * parenthèses et des opérateurs SPDX reconnus comme mots entiers.
+ */
+export function tokenizeLicenseExpression(expr) {
+  const text = String(expr ?? '');
+  const tokens = [];
+  let buffer = '';
+  let index = 0;
+  const flush = () => {
+    const value = buffer.trim();
+    if (value) tokens.push(value);
+    buffer = '';
+  };
+  while (index < text.length) {
+    const char = text[index];
+    if (char === '(' || char === ')') {
+      flush();
+      tokens.push(char);
+      index += 1;
+      continue;
+    }
+    if (/\s/.test(char)) {
+      let lookahead = index;
+      while (lookahead < text.length && /\s/.test(text[lookahead])) lookahead += 1;
+      const operator = text.slice(lookahead).match(/^(AND|OR|WITH)(?=\s|\(|\)|$)/);
+      if (operator) {
+        flush();
+        tokens.push(operator[1]);
+        index = lookahead + operator[1].length;
+        continue;
+      }
+      buffer += text.slice(index, lookahead);
+      index = lookahead;
+      continue;
+    }
+    buffer += char;
+    index += 1;
+  }
+  flush();
+  return tokens;
+}
+
+/**
+ * Classe une expression SPDX composée en respectant les parenthèses et la
+ * précédence SPDX (AND plus fort que OR). `WITH <exception>` conserve le
+ * classement de la licence de base (une exception ne peut pas rendre une
+ * licence plus permissive qu'elle ne l'est déjà, donc on ne sur-classe pas vers
+ * `allowed` et on garde un copyleft `blocked`). Échec fermé : toute expression
+ * illisible, ambiguë ou déséquilibrée est classée `blocked`, jamais `allowed`.
+ */
 export function classifyLicenseExpression(expr) {
   const raw = String(expr ?? '').trim();
   if (!raw) return classifyLicenseToken('');
-  const cleaned = raw.replace(/^\(+|\)+$/g, '').trim();
-  if (/\sOR\s/i.test(cleaned)) {
-    const tiers = cleaned.split(/\sOR\s/i).map((part) => classifyLicenseExpression(part));
-    if (tiers.includes('allowed')) return 'allowed';
-    if (tiers.includes('review')) return 'review';
+  const tokens = tokenizeLicenseExpression(raw);
+  let index = 0;
+
+  const peek = () => tokens[index];
+  const isOperator = (operator) => typeof peek() === 'string' && peek().toUpperCase() === operator;
+
+  const parsePrimary = () => {
+    const token = tokens[index++];
+    if (token === undefined) throw new Error('expression SPDX incomplète');
+    if (token === '(') {
+      const rank = parseOr();
+      if (tokens[index++] !== ')') throw new Error('parenthèse SPDX non fermée');
+      return rank;
+    }
+    if (token === ')') throw new Error('parenthèse SPDX inattendue');
+    return TIER_RANK[classifyLicenseToken(token)];
+  };
+
+  const parseWith = () => {
+    const rank = parsePrimary();
+    if (isOperator('WITH')) {
+      index += 1;
+      const exception = tokens[index++];
+      if (!exception || exception === '(' || exception === ')') throw new Error('exception SPDX invalide');
+    }
+    return rank;
+  };
+
+  const parseAnd = () => {
+    let rank = parseWith();
+    while (isOperator('AND')) {
+      index += 1;
+      rank = Math.max(rank, parseWith());
+    }
+    return rank;
+  };
+
+  const parseOr = () => {
+    let rank = parseAnd();
+    while (isOperator('OR')) {
+      index += 1;
+      rank = Math.min(rank, parseAnd());
+    }
+    return rank;
+  };
+
+  try {
+    const rank = parseOr();
+    if (index !== tokens.length) throw new Error('jetons SPDX inattendus');
+    return tierFromRank(rank);
+  } catch {
     return 'blocked';
   }
-  if (/\sAND\s/i.test(cleaned)) {
-    const tiers = cleaned.split(/\sAND\s/i).map((part) => classifyLicenseExpression(part));
-    if (tiers.includes('blocked')) return 'blocked';
-    if (tiers.includes('review')) return 'review';
-    return 'allowed';
-  }
-  return classifyLicenseToken(cleaned);
 }
 
 function runPnpmLicenses(extraArgs = []) {
@@ -172,6 +271,33 @@ function runPnpmLicenses(extraArgs = []) {
   return parsed;
 }
 
+/**
+ * Comparateur de versions (semver-like, tolérant) : compare numériquement les
+ * segments, puis les pré-versions (`1.0.0-alpha` avant `1.0.0`). Évite le tri
+ * lexicographique qui ordonne `1.10.0` avant `1.9.0`.
+ */
+export function compareVersions(a, b) {
+  const parse = (value) => {
+    const [core, ...pre] = String(value ?? '').split('-');
+    const nums = core.split('.').map((part) => (/^\d+$/.test(part) ? Number(part) : Number.NaN));
+    return { nums, pre: pre.join('-') || null };
+  };
+  const va = parse(a);
+  const vb = parse(b);
+  const hasNaN = va.nums.some(Number.isNaN) || vb.nums.some(Number.isNaN);
+  if (hasNaN) return String(a).localeCompare(String(b), undefined, { numeric: true });
+  const length = Math.max(va.nums.length, vb.nums.length);
+  for (let i = 0; i < length; i += 1) {
+    const left = va.nums[i] ?? 0;
+    const right = vb.nums[i] ?? 0;
+    if (left !== right) return left - right;
+  }
+  if (va.pre && !vb.pre) return -1;
+  if (!va.pre && vb.pre) return 1;
+  if (va.pre && vb.pre) return va.pre.localeCompare(vb.pre, undefined, { numeric: true });
+  return 0;
+}
+
 /** Aplati le regroupement { licence: [package, ...] } renvoyé par pnpm en lignes. */
 export function flattenLicenseMap(licenseMap) {
   const rows = [];
@@ -191,33 +317,90 @@ export function flattenLicenseMap(licenseMap) {
       }
     }
   }
-  rows.sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
+  rows.sort((a, b) => a.name.localeCompare(b.name) || compareVersions(a.version, b.version));
   return rows;
+}
+
+function runPnpmListDepthZero() {
+  const result = spawnSync('pnpm', ['list', '--depth', '0', '--json'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    maxBuffer: 40 * 1024 * 1024,
+  });
+  if (result.error) {
+    console.error('[audit:licenses] `pnpm list` indisponible :', result.error.message);
+    process.exit(2);
+  }
+  const raw = (result.stdout || '').trim();
+  if (!raw) {
+    console.error('[audit:licenses] `pnpm list --depth 0 --json` n’a rien renvoyé.');
+    process.exit(2);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    console.error('[audit:licenses] JSON `pnpm list` illisible — échec fermé.');
+    process.exit(2);
+  }
+  const projects = Array.isArray(parsed) ? parsed : [parsed];
+  const project = projects.find((entry) => entry && (entry.dependencies || entry.devDependencies)) ?? projects[0] ?? {};
+  return {
+    dependencies: project.dependencies ?? {},
+    devDependencies: project.devDependencies ?? {},
+  };
+}
+
+export function packageIdentity(name, version) {
+  return `${name}@${version}`;
+}
+
+/**
+ * Décide du scope d'une dépendance à partir de son identité `name@version`,
+ * jamais du seul nom : une version déclarée directement ne doit pas faire
+ * passer une autre version transitive pour « directe », ni un paquet dev être
+ * promu en production par simple homonymie.
+ */
+export function classifyDependencyScope(identity, { directProdIds, prodIds, directDevIds }) {
+  if (directProdIds.has(identity)) return 'direct-prod';
+  if (prodIds.has(identity)) return 'transitive-prod';
+  if (directDevIds.has(identity)) return 'direct-dev';
+  return 'transitive-dev';
 }
 
 /**
  * Construit l'inventaire complet (direct + transitif, prod + dev) à partir de
- * `pnpm licenses list`. Chaque ligne porte un `scope` :
+ * `pnpm licenses list` et des versions réellement résolues (`pnpm list
+ * --depth 0`). Chaque ligne porte un `scope` :
  *   direct-prod | direct-dev | transitive-prod | transitive-dev
  */
-export function buildDependencyLicenseInventory({ pkgJsonPath = join(ROOT, 'package.json') } = {}) {
-  const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
-  const directProd = new Set(Object.keys(pkg.dependencies ?? {}));
-  const directDev = new Set(Object.keys(pkg.devDependencies ?? {}));
+export function buildDependencyLicenseInventory() {
+  const listed = runPnpmListDepthZero();
+  const directProdIds = new Set();
+  const directDevIds = new Set();
+  for (const [name, info] of Object.entries(listed.dependencies)) {
+    if (info?.version) directProdIds.add(packageIdentity(name, info.version));
+  }
+  for (const [name, info] of Object.entries(listed.devDependencies)) {
+    if (info?.version) directDevIds.add(packageIdentity(name, info.version));
+  }
 
   const full = flattenLicenseMap(runPnpmLicenses());
-  const prodNames = new Set(flattenLicenseMap(runPnpmLicenses(['--prod'])).map((row) => row.name));
+  const prodIds = new Set(
+    flattenLicenseMap(runPnpmLicenses(['--prod'])).map((row) => packageIdentity(row.name, row.version)),
+  );
 
   for (const row of full) {
-    if (directProd.has(row.name)) row.scope = 'direct-prod';
-    else if (directDev.has(row.name)) row.scope = 'direct-dev';
-    else if (prodNames.has(row.name)) row.scope = 'transitive-prod';
-    else row.scope = 'transitive-dev';
+    row.scope = classifyDependencyScope(packageIdentity(row.name, row.version), {
+      directProdIds,
+      prodIds,
+      directDevIds,
+    });
   }
   return full;
 }
 
-export function renderThirdPartyNotices(rows, { generatedAt = new Date() } = {}) {
+export function renderThirdPartyNotices(rows, { generatedAt } = {}) {
   const distributed = rows.filter((row) => row.scope === 'direct-prod' || row.scope === 'transitive-prod');
   const byLicense = new Map();
   for (const row of distributed) {
@@ -244,12 +427,18 @@ export function renderThirdPartyNotices(rows, { generatedAt = new Date() } = {})
       'de développement incluses, non distribuées).',
   );
   lines.push('');
-  lines.push(`Généré le : ${generatedAt.toISOString().slice(0, 10)}`);
-  lines.push('');
+  // Date volontairement optionnelle : l'artefact généré est comparé au dépôt
+  // par `git diff --exit-code` en CI. Une date « maintenant » serait volatile
+  // et ferait échouer le gate à chaque exécution ; elle n'est donc écrite que
+  // lorsqu'un horodatage reproductible est fourni (SOURCE_DATE_EPOCH).
+  if (generatedAt) {
+    lines.push(`Généré le : ${generatedAt.toISOString().slice(0, 10)}`);
+    lines.push('');
+  }
   for (const license of licenses) {
     lines.push(`## ${license}`);
     lines.push('');
-    const pkgs = byLicense.get(license).sort((a, b) => a.name.localeCompare(b.name));
+    const pkgs = byLicense.get(license).sort((a, b) => a.name.localeCompare(b.name) || compareVersions(a.version, b.version));
     for (const pkg of pkgs) {
       const tierNote = pkg.tier === 'allowed' ? '' : ` — ⚠️ ${pkg.tier}, revue humaine requise`;
       const homepage = pkg.homepage ? ` — ${pkg.homepage}` : '';
@@ -260,29 +449,37 @@ export function renderThirdPartyNotices(rows, { generatedAt = new Date() } = {})
   return lines.join('\n');
 }
 
+/**
+ * Horodatage reproductible optionnel. Sans `SOURCE_DATE_EPOCH`, les artefacts
+ * ne portent aucune date : c'est ce qui garantit que régénérer l'inventaire sur
+ * un commit inchangé produit un fichier identique (gate `git diff --exit-code`).
+ */
+function reproducibleGeneratedAt() {
+  const epoch = process.env.SOURCE_DATE_EPOCH;
+  if (epoch && /^\d+$/.test(epoch)) return new Date(Number(epoch) * 1000);
+  return undefined;
+}
+
 function writeLicenseArtifacts() {
   const rows = buildDependencyLicenseInventory();
+  const generatedAt = reproducibleGeneratedAt();
   mkdirSync(COMPLIANCE_DIR, { recursive: true });
-  writeFileSync(
-    INVENTORY_PATH,
-    JSON.stringify(
-      {
-        note: "Inventaire automatisé (issue #39). Outil d'aide, pas un avis juridique. Toute ligne reste soumise à revue humaine avant commercialisation.",
-        generatedAt: new Date().toISOString(),
-        generatedBy: 'scripts/audit-dependencies.mjs --licenses (pnpm licenses list --json)',
-        packageCount: rows.length,
-        tierCounts: {
-          allowed: rows.filter((r) => r.tier === 'allowed').length,
-          review: rows.filter((r) => r.tier === 'review').length,
-          blocked: rows.filter((r) => r.tier === 'blocked').length,
-        },
-        dependencies: rows,
-      },
-      null,
-      2,
-    ) + '\n',
-  );
-  writeFileSync(NOTICES_PATH, renderThirdPartyNotices(rows) + '\n');
+  const inventory = {
+    note: "Inventaire automatisé (issue #39). Outil d'aide, pas un avis juridique. Toute ligne reste soumise à revue humaine avant commercialisation.",
+    generatedBy: 'scripts/audit-dependencies.mjs --licenses (pnpm licenses list --json)',
+    packageCount: rows.length,
+    tierCounts: {
+      allowed: rows.filter((r) => r.tier === 'allowed').length,
+      review: rows.filter((r) => r.tier === 'review').length,
+      blocked: rows.filter((r) => r.tier === 'blocked').length,
+    },
+    dependencies: rows,
+  };
+  if (generatedAt) {
+    inventory.generatedAt = generatedAt.toISOString();
+  }
+  writeFileSync(INVENTORY_PATH, JSON.stringify(inventory, null, 2) + '\n');
+  writeFileSync(NOTICES_PATH, renderThirdPartyNotices(rows, generatedAt ? { generatedAt } : {}) + '\n');
   return rows;
 }
 

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  classifyDependencyScope,
   classifyLicenseExpression,
   classifyLicenseToken,
+  compareVersions,
   flattenLicenseMap,
   renderThirdPartyNotices,
 } from '../scripts/audit-dependencies.mjs';
@@ -49,6 +51,37 @@ describe('license classification (issue #39)', () => {
     expect(classifyLicenseExpression('(MIT AND GPL-3.0-only)')).toBe('blocked');
   });
 
+  it('respects parentheses and precedence in nested expressions', () => {
+    // GPL est obligatoire dans le groupe : l'ensemble reste bloqué même si la
+    // branche OR contient une licence permissive.
+    expect(classifyLicenseExpression('GPL-3.0-only AND (MIT OR Apache-2.0)')).toBe('blocked');
+    // À la racine, MIT reste un choix possible : autorisé.
+    expect(classifyLicenseExpression('MIT OR (GPL-2.0-only AND Apache-2.0)')).toBe('allowed');
+    // Dans le groupe, MIT reste choisissable : le AND externe ne remonte que
+    // jusqu'à `review` (MPL), pas jusqu'à `blocked`.
+    expect(classifyLicenseExpression('(MPL-2.0 AND (MIT OR GPL-3.0-only))')).toBe('review');
+    // Ici, toutes les branches du groupe sont bloquées : l'ensemble est bloqué.
+    expect(classifyLicenseExpression('(MPL-2.0 AND (GPL-3.0-only OR AGPL-3.0-only))')).toBe('blocked');
+    expect(classifyLicenseExpression('(MIT AND (BSD-3-Clause OR Apache-2.0))')).toBe('allowed');
+  });
+
+  it('keeps the base licence tier for WITH exceptions (fail closed)', () => {
+    expect(classifyLicenseExpression('GPL-2.0-only WITH Classpath-exception-2.0')).toBe('blocked');
+    expect(classifyLicenseExpression('MIT WITH Unicode-DFS-2016')).toBe('allowed');
+  });
+
+  it('fails closed on malformed or unbalanced expressions', () => {
+    expect(classifyLicenseExpression('(MIT OR Apache-2.0')).toBe('blocked');
+    expect(classifyLicenseExpression('MIT)')).toBe('blocked');
+    expect(classifyLicenseExpression('MIT OR')).toBe('blocked');
+    expect(classifyLicenseExpression('MIT WITH')).toBe('blocked');
+  });
+
+  it('does not split multi-word licence identifiers on spaces', () => {
+    expect(classifyLicenseExpression('Apache 2.0')).toBe('allowed');
+    expect(classifyLicenseExpression('(Apache 2.0 OR MIT)')).toBe('allowed');
+  });
+
   it('never classifies a real repository dependency as blocked without a matching exception', () => {
     // Documents intent: strong copyleft in this codebase's own dependency
     // tree would be a real blocking finding, not swallowed silently.
@@ -68,6 +101,42 @@ describe('flattenLicenseMap (issue #39)', () => {
     expect(foo1?.author).toBe('Jane');
     const bar = rows.find((r) => r.name === 'bar');
     expect(bar?.tier).toBe('blocked');
+  });
+
+  it('orders multi-version rows by semantic version, not lexicographically', () => {
+    const rows = flattenLicenseMap({ MIT: [{ name: 'foo', versions: ['1.10.0', '1.9.0', '1.2.0'] }] });
+    expect(rows.map((row) => row.version)).toEqual(['1.2.0', '1.9.0', '1.10.0']);
+  });
+});
+
+describe('compareVersions (issue #39)', () => {
+  it('compares numerically rather than as strings', () => {
+    expect(compareVersions('1.9.0', '1.10.0')).toBeLessThan(0);
+    expect(compareVersions('2.0.0', '10.0.0')).toBeLessThan(0);
+    expect(compareVersions('1.0.0', '1.0.0')).toBe(0);
+  });
+
+  it('sorts a pre-release before its release', () => {
+    expect(compareVersions('1.0.0-alpha', '1.0.0')).toBeLessThan(0);
+  });
+});
+
+describe('classifyDependencyScope (issue #39)', () => {
+  const sets = {
+    directProdIds: new Set(['@radix-ui/react-slot@1.2.4']),
+    prodIds: new Set(['@radix-ui/react-slot@1.2.4', '@radix-ui/react-slot@1.2.3']),
+    directDevIds: new Set(['some-lib@2.0.0']),
+  };
+
+  it('matches on resolved version, not package name alone', () => {
+    expect(classifyDependencyScope('@radix-ui/react-slot@1.2.4', sets)).toBe('direct-prod');
+    expect(classifyDependencyScope('@radix-ui/react-slot@1.2.3', sets)).toBe('transitive-prod');
+  });
+
+  it('does not promote a dev version into production by name', () => {
+    const withProd = { ...sets, prodIds: new Set([...sets.prodIds, 'some-lib@1.0.0']) };
+    expect(classifyDependencyScope('some-lib@2.0.0', withProd)).toBe('direct-dev');
+    expect(classifyDependencyScope('some-lib@1.0.0', withProd)).toBe('transitive-prod');
   });
 });
 

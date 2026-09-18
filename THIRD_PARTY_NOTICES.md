@@ -4,8 +4,6 @@ Ce fichier liste les dépendances tierces effectivement distribuées avec Clubik
 
 **Génération automatisée — pas un avis juridique.** Généré par `pnpm run audit:licenses` (`scripts/audit-dependencies.mjs`) à partir de `pnpm licenses list --json`. Toute entrée marquée `review` doit être lue par un humain avant publication commerciale ; voir `docs/compliance/README.md` et `docs/compliance/dependency-license-inventory.json` pour le détail (dépendances de développement incluses, non distribuées).
 
-Généré le : 2026-09-17
-
 ## (MIT AND Zlib)
 
 - `pako@2.1.0` — https://github.com/nodeca/pako#readme
@@ -21,6 +19,7 @@ Généré le : 2026-09-17
 ## Apache-2.0
 
 - `@img/sharp-linux-x64@0.35.4` — https://sharp.pixelplumbing.com
+- `@playwright/test@1.63.0` — https://playwright.dev
 - `@swc/helpers@0.5.23` — https://swc.rs
 - `baseline-browser-mapping@2.11.22` — https://github.com/web-platform-dx/baseline-browser-mapping#readme
 - `class-variance-authority@0.7.1` — https://github.com/joe-bell/cva#readme
@@ -128,8 +127,8 @@ Généré le : 2026-09-17
 - `@radix-ui/react-popper@1.3.7` — https://radix-ui.com/primitives
 - `@radix-ui/react-portal@1.1.17` — https://radix-ui.com/primitives
 - `@radix-ui/react-presence@1.1.10` — https://radix-ui.com/primitives
-- `@radix-ui/react-primitive@2.1.10` — https://radix-ui.com/primitives
 - `@radix-ui/react-primitive@2.1.4` — https://radix-ui.com/primitives
+- `@radix-ui/react-primitive@2.1.10` — https://radix-ui.com/primitives
 - `@radix-ui/react-roving-focus@1.1.19` — https://radix-ui.com/primitives
 - `@radix-ui/react-slot@1.2.4` — https://radix-ui.com/primitives
 - `@radix-ui/react-slot@1.3.3` — https://radix-ui.com/primitives
@@ -148,16 +147,16 @@ Généré le : 2026-09-17
 - `@sqltools/formatter@1.2.5` — https://github.com/mtxr/vscode-sqltools#readme
 - `@types/cors@2.8.19` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/cors
 - `@types/geojson@7946.0.16` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/geojson
+- `@types/node@26.6.1` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node
 - `@types/pako@2.0.4` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/pako
 - `@types/raf@3.4.3` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/raf
+- `@types/react@19.3.0` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react
+- `@types/react-dom@19.3.0` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom
 - `@types/trusted-types@2.0.7` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/trusted-types
 - `@types/ws@8.18.1` — https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/ws
 - `accepts@1.3.8` — https://github.com/jshttp/accepts#readme
 - `agent-base@7.1.4` — https://github.com/TooTallNate/proxy-agents#readme
-- `ansi-regex@5.0.1` — https://github.com/chalk/ansi-regex#readme
 - `ansi-regex@6.2.2` — https://github.com/chalk/ansi-regex#readme
-- `ansi-styles@4.3.0` — https://github.com/chalk/ansi-styles#readme
-- `ansi-styles@5.2.0` — https://github.com/chalk/ansi-styles#readme
 - `ansi-styles@6.2.3` — https://github.com/chalk/ansi-styles#readme
 - `aria-hidden@1.2.6` — https://github.com/theKashey/aria-hidden#readme
 - `asn1.js@5.4.1` — https://github.com/indutny/asn1.js
@@ -179,12 +178,10 @@ Généré le : 2026-09-17
 - `css-line-break@2.1.0` — https://github.com/niklasvh/css-line-break#readme
 - `csstype@3.2.3` — https://github.com/frenic/csstype#readme
 - `dayjs@1.11.23` — https://day.js.org
-- `debug@3.2.7` — https://github.com/debug-js/debug#readme
 - `debug@4.4.3` — https://github.com/debug-js/debug#readme
 - `dedent@1.7.2` — https://github.com/dmnd/dedent
 - `detect-node-es@1.1.0` — https://github.com/thekashey/detect-node
 - `emoji-regex@10.6.0` — https://mths.be/emoji-regex
-- `emoji-regex@9.2.2` — https://mths.be/emoji-regex
 - `engine.io@6.6.9` — https://github.com/socketio/socket.io/tree/main/packages/engine.io#readme
 - `engine.io-client@6.6.6` — https://github.com/socketio/socket.io/tree/main/packages/engine.io-client#readme
 - `engine.io-parser@5.2.3` — https://github.com/socketio/socket.io/tree/main/packages/engine.io-parser#readme
@@ -204,10 +201,8 @@ Généré le : 2026-09-17
 - `iobuffer@5.4.0` — https://github.com/image-js/iobuffer#readme
 - `is-property@1.0.2` — https://github.com/mikolalysenko/is-property#readme
 - `isarray@1.0.0` — https://github.com/juliangruber/isarray
-- `isarray@2.0.5` — https://github.com/juliangruber/isarray
 - `js-tokens@4.0.0` — https://github.com/lydell/js-tokens#readme
 - `jsesc@3.1.0` — https://mths.be/jsesc
-- `json5@1.0.2` — http://json5.org/
 - `json5@2.2.3` — http://json5.org/
 - `jspdf@4.2.1` — https://github.com/parallax/jsPDF
 - `jwa@2.0.1` — https://github.com/brianloveswords/node-jwa#readme
@@ -220,7 +215,6 @@ Généré le : 2026-09-17
 - `mysql@2.18.1` — https://github.com/mysqljs/mysql#readme
 - `mysql2@3.24.4` — https://sidorares.github.io/node-mysql2/docs
 - `named-placeholders@1.1.6` — https://github.com/mysqljs/named-placeholders#readme
-- `nanoid@3.3.11` — https://github.com/ai/nanoid#readme
 - `nanoid@3.3.19` — https://github.com/ai/nanoid#readme
 - `negotiator@0.6.3` — https://github.com/jshttp/negotiator#readme
 - `next@16.3.5` — https://nextjs.org
@@ -228,12 +222,8 @@ Généré le : 2026-09-17
 - `node-releases@2.0.55` — https://github.com/chicoxyzzy/node-releases#readme
 - `object-assign@4.1.1` — https://github.com/sindresorhus/object-assign#readme
 - `performance-now@2.1.0` — https://github.com/braveg1rl/performance-now
-- `picomatch@2.3.1` — https://github.com/micromatch/picomatch
-- `picomatch@4.0.3` — https://github.com/micromatch/picomatch
 - `picomatch@4.0.7` — https://github.com/micromatch/picomatch
 - `postcss@8.5.23` — https://postcss.org/
-- `postcss@8.5.28` — https://postcss.org/
-- `postcss@8.5.6` — https://postcss.org/
 - `process-nextick-args@2.0.1` — https://github.com/calvinmetcalf/process-nextick-args
 - `raf@3.4.1` — https://github.com/chrisdickinson/raf#readme
 - `react@19.3.0` — https://react.dev/
@@ -265,11 +255,9 @@ Généré le : 2026-09-17
 - `svg-pathdata@6.0.3` — https://github.com/nfroidure/svg-pathdata#readme
 - `tailwind-merge@3.6.0` — https://github.com/dcastil/tailwind-merge
 - `text-segmentation@1.0.3` — https://github.com/niklasvh/text-segmentation
-- `tinyglobby@0.2.15` — https://superchupu.dev/tinyglobby
 - `tinyglobby@0.2.17` — https://superchupu.dev/tinyglobby
 - `tsx@4.23.13` — https://tsx.hirok.io
 - `typeorm@1.1.1` — https://typeorm.io
-- `undici-types@8.10.2` — https://undici.nodejs.org
 - `undici-types@8.9.0` — https://undici.nodejs.org
 - `update-browserslist-db@1.3.2` — https://github.com/browserslist/update-db#readme
 - `use-callback-ref@1.3.3` — https://github.com/theKashey/use-callback-ref#readme

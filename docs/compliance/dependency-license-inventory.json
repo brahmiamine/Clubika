@@ -1,6 +1,5 @@
 {
   "note": "Inventaire automatisé (issue #39). Outil d'aide, pas un avis juridique. Toute ligne reste soumise à revue humaine avant commercialisation.",
-  "generatedAt": "2026-09-17T20:03:05.658Z",
   "generatedBy": "scripts/audit-dependencies.mjs --licenses (pnpm licenses list --json)",
   "packageCount": 605,
   "tierCounts": {
@@ -647,7 +646,7 @@
       "author": "Microsoft Corporation",
       "homepage": "https://playwright.dev",
       "description": "A high-level API to automate web browsers",
-      "scope": "direct-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "@radix-ui/primitive",
@@ -891,7 +890,7 @@
     },
     {
       "name": "@radix-ui/react-primitive",
-      "version": "2.1.10",
+      "version": "2.1.4",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -901,7 +900,7 @@
     },
     {
       "name": "@radix-ui/react-primitive",
-      "version": "2.1.4",
+      "version": "2.1.10",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -927,7 +926,7 @@
       "author": "",
       "homepage": "https://radix-ui.com/primitives",
       "description": "",
-      "scope": "direct-prod"
+      "scope": "transitive-prod"
     },
     {
       "name": "@radix-ui/react-slot",
@@ -1277,7 +1276,7 @@
       "author": "",
       "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node",
       "description": "TypeScript definitions for node",
-      "scope": "direct-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "@types/nodemailer",
@@ -1317,7 +1316,7 @@
       "author": "",
       "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react",
       "description": "TypeScript definitions for react",
-      "scope": "direct-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "@types/react-dom",
@@ -1327,7 +1326,7 @@
       "author": "",
       "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/react-dom",
       "description": "TypeScript definitions for react-dom",
-      "scope": "direct-dev"
+      "scope": "transitive-prod"
     },
     {
       "name": "@types/tough-cookie",
@@ -1617,7 +1616,7 @@
       "author": "Sindre Sorhus",
       "homepage": "https://github.com/chalk/ansi-regex#readme",
       "description": "Regular expression for matching ANSI escape codes",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "ansi-regex",
@@ -1637,7 +1636,7 @@
       "author": "Sindre Sorhus",
       "homepage": "https://github.com/chalk/ansi-styles#readme",
       "description": "ANSI escape codes for styling strings in the terminal",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "ansi-styles",
@@ -1647,7 +1646,7 @@
       "author": "Sindre Sorhus",
       "homepage": "https://github.com/chalk/ansi-styles#readme",
       "description": "ANSI escape codes for styling strings in the terminal",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "ansi-styles",
@@ -2307,7 +2306,7 @@
       "author": "Josh Junon",
       "homepage": "https://github.com/debug-js/debug#readme",
       "description": "Lightweight debugging utility for Node.js and the browser",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "debug",
@@ -2471,17 +2470,17 @@
     },
     {
       "name": "emoji-regex",
-      "version": "10.6.0",
+      "version": "9.2.2",
       "license": "MIT",
       "tier": "allowed",
       "author": "Mathias Bynens",
       "homepage": "https://mths.be/emoji-regex",
       "description": "A regular expression to match all Emoji-only symbols as per the Unicode Standard.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "emoji-regex",
-      "version": "9.2.2",
+      "version": "10.6.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "Mathias Bynens",
@@ -3707,7 +3706,7 @@
       "author": "Julian Gruber",
       "homepage": "https://github.com/juliangruber/isarray",
       "description": "Array#isArray for older browsers",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "isexe",
@@ -3817,7 +3816,7 @@
       "author": "Aseem Kishore",
       "homepage": "http://json5.org/",
       "description": "JSON for Humans",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "json5",
@@ -3991,8 +3990,8 @@
     },
     {
       "name": "lru-cache",
-      "version": "11.5.2",
-      "license": "BlueOak-1.0.0",
+      "version": "5.1.1",
+      "license": "ISC",
       "tier": "allowed",
       "author": "Isaac Z. Schlueter",
       "homepage": "https://github.com/isaacs/node-lru-cache#readme",
@@ -4001,8 +4000,8 @@
     },
     {
       "name": "lru-cache",
-      "version": "5.1.1",
-      "license": "ISC",
+      "version": "11.5.2",
+      "license": "BlueOak-1.0.0",
       "tier": "allowed",
       "author": "Isaac Z. Schlueter",
       "homepage": "https://github.com/isaacs/node-lru-cache#readme",
@@ -4207,7 +4206,7 @@
       "author": "Andrey Sitnik",
       "homepage": "https://github.com/ai/nanoid#readme",
       "description": "A tiny (116 bytes), secure URL-friendly unique string ID generator",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "nanoid",
@@ -4517,7 +4516,7 @@
       "author": "Jon Schlinkert",
       "homepage": "https://github.com/micromatch/picomatch",
       "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "picomatch",
@@ -4527,7 +4526,7 @@
       "author": "Jon Schlinkert",
       "homepage": "https://github.com/micromatch/picomatch",
       "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "picomatch",
@@ -4571,6 +4570,16 @@
     },
     {
       "name": "postcss",
+      "version": "8.5.6",
+      "license": "MIT",
+      "tier": "allowed",
+      "author": "Andrey Sitnik",
+      "homepage": "https://postcss.org/",
+      "description": "Tool for transforming styles with JS plugins",
+      "scope": "transitive-dev"
+    },
+    {
+      "name": "postcss",
       "version": "8.5.23",
       "license": "MIT",
       "tier": "allowed",
@@ -4587,17 +4596,7 @@
       "author": "Andrey Sitnik",
       "homepage": "https://postcss.org/",
       "description": "Tool for transforming styles with JS plugins",
-      "scope": "transitive-prod"
-    },
-    {
-      "name": "postcss",
-      "version": "8.5.6",
-      "license": "MIT",
-      "tier": "allowed",
-      "author": "Andrey Sitnik",
-      "homepage": "https://postcss.org/",
-      "description": "Tool for transforming styles with JS plugins",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "prelude-ls",
@@ -5457,7 +5456,7 @@
       "author": "Superchupu",
       "homepage": "https://superchupu.dev/tinyglobby",
       "description": "A fast and minimal alternative to globby and fast-glob",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "tinyglobby",
@@ -5681,7 +5680,7 @@
     },
     {
       "name": "undici-types",
-      "version": "8.10.2",
+      "version": "8.9.0",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
@@ -5691,13 +5690,13 @@
     },
     {
       "name": "undici-types",
-      "version": "8.9.0",
+      "version": "8.10.2",
       "license": "MIT",
       "tier": "allowed",
       "author": "",
       "homepage": "https://undici.nodejs.org",
       "description": "A stand-alone types package for Undici",
-      "scope": "transitive-prod"
+      "scope": "transitive-dev"
     },
     {
       "name": "unrs-resolver",

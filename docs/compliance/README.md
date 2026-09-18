@@ -20,14 +20,25 @@ commercialisation.
 
 - `node scripts/audit-dependencies.mjs --licenses` (alias `pnpm run
   audit:licenses`) appelle `pnpm licenses list --json` (avec et sans
-  `--prod`), classe chaque paquet en `allowed` / `review` / `blocked` par
-  heuristique SPDX (voir commentaire en tête de
+  `--prod`) et `pnpm list --depth 0 --json` (versions réellement résolues
+  des dépendances directes), classe chaque paquet en `allowed` / `review` /
+  `blocked` par heuristique SPDX (voir commentaire en tête de
   `scripts/audit-dependencies.mjs`), puis régénère
   `dependency-license-inventory.json` et `THIRD_PARTY_NOTICES.md`. La CI
   échoue si un paquet est `blocked` (licence absente, `UNLICENSED`, ou
   copyleft fort/non-commercial connu), et échoue aussi si les fichiers
   générés divergent de ce qui est committé (`git diff --exit-code`), pour
   éviter un inventaire périmé.
+- La génération est **déterministe** : aucun horodatage volatil n'est écrit
+  (pas de `generatedAt` « maintenant »), les paquets sont triés par nom puis
+  par version sémantique, et le scope `direct-prod` / `transitive-prod` /
+  `direct-dev` / `transitive-dev` est calculé sur l'identité résolue
+  `name@version`. Rejouer `pnpm run audit:licenses` sur un arbre inchangé
+  produit donc des fichiers identiques — condition du gate
+  `git diff --exit-code`. Un horodatage reproductible peut être fourni via
+  `SOURCE_DATE_EPOCH=...`. L'inventaire reste dépendant de la plateforme
+  (binaires `optionalDependencies` natifs) : il doit être régénéré sous
+  Linux x64, comme la CI.
 - `node scripts/check-asset-registry.mjs` (alias `pnpm run audit:assets`)
   parcourt le dépôt à la recherche de fichiers d'actifs (images, SVG, audio,
   police, icône, vidéo) et échoue si l'un d'eux n'a pas d'entrée dans
@@ -52,7 +63,7 @@ dépôt) doivent être tranchés par un humain habilité, pas par cet outillage.
 Non bloquantes pour la CI (ce ne sont pas des licences interdites connues),
 mais nécessitent une lecture humaine avant publication commerciale :
 
-- `mariadb@3.5.3` — LGPL-2.1-or-later, dépendance directe de production
+- `mariadb@3.5.4` — LGPL-2.1-or-later, dépendance directe de production
   (pilote MariaDB officiel, utilisé sans modification).
 - `@img/sharp-libvips-linux-x64@1.3.3` — LGPL-3.0-or-later, binaire natif
   transitif de `sharp` (traitement d'image), production.
