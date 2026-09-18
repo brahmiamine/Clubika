@@ -2,6 +2,7 @@
 
 import { Copy, Share2 } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { logError } from '@/lib/observability/client-log';
 import { toast } from 'sonner';
 
 async function copyLink(url: string): Promise<void> {
@@ -26,7 +27,7 @@ async function shareLink(url: string, shareTitle: string, shareText: string): Pr
       return;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return;
-      console.error('Share failed:', error);
+      logError('app.unhandled', 'Share failed:', error);
     }
   }
 
