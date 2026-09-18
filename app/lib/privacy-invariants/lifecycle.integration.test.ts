@@ -15,6 +15,7 @@ import { getDb } from '@/lib/db';
 import { isDbAvailable } from '@/lib/db/test-utils';
 import { createTestUserAndSession } from '@/lib/auth/test-helpers';
 import { getSessionUser } from '@/lib/auth/session';
+import { runWithClubId } from '@/lib/auth/club-context';
 import { createChannel, deleteMessage } from '@/lib/chat/service';
 import { closeAccount } from '@/lib/account-closure/close-account';
 import { runRetentionPurge } from '@/lib/retention/purge';
@@ -199,12 +200,14 @@ describe.skipIf(!dbAvailable)('scénarios de cycle de vie (issue #41)', () => {
       [`msg-${randomBytes(8).toString('hex')}`, room.id, target.user.id, targetSession!.nom, randomBytes(8).toString('hex'), 'message ordinaire'],
     );
 
-    const result = await closeAccount(db, {
-      target: target.user,
-      processedByUserId: admin.user.id,
-      processedByRole: 'admin',
-      activeAdminCount: 2,
-    });
+    const result = await runWithClubId(clubId, () =>
+      closeAccount(db, {
+        target: target.user,
+        processedByUserId: admin.user.id,
+        processedByRole: 'admin',
+        activeAdminCount: 2,
+      }),
+    );
     expect(result.alreadyClosed).toBe(false);
 
     const stored = await db.getRepository('User').findOneByOrFail({ id: target.user.id }) as {
