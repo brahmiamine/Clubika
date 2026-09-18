@@ -12,6 +12,9 @@ const BLOCKED_PREFIXES = [
   '/inscription',
   '/droits-sans-compte',
   '/exercice-des-droits',
+  '/mentions-legales',
+  '/confidentialite',
+  '/cgu',
   '/confirmer-email',
 ];
 

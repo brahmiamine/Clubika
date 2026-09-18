@@ -80,7 +80,10 @@ export default function PublicPrivacyRightsPage() {
           <p className="mt-4 text-sm">Référence : {receipt}</p>
         )}
         {notice && <p className="mt-2 text-xs text-muted-foreground">{notice}</p>}
-        <p className="mt-6 text-sm"><Link className="underline" href="/login">J’ai déjà un compte</Link></p>
+        <p className="mt-6 text-sm"><Link className="underline" href="/login">J’ai déjà un compte</Link>
+          {' · '}
+          <Link className="underline" href="/confidentialite">Confidentialité</Link>
+        </p>
       </CardContent>
     </AuthShell>
   );

@@ -413,6 +413,14 @@ Les colonnes `simple-json` des entités de planning sont cartographiées, avec l
 frontière décidée entre ce qui reste JSON et ce qui est candidat à la normalisation,
 dans [`docs/decisions/json-payloads-cartography.md`](docs/decisions/json-payloads-cartography.md).
 
+## Pages légales (issue #12)
+
+Routes publiques, accessibles avant connexion : `/mentions-legales`, `/confidentialite`, `/cgu`.
+Elles décrivent le comportement du logiciel. L’identité de l’éditeur n’est publiée que si
+`LEGAL_PUBLISHER_NAME`, `LEGAL_PUBLISHER_ADDRESS` et `LEGAL_PUBLISHER_EMAIL` sont définis.
+Les bases juridiques et le rôle responsable/sous-traitant ne sont pas tranchés ;
+brouillons internes dans [`docs/governance/`](docs/governance/README.md).
+
 ## Déploiement
 
 Le chemin prévu pour un VPS (OVH, Debian, domaine `clubika.com`) est décrit dans

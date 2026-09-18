@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { SESSION_COOKIE_NAME, PLATFORM_SESSION_COOKIE_NAME } from '@/lib/auth/constants';
+import { LEGAL_PUBLIC_PATHS } from '@/lib/compliance/legal-notice';
 import { getSessionUser } from '@/lib/auth/session';
 import { isPlausibleSessionToken } from '@/lib/auth/session-token';
 import { sessionCookieClearOptions } from '@/lib/auth/session-cookie';
@@ -16,7 +17,7 @@ const LOGIN_PAGE = '/login';
 // de savoir dans quel espace la session atterrira.
 // /sw.js doit rester accessible sans session : un navigateur refuse d'enregistrer un
 // service worker dont le script est servi derrière une redirection (ici, vers /login).
-const PUBLIC_PAGE_PATHS = ['/login', '/mot-de-passe-oublie', '/droits-sans-compte', '/exercice-des-droits', '/manifest.webmanifest', '/offline', '/sw.js', '/inscription'];
+const PUBLIC_PAGE_PATHS = ['/login', '/mot-de-passe-oublie', '/droits-sans-compte', '/exercice-des-droits', ...LEGAL_PUBLIC_PATHS, '/manifest.webmanifest', '/offline', '/sw.js', '/inscription'];
 // /partage/{token} affiche le planning public : un visiteur anonyme doit pouvoir l'ouvrir
 // sans session, le token lui-même (SHA-256, expiration) protégeant l'accès (issue #211).
 const PUBLIC_PAGE_PREFIXES = ['/inscription/', '/reinitialiser/', '/partage/', '/confirmer-email/'];

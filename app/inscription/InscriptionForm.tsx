@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -8,6 +9,7 @@ import { Label } from '@/app/components/ui/label';
 import { Checkbox } from '@/app/components/ui/checkbox';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { AuthShell } from '@/app/components/layout/AuthShell';
+import { LegalFooterLinks } from '@/app/components/legal/LegalFooterLinks';
 import { toast } from 'sonner';
 import { apiPost } from '@/lib/utils/api';
 import { useCurrentUser } from '@/app/hooks/useCurrentUser';
@@ -161,7 +163,9 @@ export function InscriptionForm({ invitation }: { invitation: InvitationPublicVi
               disabled={isSubmitting}
             />
             <Label htmlFor="acknowledgeNotice" className="text-sm font-normal leading-5">
-              Je confirme avoir pris connaissance des informations communiquées par le club concernant ce compte.
+              Je confirme avoir pris connaissance des informations communiquées par le club concernant ce compte,
+              ainsi que des <Link href="/confidentialite" className="underline">règles de confidentialité</Link>
+              {' '}et des <Link href="/cgu" className="underline">conditions d’utilisation</Link>.
             </Label>
           </div>
           <Button
@@ -172,6 +176,9 @@ export function InscriptionForm({ invitation }: { invitation: InvitationPublicVi
             {isSubmitting ? 'Création...' : 'Créer mon compte'}
           </Button>
         </form>
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          <LegalFooterLinks className="hover:underline" />
+        </p>
       </CardContent>
     </AuthShell>
   );

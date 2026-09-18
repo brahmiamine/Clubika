@@ -10,6 +10,7 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { AuthShell } from '@/app/components/layout/AuthShell';
+import { LegalFooterLinks } from '@/app/components/legal/LegalFooterLinks';
 import { toast } from 'sonner';
 
 interface LoginClubChoice {
@@ -153,6 +154,8 @@ export default function LoginPage() {
               <Link href="/droits-sans-compte" className="text-primary hover:underline">
                 Exercer un droit sans compte
               </Link>
+              {' · '}
+              <LegalFooterLinks className="hover:underline" />
             </p>
           </form>
         </CardContent>

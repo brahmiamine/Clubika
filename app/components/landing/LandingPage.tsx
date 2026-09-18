@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import styles from './landing.module.css';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { homePathForAccessRole } from '@/lib/auth/roles';
+import { LegalFooterLinks } from '@/app/components/legal/LegalFooterLinks';
 import {
   LANDING_CHAT_FACTS,
   LANDING_CHAT_INTRO,
@@ -251,6 +252,8 @@ export function LandingPage() {
           <Link href="/droits-sans-compte" className={styles.footerLink}>
             Vos droits sans compte
           </Link>
+          {' · '}
+          <LegalFooterLinks className={styles.footerLink} />
         </div>
       </footer>
     </div>

@@ -44,6 +44,10 @@ export interface RetainedPublicClaim {
 export const PUBLIC_CLAIM_SURFACES = [
   'app/components/landing/LandingPage.tsx',
   'app/lib/compliance/public-claims.ts',
+  'app/lib/compliance/legal-notice.ts',
+  'app/mentions-legales/page.tsx',
+  'app/confidentialite/page.tsx',
+  'app/cgu/page.tsx',
   'app/page.tsx',
   'app/lib/pwa/branding.ts',
   'app/manifest.ts',

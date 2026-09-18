@@ -39,6 +39,15 @@ describe('proxy — exceptions publiques (issue #211)', () => {
     expect(response.status).toBe(200);
   });
 
+  it.each(['/mentions-legales', '/confidentialite', '/cgu'])(
+    'laisse passer un visiteur anonyme sur %s (issue #12)',
+    async (path) => {
+      const response = await proxy(anonymousRequest(path));
+      expect(response.headers.get('location')).toBeNull();
+      expect(response.status).toBe(200);
+    },
+  );
+
   it('laisse passer un visiteur anonyme sur /api/privacy/exports/<token> (issue #22)', async () => {
     const response = await proxy(anonymousRequest('/api/privacy/exports/un-jeton'));
     expect(response.headers.get('location')).toBeNull();

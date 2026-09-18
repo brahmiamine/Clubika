@@ -2,6 +2,7 @@ import Image from 'next/image';
 import type { ReactNode } from 'react';
 
 import { Card } from '@/app/components/ui/card';
+import { LegalFooterLinks } from '@/app/components/legal/LegalFooterLinks';
 
 export interface AuthShellBrand {
   name: string;
@@ -79,7 +80,11 @@ export function AuthShell({ children, brand }: { children: ReactNode; brand?: Au
             Matchs, affectations, disponibilités, chat et notifications réunis dans un seul espace pour tout le club.
           </p>
         </div>
-        <p className="relative text-xs text-primary-foreground/50">© {new Date().getFullYear()} Clubika</p>
+        <p className="relative text-xs text-primary-foreground/50">
+          © {new Date().getFullYear()} Clubika
+          {' · '}
+          <LegalFooterLinks className="underline-offset-2 hover:underline" />
+        </p>
       </div>
 
       <div className="flex flex-col items-center justify-center gap-6 bg-secondary-soft p-4">
