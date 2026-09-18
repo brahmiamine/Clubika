@@ -1,4 +1,3 @@
-import { logWarn } from '@/lib/observability/log';
 import type { DataSource } from 'typeorm';
 
 /**
@@ -106,7 +105,7 @@ export async function scopeTableEmailUniquenessToClub(
   const staleIndexNames = await singleColumnUniqueIndexNames(db, database, table, 'email');
   for (const indexName of staleIndexNames) {
     await db.query(`ALTER TABLE \`${table}\` DROP INDEX \`${indexName}\``);
-    logWarn('app.unhandled', `[migrations] 0017 : ${table} — index unique global « ${indexName} » sur email supprimé.`);
+    console.warn(`[migrations] 0017 : ${table} — index unique global « ${indexName} » sur email supprimé.`);
   }
 
   await db.query(

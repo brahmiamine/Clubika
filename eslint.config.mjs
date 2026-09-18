@@ -35,6 +35,18 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Les fichiers de logique de migration (`up()`) sont figés : leur contenu
+    // complet est haché dans l'empreinte d'immuabilité (issue #283). Ils doivent
+    // donc utiliser `console.warn` — API globale stable — plutôt qu'un import
+    // interne (`logWarn`) dont la signature ou le chemin pourrait changer et
+    // invalider les empreintes des migrations déjà appliquées (régression
+    // observabilité commit 8ebbc31).
+    files: ["app/lib/db/migrations/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+  {
     files: [
       "app/components/events/EventCard.tsx",
       "app/components/events/EventListItem.tsx",

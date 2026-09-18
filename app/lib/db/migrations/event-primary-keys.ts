@@ -1,4 +1,3 @@
-import { logWarn } from '@/lib/observability/log';
 import type { DataSource } from 'typeorm';
 
 /**
@@ -109,7 +108,7 @@ export async function convertTablePrimaryKeyToTenantScoped(
   await db.query(
     `ALTER TABLE \`${table}\` DROP PRIMARY KEY, ADD PRIMARY KEY (clubId, \`${businessKey}\`)`,
   );
-  logWarn('app.unhandled', `[migrations] 0008 : ${table} — clé primaire convertie en (clubId, ${businessKey}).`);
+  console.warn(`[migrations] 0008 : ${table} — clé primaire convertie en (clubId, ${businessKey}).`);
 }
 
 export async function convertEventPrimaryKeysToTenantScoped(db: DataSource): Promise<void> {
