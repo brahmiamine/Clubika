@@ -74,9 +74,14 @@ réelles depuis une pull request. Les tests n’utilisent que des fixtures synth
 de fermeture (`closeAccount`) sous un motif distinct, `processed_by_role =
 'minor-erroneous'`, pour le cas où un compte s'avère appartenir à une personne
 mineure — la V1 réserve ses comptes au staff majeur. Volets appliqués : suspension
-immédiate + révocation des sessions, notification traçable aux administrateurs
-actifs du club (type `minor-account-erroneous-closure`), puis effacement par le
-même mécanisme d'anonymisation que la fermeture standard. Détails et questions
+immédiate + révocation des sessions, notification **générique** aux administrateurs
+actifs du club (type `minor-account-erroneous-closure`, sans identité — ni le nom
+de la personne effacée, ni celui de l'administrateur, ni aucun email — issue #97),
+puis effacement par le même mécanisme d'anonymisation que la fermeture standard.
+
+Les notifications historiques de ce type qui auraient persisté un nom sont
+réécrites vers le message générique par la migration `0045`
+(`reinitialiser_notifications_fermeture_mineur`), idempotente. Détails et questions
 ouvertes (notification de la personne/d'un tuteur, fenêtre de contestation) :
 [`docs/decisions/perimetre-adulte-v1.md`](decisions/perimetre-adulte-v1.md).
 

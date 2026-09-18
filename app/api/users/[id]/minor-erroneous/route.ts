@@ -56,10 +56,6 @@ export async function POST(
       const target = locked.find((candidate) => candidate.id === id);
       if (!target) return { kind: 'not-found' as const };
 
-      // Nom capturé avant anonymisation, uniquement pour la notification interne
-      // ci-dessous — jamais persisté ni renvoyé au-delà de cet appel.
-      const displayNameBeforeErasure = target.nom;
-
       try {
         const result = await closeAccount(manager, {
           target,
@@ -70,7 +66,6 @@ export async function POST(
         return {
           kind: result.alreadyClosed ? ('already-closed' as const) : ('ok' as const),
           result,
-          displayNameBeforeErasure,
         };
       } catch (error) {
         if (error instanceof AccountClosureError && error.code === 'last-admin') {
@@ -96,8 +91,11 @@ export async function POST(
       await notifyAdmins(db, {
         type: 'minor-account-erroneous-closure',
         title: 'Compte mineur créé par erreur : suspendu et effacé',
-        message: `Le compte « ${outcome.displayNameBeforeErasure} » a été suspendu et anonymisé par ${auth.user.nom}, `
-          + 'la personne s\'étant révélée mineure. La V1 de Clubika est réservée aux adultes du staff (issue #18).',
+        // Message générique allowlisté (issue #97) : après anonymisation, aucune
+        // identité — nom de la personne, nom de l'administrateur, email — ne doit
+        // être réintroduite dans une notification persistante.
+        message: 'Un compte créé par erreur pour une personne mineure a été suspendu et anonymisé. '
+          + 'La V1 de Clubika est réservée aux adultes du staff (issue #18).',
       });
     }
 

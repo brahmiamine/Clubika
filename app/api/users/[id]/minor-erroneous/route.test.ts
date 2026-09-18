@@ -21,6 +21,9 @@ describe.skipIf(!dbAvailable)('POST /api/users/[id]/minor-erroneous — compte m
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const admin = await createTestUserAndSession('admin', { clubId });
     const minor = await createTestUserAndSession('dirigeant', { clubId, nom: `Mineur ${randomBytes(3).toString('hex')}` }, ['encadrant']);
+    // Noms sentinelles capturés avant anonymisation, pour prouver leur absence.
+    const minorName = minor.user.nom;
+    const adminName = admin.user.nom;
 
     try {
       const db = await getDb();
@@ -30,6 +33,9 @@ describe.skipIf(!dbAvailable)('POST /api/users/[id]/minor-erroneous — compte m
       const body = await response.json() as { closure: { userId: number; alreadyClosed: boolean } };
       expect(body.closure.userId).toBe(minor.user.id);
       expect(body.closure.alreadyClosed).toBe(false);
+      // La réponse ne doit pas révéler l'identité effacée.
+      expect(JSON.stringify(body)).not.toContain(minorName);
+      expect(JSON.stringify(body)).not.toContain(adminName);
 
       // Suspension + effacement : le compte n'est plus actif, l'identité est
       // anonymisée et la fermeture est tracée sous ce motif distinct.
@@ -54,7 +60,14 @@ describe.skipIf(!dbAvailable)('POST /api/users/[id]/minor-erroneous — compte m
 
       // Information : les administrateurs actifs du club reçoivent une notification.
       const adminNotifications = await db.getRepository<NotificationEntity>('Notification').find({ where: { userId: admin.user.id } });
-      expect(adminNotifications.some((n) => n.type === 'minor-account-erroneous-closure')).toBe(true);
+      const closureNotification = adminNotifications.find((n) => n.type === 'minor-account-erroneous-closure');
+      expect(closureNotification).toBeTruthy();
+      // Issue #97 : la notification persistée ne réintroduit aucune identité effacée
+      // (ni le nom du mineur, ni celui de l'administrateur).
+      expect(closureNotification!.title).not.toContain(minorName);
+      expect(closureNotification!.title).not.toContain(adminName);
+      expect(closureNotification!.message).not.toContain(minorName);
+      expect(closureNotification!.message).not.toContain(adminName);
     } finally {
       const db = await getDb();
       await db.getRepository('Notification').delete({ userId: admin.user.id });

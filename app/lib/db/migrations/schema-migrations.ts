@@ -941,4 +941,20 @@ export const schemaMigrations: readonly SchemaMigration[] = [
        WHERE adultConfirmedAt IS NULL AND usedAt IS NULL AND expiresAt > '1970-01-01 00:00:00.000000'`,
     ],
   },
+  {
+    version: '0045',
+    name: 'reinitialiser_notifications_fermeture_mineur',
+    // Issue #97 : la notification « compte mineur créé par erreur » a persisté le nom
+    // de la personne effacée et de l'administrateur, réintroduisant une identité après
+    // anonymisation. On réécrit les lignes existantes vers un message générique
+    // allowlisté (identique à celui du code), sans supprimer la ligne (audit) ni
+    // recopier l'ancien contenu. Idempotent : le WHERE ne cible que ce type, et
+    // réécrire la même valeur ne change rien.
+    statements: [
+      `UPDATE notifications
+       SET title = 'Compte mineur créé par erreur : suspendu et effacé',
+           message = 'Un compte créé par erreur pour une personne mineure a été suspendu et anonymisé. La V1 de Clubika est réservée aux adultes du staff (issue #18).'
+       WHERE type = 'minor-account-erroneous-closure'`,
+    ],
+  },
 ];
