@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
+import { Checkbox } from '@/app/components/ui/checkbox';
 import {
   DataCell,
   DataList,
@@ -58,6 +59,11 @@ export default function InvitationsPage() {
   const [inviteFunctions, setInviteFunctions] = useState<PlanningFunction[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePersonId, setInvitePersonId] = useState<number | ''>('');
+  // Issue #18 : la V1 réserve les comptes au staff majeur. L'admin invitant doit
+  // confirmer explicitement — un booléen, jamais une date de naissance — que la
+  // personne invitée est majeure ; l'API refuse aussi la création sans cette
+  // confirmation, cette case n'étant qu'un raccourci pour l'UX.
+  const [inviteAdultConfirmed, setInviteAdultConfirmed] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -84,6 +90,10 @@ export default function InvitationsPage() {
       toast.error('Une invitation administrateur doit être liée à une adresse email');
       return;
     }
+    if (!inviteAdultConfirmed) {
+      toast.error('Confirmez que la personne invitée est majeure avant de générer le lien');
+      return;
+    }
     setIsCreating(true);
     try {
       const data = await apiPost<{ url: string }>('/api/invitations', {
@@ -91,11 +101,13 @@ export default function InvitationsPage() {
         planningFunctions: inviteFunctions,
         email: inviteEmail || undefined,
         personId: invitePersonId === '' ? undefined : invitePersonId,
+        adultConfirmed: inviteAdultConfirmed,
       });
       const fullUrl = data.url.startsWith('http') ? data.url : `${window.location.origin}${data.url}`;
       setLastInviteUrl(fullUrl);
       setInviteEmail('');
       setInvitePersonId('');
+      setInviteAdultConfirmed(false);
       toast.success('Lien d\'invitation généré');
       await reload();
     } catch (error) {
@@ -178,7 +190,19 @@ export default function InvitationsPage() {
               </p>
             </div>
           </div>
-          <Button onClick={handleCreate} disabled={isCreating}>
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="invite-adult-confirmed"
+              checked={inviteAdultConfirmed}
+              onCheckedChange={(value) => setInviteAdultConfirmed(value === true)}
+              disabled={isCreating}
+            />
+            <Label htmlFor="invite-adult-confirmed" className="text-sm font-normal leading-5">
+              Je confirme que la personne invitée est majeure. Les comptes Clubika V1 sont
+              réservés aux adultes du staff, aucun parcours mineur n&apos;étant encore proposé.
+            </Label>
+          </div>
+          <Button onClick={handleCreate} disabled={isCreating || !inviteAdultConfirmed}>
             {isCreating ? 'Génération...' : 'Générer un lien d\'invitation'}
           </Button>
 

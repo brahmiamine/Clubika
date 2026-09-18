@@ -101,6 +101,18 @@ import { applyAuditLogMinimizeMigration } from './audit-log-minimize';
  * métadonnées de provenance/notice, configuration de notice club, et file
  * d'attente publique des droits (empreintes uniquement, aucun plaintext).
  *
+ * La migration 0041 (issue #13) bascule le jeton iCal personnel sur empreinte
+ * SHA-256 : plus de stockage en clair. Backfill immédiat (calcul depuis le clair
+ * avant DROP), URLs calendrier inchangées (seule la représentation stockée change).
+ *
+ * La migration 0042 (issue #27) minimise l'outbox de notifications : plus de texte
+ * libre (`title`/`message`) ni d'identifiants d'événement en clair, seulement un
+ * `template_id` allowlisté et un `notification_id` opaque résolu après authentification.
+ *
+ * La migration 0043 (issue #18) ajoute `invitations.adultConfirmedAt` : horodatage
+ * de la confirmation par l'admin invitant que la personne est majeure (V1 réservée
+ * au staff adulte), jamais une date de naissance ni une autre donnée d'âge.
+ *
  * Rappel : toute évolution future d'une entité TypeORM (`EntitySchema` dans
  * `app/lib/db/schemas.ts`) doit ajouter une nouvelle migration ici — jamais
  * modifier une migration déjà publiée, jamais réactiver `synchronize` au boot.
@@ -897,6 +909,20 @@ export const schemaMigrations: readonly SchemaMigration[] = [
       'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS event_type',
       'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS event_id',
       'ALTER TABLE planning_notification_outbox DROP COLUMN IF EXISTS urgency',
+    ],
+  },
+  {
+    version: '0043',
+    name: 'invitation_adult_confirmation',
+    statements: [
+      // Issue #18 : la V1 réserve les comptes aux adultes du staff. L'admin qui invite
+      // doit confirmer explicitement que la personne est majeure — un simple horodatage
+      // de confirmation, jamais une date de naissance ni aucune autre donnée d'âge.
+      // Colonne nullable : les invitations déjà en attente au moment du déploiement
+      // n'en disposent pas et restent acceptables telles quelles (aucune purge
+      // rétroactive) ; seules les invitations créées après ce déploiement l'exigent,
+      // via la validation applicative de `POST /api/invitations`.
+      "ALTER TABLE invitations ADD COLUMN IF NOT EXISTS adultConfirmedAt DATETIME(6) NULL AFTER createdByPlatformAdminId",
     ],
   },
 ];

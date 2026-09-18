@@ -68,9 +68,23 @@ réelles depuis une pull request. Les tests n’utilisent que des fixtures synth
   `schema_migrations` **uniquement si la migration n’a pas été fusionnée**.
 - Impact : DDL court, pas de backfill nominatif.
 
+## Compte mineur créé par erreur (issue #18)
+
+`POST /api/users/[id]/minor-erroneous` (admin uniquement) applique le même moteur
+de fermeture (`closeAccount`) sous un motif distinct, `processed_by_role =
+'minor-erroneous'`, pour le cas où un compte s'avère appartenir à une personne
+mineure — la V1 réserve ses comptes au staff majeur. Volets appliqués : suspension
+immédiate + révocation des sessions, notification traçable aux administrateurs
+actifs du club (type `minor-account-erroneous-closure`), puis effacement par le
+même mécanisme d'anonymisation que la fermeture standard. Détails et questions
+ouvertes (notification de la personne/d'un tuteur, fenêtre de contestation) :
+[`docs/decisions/perimetre-adulte-v1.md`](decisions/perimetre-adulte-v1.md).
+
 ## Points soumis à validation humaine / juridique
 
 - Conservation des corps de messages et textes opérationnels jusqu’à #9.
 - Absence d’archive nominative à échéance (pas de base légale inventée).
+- Traitement du compte mineur créé par erreur (#18) : voir les points ouverts dans
+  [`docs/decisions/perimetre-adulte-v1.md`](decisions/perimetre-adulte-v1.md).
 - Traitement des contenus encore identifiants par eux-mêmes (#12).
 - Revue de sécurité avant fusion / production (suivre #19).

@@ -86,6 +86,7 @@ function serializeInvitation(invitation: InvitationEntity) {
     personNom: invitation.personNom,
     personType: invitation.personType,
     personId: invitation.personId,
+    adultConfirmedAt: invitation.adultConfirmedAt,
     expiresAt: invitation.expiresAt,
     usedAt: invitation.usedAt,
     createdAt: invitation.createdAt,
@@ -119,17 +120,32 @@ export async function POST(request: NextRequest) {
   try {
     const body = parseJsonBody(await request.json());
     const v = new BodyValidator(body);
-    v.forbidUnknownFields(['email', 'accessRole', 'personNom', 'personId', 'expiresInDays', 'planningFunctions']);
+    v.forbidUnknownFields(['email', 'accessRole', 'personNom', 'personId', 'expiresInDays', 'planningFunctions', 'adultConfirmed']);
     const accessRole = v.enum('accessRole', ['admin', 'dirigeant']);
     const normalizedEmail = v.string('email', { required: false, maxLength: 255 })?.toLowerCase() ?? null;
     const personNom = v.string('personNom', { required: false, maxLength: 255 });
     const personId = v.number('personId', { required: false, min: 1 });
     const expiresInDays = v.number('expiresInDays', { required: false, min: 1, max: MAX_INVITATION_EXPIRES_IN_DAYS });
+    const adultConfirmed = v.boolean('adultConfirmed', { required: true });
     v.throwIfInvalid();
 
     if (!isClubAccessRole(accessRole)) {
       return NextResponse.json(
         { error: 'Rôle d\'accès invalide' },
+        { status: 400 },
+      );
+    }
+
+    // Issue #18 : la V1 réserve les comptes au staff majeur tant qu'aucun parcours
+    // adapté aux mineurs n'a été conçu. L'admin invitant doit confirmer explicitement
+    // — un booléen, jamais une date de naissance — que la personne est majeure ; ce
+    // contrôle est appliqué ici, côté serveur, pour qu'aucun appel direct à l'API ne
+    // puisse contourner la case à cocher de l'écran d'invitation.
+    if (adultConfirmed !== true) {
+      return NextResponse.json(
+        {
+          error: 'Confirmez que la personne invitée est majeure : les comptes Clubika V1 sont réservés aux adultes du staff.',
+        },
         { status: 400 },
       );
     }
@@ -213,6 +229,7 @@ export async function POST(request: NextRequest) {
       personId: targetProfile?.id ?? null,
       createdByUserId: auth.user.id,
       createdByPlatformAdminId: null,
+      adultConfirmedAt: new Date(),
       expiresAt,
       usedAt: null,
       usedByUserId: null,

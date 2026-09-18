@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/app
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
+import { Checkbox } from '@/app/components/ui/checkbox';
 import { toast } from 'sonner';
 import { apiPost, apiPut } from '@/lib/utils/api';
 import type { ClubAccessRole, PlanningFunction } from '@/lib/auth/roles';
@@ -42,6 +43,9 @@ export function UserForm({ user }: UserFormProps) {
   const [form, setForm] = useState<UserFormState>(() => initialState(user));
   const [isSaving, setIsSaving] = useState(false);
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  // Issue #18 : la V1 réserve les comptes au staff majeur. Requis uniquement à la
+  // création d'une invitation (l'API le refuse aussi côté serveur sans ce champ).
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
 
   if (user?.closedAt) {
     return (
@@ -67,6 +71,10 @@ export function UserForm({ user }: UserFormProps) {
       toast.error('Email et nom sont requis');
       return;
     }
+    if (!user && !adultConfirmed) {
+      toast.error('Confirmez que la personne invitée est majeure avant d\'envoyer l\'invitation');
+      return;
+    }
     setIsSaving(true);
     try {
       if (user) {
@@ -85,6 +93,7 @@ export function UserForm({ user }: UserFormProps) {
           accessRole: form.accessRole,
           planningFunctions: form.planningFunctions,
           personNom: form.nom.trim(),
+          adultConfirmed,
         });
         const url = data.url.startsWith('http') ? data.url : `${window.location.origin}${data.url}`;
         setInviteUrl(url);
@@ -157,6 +166,20 @@ export function UserForm({ user }: UserFormProps) {
             <Label htmlFor="user-active">Compte actif</Label>
           </div>
         )}
+        {!user && !inviteUrl && (
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="user-adult-confirmed"
+              checked={adultConfirmed}
+              onCheckedChange={(value) => setAdultConfirmed(value === true)}
+              disabled={isSaving}
+            />
+            <Label htmlFor="user-adult-confirmed" className="text-sm font-normal leading-5">
+              Je confirme que la personne invitée est majeure. Les comptes Clubika V1 sont
+              réservés aux adultes du staff, aucun parcours mineur n&apos;étant encore proposé.
+            </Label>
+          </div>
+        )}
         {inviteUrl && (
           <div className="space-y-2">
             <Label>Lien d&apos;invitation (à copier, jamais un mot de passe choisi pour autrui)</Label>
@@ -169,7 +192,11 @@ export function UserForm({ user }: UserFormProps) {
             {inviteUrl ? 'Fermer' : 'Annuler'}
           </Button>
           {!inviteUrl && (
-            <Button onClick={handleSubmit} disabled={isSaving} className="w-full sm:w-auto">
+            <Button
+              onClick={handleSubmit}
+              disabled={isSaving || (!user && !adultConfirmed)}
+              className="w-full sm:w-auto"
+            >
               {isSaving ? 'Enregistrement...' : user ? 'Enregistrer' : 'Envoyer une invitation'}
             </Button>
           )}

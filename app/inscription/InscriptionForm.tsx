@@ -75,6 +75,24 @@ export function InscriptionForm({ invitation }: { invitation: InvitationPublicVi
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/*
+          Issue #18 : la V1 de Clubika réserve les comptes au staff majeur (admin,
+          dirigeant, arbitre, encadrant, accompagnateur). Aucun parcours adapté aux
+          mineurs n'a encore été conçu — voir la revue juridique et de conception
+          dédiée demandée par l'issue avant toute ouverture aux mineurs. Ce message
+          est indépendant de la notice club configurable ci-dessous (issue #26) ;
+          en l'absence des CGU publiques (issue #12, pas encore fusionnées), ce
+          rappel reste le seul texte public portant cette restriction — à faire
+          coordonner avec les CGU dès qu'elles seront disponibles.
+        */}
+        <div className="mb-4 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-200">
+          <p className="font-medium">Comptes réservés aux personnes majeures</p>
+          <p className="mt-1">
+            Clubika V1 réserve les comptes au staff majeur. N&apos;acceptez cette invitation
+            que si vous avez 18 ans ou plus : aucun parcours adapté aux mineurs n&apos;est
+            proposé pour le moment.
+          </p>
+        </div>
         {invitation.notice ? (
           <div className="mb-4 space-y-2 rounded-md border p-3 text-sm">
             <p className="font-medium">Information (version {invitation.notice.version})</p>
