@@ -919,10 +919,26 @@ export const schemaMigrations: readonly SchemaMigration[] = [
       // doit confirmer explicitement que la personne est majeure — un simple horodatage
       // de confirmation, jamais une date de naissance ni aucune autre donnée d'âge.
       // Colonne nullable : les invitations déjà en attente au moment du déploiement
-      // n'en disposent pas et restent acceptables telles quelles (aucune purge
-      // rétroactive) ; seules les invitations créées après ce déploiement l'exigent,
-      // via la validation applicative de `POST /api/invitations`.
+      // n'en disposent pas. Elles sont expirées par la migration 0044 et rejetées à
+      // l'acceptation (issue #96) — un compte V1 ne doit plus être créé sans cette
+      // confirmation explicite, jamais déduite ni re-bouchée a posteriori.
       "ALTER TABLE invitations ADD COLUMN IF NOT EXISTS adultConfirmedAt DATETIME(6) NULL AFTER createdByPlatformAdminId",
+    ],
+  },
+  {
+    version: '0044',
+    name: 'expirer_invitations_sans_confirmation_adulte',
+    // Issue #96 : les invitations héritées (créées avant 0043) portent
+    // adultConfirmedAt NULL. Comme la V1 réserve les comptes au staff majeur, elles
+    // ne doivent plus permettre de créer un compte. On les « expire » en repoussant
+    // expiresAt dans le passé — sans supprimer la ligne (audit) ni fabriquer un
+    // horodatage de confirmation qui n'a jamais été donné. Un administrateur peut
+    // réémettre une invitation après confirmation explicite.
+    // Idempotent : le WHERE exclut les lignes déjà expirées (sentinel 1970-01-01).
+    statements: [
+      `UPDATE invitations
+       SET expiresAt = '1970-01-01 00:00:00.000000'
+       WHERE adultConfirmedAt IS NULL AND usedAt IS NULL AND expiresAt > '1970-01-01 00:00:00.000000'`,
     ],
   },
 ];

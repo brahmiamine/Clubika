@@ -24,6 +24,14 @@ synchronisation SportCorico) ne créent que des profils **sans accès**
   contournerait la case à cocher de l'écran d'invitation est refusé de la même
   façon que l'UI (test dédié : `app/api/invitations/route.test.ts`, describe
   « confirmation de majorité »).
+- **Invitations héritées sans confirmation refusées (issue #96).** Une invitation
+  dont `adultConfirmedAt` est `NULL` (créée avant la migration 0043, ou insérée par
+  un autre chemin) est refusée à **la fois** par la résolution publique du jeton
+  (`valid: false`, 404) et par l'acceptation transactionnelle verrouillée
+  (404 « lien introuvable ») — sans jamais fabriquer un horodatage de confirmation
+  qui n'a pas été donné. La migration 0044 les **expire** (repousse `expiresAt` dans
+  le passé, sans supprimer la ligne) ; un administrateur peut réémettre une invitation
+  après avoir confirmé explicitement la majorité.
 - **Message à l'acceptation.** L'écran d'inscription (`/inscription/[token]`)
   affiche un rappel visible que les comptes V1 sont réservés aux personnes majeures,
   indépendant de la notice club configurable (issue #26).

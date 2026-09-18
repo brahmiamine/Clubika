@@ -52,6 +52,10 @@ export function invitationPublicInvalid(): NextResponse {
 function isInvitationCurrentlyUsable(invitation: InvitationEntity, nowMs: number): boolean {
   if (invitation.usedAt) return false;
   if (new Date(invitation.expiresAt).getTime() <= nowMs) return false;
+  // Issue #96 : une invitation sans horodatage de confirmation adulte (invitation
+  // héritée créée avant la migration 0043, ou insérée par un autre chemin) ne doit
+  // jamais être présentée comme valide — fail closed.
+  if (!invitation.adultConfirmedAt) return false;
   return true;
 }
 

@@ -133,6 +133,14 @@ export async function acceptInvitationInTransaction(
   if (new Date(invitation.expiresAt).getTime() <= Date.now()) {
     throw new InvitationAcceptError(410, 'Ce lien a expiré');
   }
+  // Issue #96 : même garde que le chemin public, mais appliquée ici, à l'intérieur
+  // de la transaction verrouillée, pour qu'un contournement du pré-contrôle public
+  // ne puisse pas créer de compte. Une invitation sans confirmation adulte explicite
+  // (invitation héritée d'avant la migration 0043) doit échouer en « lien introuvable »,
+  // sans révéler l'existence ni l'état de l'invitation.
+  if (!invitation.adultConfirmedAt) {
+    throw new InvitationAcceptError(404, 'Lien d\'invitation introuvable');
+  }
   if (!isClubAccessRole(invitation.accessRole)) {
     throw new InvitationAcceptError(400, 'Rôle d\'invitation invalide');
   }

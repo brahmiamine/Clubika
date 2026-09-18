@@ -185,6 +185,27 @@ describe.skipIf(!dbAvailable)('GET/DELETE /api/invitations/[token] (issue #34)',
     }
   });
 
+  it('ne révèle pas une invitation héritée sans confirmation adulte (adultConfirmedAt null, issue #96)', async () => {
+    const clubId = `test-club-${randomBytes(6).toString('hex')}`;
+    const admin = await createTestUserAndSession('admin', { clubId });
+    const legacy = await makeInvitation(clubId, admin.user.id, { adultConfirmedAt: null });
+    const ip = uniqueTestIp();
+
+    try {
+      const response = await GET(getRequest(legacy.rawToken, ip), { params: { token: legacy.rawToken } });
+      // Fail closed : identique à un jeton introuvable, sans détail d'état.
+      expect(response.status).toBe(404);
+      const body = await response.json();
+      expect(body).toEqual({ valid: false });
+      expect(JSON.stringify(body)).not.toContain('invite@example.com');
+    } finally {
+      const db = await getDb();
+      await db.getRepository('Invitation').delete({ id: legacy.id });
+      await cleanupRateLimit(ip, legacy.rawToken);
+      await admin.cleanup();
+    }
+  });
+
   it('échange le jeton d’URL contre un contexte cookie relisible sans le secret', async () => {
     const clubId = `test-club-${randomBytes(6).toString('hex')}`;
     const admin = await createTestUserAndSession('admin', { clubId });

@@ -55,6 +55,10 @@ async function createInvitation(overrides?: Partial<InvitationEntity>) {
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     usedAt: null,
     usedByUserId: null,
+    // Confirmation adulte par défaut (issue #96) : les invitations créées par l'API
+    // portent toujours cet horodatage ; un test ciblant le cas hérité peut le
+    // neutraliser via `adultConfirmedAt: null` dans les overrides.
+    adultConfirmedAt: new Date(),
     ...overrides,
   });
   return { ...invitation, rawToken };
@@ -245,6 +249,36 @@ describe.skipIf(!dbAvailable)('POST /api/invitations/[token]/accept (integration
       { params: { token: invitation.rawToken } },
     );
     expect(response.status).toBe(409);
+  });
+
+  it('rejette une invitation héritée sans confirmation adulte (adultConfirmedAt null, issue #96)', async () => {
+    const invitation = await createInvitation({ adultConfirmedAt: null });
+    const email = `legacy-${randomBytes(8).toString('hex')}@example.com`;
+    createdEmails.push(email);
+
+    const response = await POST(
+      acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
+      { params: { token: invitation.rawToken } },
+    );
+    // Fail closed : même statut générique qu'un lien introuvable, sans révéler l'état.
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ error: expect.stringMatching(/introuvable/) });
+
+    // Aucun compte ne doit avoir été créé.
+    const db = await getDb();
+    expect(await db.getRepository('User').findOneBy({ email })).toBeNull();
+  });
+
+  it('accepte une invitation avec confirmation adulte explicite (adultConfirmedAt non null)', async () => {
+    const invitation = await createInvitation({ adultConfirmedAt: new Date() });
+    const email = `confirmed-${randomBytes(8).toString('hex')}@example.com`;
+    createdEmails.push(email);
+
+    const response = await POST(
+      acceptRequest(invitation.rawToken, { email, password: 'password123', confirmIdentity: true, acknowledgeNotice: true, nom: 'X' }),
+      { params: { token: invitation.rawToken } },
+    );
+    expect(response.status).toBe(200);
   });
 
   it('rejects an unknown token', async () => {
