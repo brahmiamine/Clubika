@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Copy, Link2, Trash2 } from 'lucide-react';
+import { Link2, Trash2 } from 'lucide-react';
 import { Badge } from '@/app/components/ui/badge';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { PageContainer, PageHeader } from '@/app/components/layout/page-primitives';
+import { PublicShareLinkRow } from '@/app/components/planning/PublicShareLinkRow';
 import { apiDelete, apiGet, apiPost } from '@/lib/utils/api';
 import { formatIsoDate } from '@/lib/utils/date';
 import { toast } from 'sonner';
@@ -81,8 +82,7 @@ export default function PlanningSharingPage() {
       });
       const url = `${window.location.origin}${result.share.path}`;
       setLastUrl(url);
-      await navigator.clipboard?.writeText(url);
-      toast.success('Lien créé et copié');
+      toast.success('Lien public créé');
       load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Impossible de créer le partage');
@@ -101,8 +101,7 @@ export default function PlanningSharingPage() {
       });
       const url = `${window.location.origin}${result.share.path}`;
       setQuickUrl(url);
-      await navigator.clipboard?.writeText(url);
-      toast.success('Lien public créé et copié');
+      toast.success('Lien public créé');
       load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Impossible de créer le partage');
@@ -136,7 +135,7 @@ export default function PlanningSharingPage() {
               <Link2 className="mr-2 h-4 w-4" />
               {quickLoading ? 'Génération…' : 'Générer un lien public'}
             </Button>
-            {quickUrl && <div className="flex gap-2 rounded-lg border p-3 text-sm"><span className="min-w-0 flex-1 truncate">{quickUrl}</span><Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(quickUrl)}><Copy className="h-4 w-4" /></Button></div>}
+            {quickUrl && <PublicShareLinkRow url={quickUrl} />}
           </CardContent>
         </Card>
         <Card>
@@ -168,7 +167,7 @@ export default function PlanningSharingPage() {
               Ce lien expirera le <strong>{formatShareExpiryPreview(expiryDays)}</strong> (maximum proposé : {maxExpiryDays} jours).
             </p>
             <Button onClick={create} disabled={!eventTypes.length}>Créer le lien public</Button>
-            {lastUrl && <div className="flex gap-2 rounded-lg border p-3 text-sm"><span className="min-w-0 flex-1 truncate">{lastUrl}</span><Button size="sm" variant="outline" onClick={() => navigator.clipboard?.writeText(lastUrl)}><Copy className="h-4 w-4" /></Button></div>}
+            {lastUrl && <PublicShareLinkRow url={lastUrl} />}
           </CardContent>
         </Card>
         <Card>
