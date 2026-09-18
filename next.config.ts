@@ -33,9 +33,7 @@ const nextConfig: NextConfig = {
   // Optimisations de compilation
   compiler: {
     // Supprimer les console.log en production
-    removeConsole: process.env.NODE_ENV === 'production' ? {
-      exclude: ['error', 'warn'],
-    } : false,
+    removeConsole: process.env.NODE_ENV === 'production',
   },
 
   // Compression (activée par défaut en production)
@@ -57,7 +55,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'X-XSS-Protection',
-            value: '1; mode=block',
+            value: '0',
           },
           {
             key: 'Referrer-Policy',
@@ -69,6 +67,22 @@ const nextConfig: NextConfig = {
             // n'affiche jamais la boîte « Autoriser le microphone ».
             value: 'camera=(), microphone=(self), geolocation=()',
           },
+        ],
+      },
+      {
+        source: '/inscription',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+      {
+        source: '/inscription/:path*',
+        headers: [
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
       {
@@ -107,6 +121,16 @@ const nextConfig: NextConfig = {
 
   // Optimisations de production build
   productionBrowserSourceMaps: false,
+
+  // TypeORM / mysql2 hors du bundle API : le driver `mysql` 2.x mélange les
+  // paquets (`PROTOCOL_INCORRECT_PACKET_SEQUENCE`) dès que deux routes
+  // initialisent la connexion en parallèle.
+  serverExternalPackages: ['typeorm', 'mysql', 'mysql2', 'mariadb', 'reflect-metadata'],
+
+  // Les empreintes de migrations sont lues via readFileSync, invisible au tracing.
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./app/lib/db/migrations/**/*'],
+  },
 
   turbopack: {
     root: process.cwd(),

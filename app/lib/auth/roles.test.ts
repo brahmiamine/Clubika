@@ -3,6 +3,7 @@ import {
   canEdit,
   hasAnyPlanningFunction,
   hasPlanningFunction,
+  homePathForAccessRole,
   normalizeAccessRole,
   normalizePlanningFunctions,
 } from './roles';
@@ -13,6 +14,12 @@ describe('rôle d’accès au club (issue #209)', () => {
     expect(canEdit('dirigeant')).toBe(false);
     expect(canEdit(null)).toBe(false);
     expect(canEdit(undefined)).toBe(false);
+  });
+
+  it('envoie l’administrateur vers /club et le dirigeant vers /mon-planning', () => {
+    expect(homePathForAccessRole('admin')).toBe('/club');
+    expect(homePathForAccessRole('dirigeant')).toBe('/mon-planning');
+    expect(homePathForAccessRole(null)).toBe('/mon-planning');
   });
 
   it('rabat toute valeur non administrateur sur dirigeant', () => {

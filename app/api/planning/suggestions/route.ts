@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       suggestions,
     });
   } catch (error) {
-    console.error('Assignment suggestions failed:', error);
+    logError('app.unhandled', 'Assignment suggestions failed:', error);
     return NextResponse.json({ error: 'Impossible de générer les suggestions' }, { status: 500 });
   }
 }

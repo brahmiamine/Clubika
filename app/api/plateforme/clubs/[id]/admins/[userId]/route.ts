@@ -1,8 +1,10 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
 import { requirePlatformAuth } from '@/lib/auth/platform-require';
 import { revokeAllSessionsForUser } from '@/lib/auth/session';
+import { rejectIfClubNotWritable } from '@/lib/tenant-offboarding/writable';
 
 export async function PATCH(
   request: NextRequest,
@@ -13,6 +15,8 @@ export async function PATCH(
 
   try {
     const { id, userId } = params instanceof Promise ? await params : params;
+    const blocked = await rejectIfClubNotWritable(await getDb(), id);
+    if (blocked) return blocked;
     const parsedUserId = Number.parseInt(userId, 10);
     if (!Number.isFinite(parsedUserId)) {
       return NextResponse.json({ error: 'Identifiant invalide' }, { status: 400 });
@@ -52,7 +56,7 @@ export async function PATCH(
       },
     });
   } catch (error) {
-    console.error('Error updating club admin:', error);
+    logError('app.unhandled', 'Error updating club admin:', error);
     return NextResponse.json({ error: 'Impossible de mettre à jour l\'administrateur' }, { status: 500 });
   }
 }

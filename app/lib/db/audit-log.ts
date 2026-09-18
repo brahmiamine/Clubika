@@ -1,6 +1,7 @@
 import { DataSource, EntityManager } from 'typeorm';
 import { MatchAuditLogEntity } from './schemas';
 import type { SessionUser } from '@/lib/auth/session';
+import { minimizeAuditPayload } from '@/lib/audit/minimize';
 
 export type AuditEntityType =
   | 'MatchOfficial'
@@ -73,9 +74,9 @@ export async function logAuditEntry(db: DataSource | EntityManager, entry: LogAu
     entityId: entry.entityId,
     action: entry.action,
     userId: entry.user?.id ?? null,
-    userEmail: entry.user?.email ?? null,
-    userNom: entry.user?.nom ?? null,
-    before: entry.before,
-    after: entry.after,
+    userEmail: null,
+    userNom: null,
+    before: minimizeAuditPayload(entry.before),
+    after: minimizeAuditPayload(entry.after),
   });
 }

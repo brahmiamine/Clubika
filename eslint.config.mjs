@@ -10,11 +10,28 @@ const eslintConfig = defineConfig([
     // feature PRs to use lint as a blocking gate for new correctness errors.
     // The warning budget is ratcheted via `pnpm lint` (`--max-warnings` in
     // package.json, issue #286) rather than by disabling these rules.
+    // Issue #31: block raw console.* except the documented exceptions below
+    // (tests, e2e, CLI scripts, scraper, service worker). Application code must
+    // use @/lib/observability/log or client-log.
     rules: {
       "react/no-unescaped-entities": "warn",
       "react-hooks/set-state-in-effect": "warn",
       "@typescript-eslint/no-explicit-any": "warn",
       "prefer-const": "warn",
+      "no-console": "error",
+      "no-restricted-imports": ["error", {
+        paths: [
+          { name: "pino", message: "Use @/lib/observability/log (issue #31)." },
+          { name: "winston", message: "Use @/lib/observability/log (issue #31)." },
+          { name: "bunyan", message: "Use @/lib/observability/log (issue #31)." },
+        ],
+      }],
+    },
+  },
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "e2e/**/*.ts", "scripts/**/*.{ts,mjs,js}", "deploy/scripts/**/*.{ts,mjs,js}", "scraper.js", "public/sw.js"],
+    rules: {
+      "no-console": "off",
     },
   },
   {

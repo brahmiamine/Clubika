@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity } from '@/lib/db/schemas';
@@ -15,6 +16,8 @@ function serializeClub(club: ClubTenantEntity) {
     active: club.active,
     matchesUrlKey: club.matchesUrlKey,
     scraperClubName: club.scraperClubName,
+    offboardingStatus: club.offboardingStatus ?? 'none',
+    legalHoldActive: Boolean(club.legalHoldActive),
     createdAt: club.createdAt,
     updatedAt: club.updatedAt,
   };
@@ -117,7 +120,7 @@ export async function GET(request: NextRequest) {
     const clubs = await repo.find({ order: { name: 'ASC' } });
     return NextResponse.json({ clubs: clubs.map(serializeClub) });
   } catch (error) {
-    console.error('Error listing club tenants:', error);
+    logError('app.unhandled', 'Error listing club tenants:', error);
     return NextResponse.json({ error: 'Impossible de charger les clubs' }, { status: 500 });
   }
 }
@@ -178,6 +181,16 @@ export async function POST(request: NextRequest) {
       smtpFromEmail: null,
       smtpFromName: null,
       active: true,
+      offboardingStatus: 'none',
+      frozenAt: null,
+      retentionUntil: null,
+      purgedAt: null,
+      legalHoldActive: false,
+      legalHoldMotive: null,
+      legalHoldScope: null,
+      legalHoldExpiresAt: null,
+      legalHoldApprovedBy: null,
+      legalHoldCreatedAt: null,
     });
 
     try {
@@ -192,7 +205,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, club: serializeClub(club) });
   } catch (error) {
-    console.error('Error creating club tenant:', error);
+    logError('app.unhandled', 'Error creating club tenant:', error);
     return NextResponse.json({ error: 'Impossible de créer le club' }, { status: 500 });
   }
 }

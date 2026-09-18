@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { randomBytes } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -8,6 +9,10 @@ import { normalizePlanningFunctions, WRITE_ROLES, type PlanningFunction } from '
 import { hashPassword } from '@/lib/auth/password';
 import { generatePlaceholderEmail } from '@/lib/auth/placeholder-account';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { applyTelephoneGateAndMeta, contactLifecycleResponse } from '@/lib/non-account-contacts/referentiel-write';
+import { normalizeTelephone } from '@/lib/non-account-contacts/meta';
+import { assertTelephoneAllowed, parseProvenance, parsePurpose, upsertContactMeta } from '@/lib/non-account-contacts/meta';
+import { isClosedAccount } from '@/lib/account-closure/constants';
 
 /** Fonction opérationnelle représentée par ce référentiel (issue #209). */
 const FUNCTION: PlanningFunction = 'arbitre_club';
@@ -46,6 +51,7 @@ async function findAllOfficiels(
   const users = await repo.find({ where: { clubId }, order: { nom: 'ASC' } });
   return users
     .filter((user) => normalizePlanningFunctions(user.planningFunctions).includes(FUNCTION))
+    .filter((user) => !isClosedAccount(user))
     .filter((user) => !activeOnly || user.active);
 }
 
@@ -62,7 +68,7 @@ export async function GET(request: NextRequest) {
     const all = await findAllOfficiels(db, auth.user.clubId, { activeOnly: true });
     return NextResponse.json({ officiels: all.map(serialize) } satisfies OfficielsData);
   } catch (error) {
-    console.error('Error reading officiels from DB:', error);
+    logError('app.unhandled', 'Error reading officiels from DB:', error);
     return NextResponse.json({ error: 'Failed to load officiels' }, { status: 500 });
   }
 }
@@ -74,7 +80,7 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { oldNom, nom, telephone, indisponibilites } = body;
+    const { oldNom, nom, indisponibilites } = body;
     const targetOldNom = oldNom && typeof oldNom === 'string' ? oldNom : nom;
 
     if (!targetOldNom || typeof targetOldNom !== 'string' || targetOldNom.trim() === '') {
@@ -99,7 +105,13 @@ export async function PUT(request: NextRequest) {
     }
 
     officiel.nom = nom.trim();
-    officiel.telephone = telephone && typeof telephone === 'string' ? telephone.trim() || null : null;
+    officiel.telephone = await applyTelephoneGateAndMeta(db, {
+      user: officiel,
+      clubId,
+      category: 'officiel',
+      recordedByUserId: auth.user.id,
+      body,
+    });
     if (Object.prototype.hasOwnProperty.call(body, 'indisponibilites')) {
       const normalized = normalizeIndisponibilites(indisponibilites);
       officiel.indisponibilites = normalized.length > 0 ? normalized : null;
@@ -109,7 +121,9 @@ export async function PUT(request: NextRequest) {
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error updating officiels in DB:', error);
+    const lifecycle = contactLifecycleResponse(error);
+    if (lifecycle) return lifecycle;
+    logError('app.unhandled', 'Error updating officiels in DB:', error);
     return NextResponse.json({ error: 'Failed to update officiels' }, { status: 500 });
   }
 }
@@ -127,35 +141,52 @@ export async function POST(request: NextRequest) {
     }
 
     const db = await getDb();
-    const repo = db.getRepository<UserEntity>('User');
     const clubId = auth.user.clubId;
     const officiels = await findAllOfficiels(db, clubId);
     const existing = officiels.find((item) => normalize(item.nom) === normalize(nom));
     if (existing) return NextResponse.json({ error: 'Un officiel avec ce nom existe déjà' }, { status: 400 });
 
+    const resolvedTelephone = normalizeTelephone(telephone);
+    const provenance = parseProvenance(body.provenance);
+    const purpose = parsePurpose(body.purpose);
+    assertTelephoneAllowed({ telephone: resolvedTelephone, provenance });
+
     const normalized = normalizeIndisponibilites(indisponibilites);
     const email = await generatePlaceholderEmail(db, nom, TAG);
     const passwordHash = await hashPassword(randomBytes(24).toString('hex'));
-    await repo.save({
-      clubId,
-      email,
-      passwordHash,
-      nom: nom.trim(),
-      accessRole: 'dirigeant',
-      planningFunctions: [FUNCTION],
-      active: true,
-      // Profil sans accès (issue #204) : pas d'identifiants connus, activation
-      // uniquement via une invitation ciblant ce profil.
-      claimedAt: null,
-      telephone: telephone && typeof telephone === 'string' ? telephone.trim() || null : null,
-      indisponibilites: normalized.length > 0 ? normalized : null,
-      icalToken: randomBytes(24).toString('hex'),
+    await db.transaction(async (manager) => {
+      const saved = await manager.getRepository<UserEntity>('User').save({
+        clubId,
+        email,
+        passwordHash,
+        nom: nom.trim(),
+        accessRole: 'dirigeant',
+        planningFunctions: [FUNCTION],
+        active: true,
+        // Profil sans accès (issue #204) : pas d'identifiants connus, activation
+        // uniquement via une invitation ciblant ce profil.
+        claimedAt: null,
+        telephone: resolvedTelephone,
+        indisponibilites: normalized.length > 0 ? normalized : null,
+        // Pas de flux iCal généré à l'import (issue #13) — voir
+        // `app/lib/planning/ical-token.ts`.
+      });
+      await upsertContactMeta(manager, {
+        userId: saved.id,
+        clubId,
+        category: 'officiel',
+        provenance,
+        purpose,
+        recordedByUserId: auth.user.id,
+      });
     });
 
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error adding officiel in DB:', error);
+    const lifecycle = contactLifecycleResponse(error);
+    if (lifecycle) return lifecycle;
+    logError('app.unhandled', 'Error adding officiel in DB:', error);
     return NextResponse.json({ error: 'Failed to add officiel' }, { status: 500 });
   }
 }
@@ -192,7 +223,7 @@ export async function DELETE(request: NextRequest) {
     const all = await findAllOfficiels(db, clubId);
     return NextResponse.json({ success: true, data: { officiels: all.map(serialize) } satisfies OfficielsData });
   } catch (error) {
-    console.error('Error deleting officiel in DB:', error);
+    logError('app.unhandled', 'Error deleting officiel in DB:', error);
     return NextResponse.json({ error: 'Failed to delete officiel' }, { status: 500 });
   }
 }

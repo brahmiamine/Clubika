@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import type { DataSource, EntityManager } from 'typeorm';
 import type { AssignmentContact } from '@/types/match';
 import type {
@@ -12,11 +13,12 @@ import { getPlanningRecord } from '@/lib/planning/records';
 import { emitNotificationsChanged } from '@/lib/realtime/hub';
 import { CHAT_INBOX_EXCLUDED_TYPES } from './inbox';
 import { sendEmail } from './email';
-import { sendWhatsAppNotification } from './whatsapp';
-import { notificationDestinationHref } from './destinations';
+import { sendWhatsAppNotification, isWhatsAppGloballyEnabled } from './whatsapp';
+import { notificationSpace, notificationsInboxHref } from './destinations';
 import {
   normalizeNotificationPreferences,
   selectedNotificationChannels,
+  type NotificationPreferences,
   type NotificationUrgency,
 } from './preferences';
 import {
@@ -27,6 +29,12 @@ import {
   type NotificationOutboxItem,
   type OutboxChannel,
 } from './outbox';
+import {
+  renderEmailNotification,
+  renderPushNotification,
+  resolveNotificationTemplateId,
+} from './templates';
+import { isOutboundProcessingBlocked, isPrivacyOperationalNotice } from '@/lib/privacy/catalog';
 
 type Queryable = DataSource | EntityManager;
 
@@ -39,47 +47,57 @@ export interface NotificationInput {
   urgency?: NotificationUrgency;
 }
 
-async function deliverWhatsApp(_db: DataSource, user: UserEntity, input: NotificationInput): Promise<void> {
-  const phone = user.telephone?.trim() || null;
-  if (!phone) return;
-  await sendWhatsAppNotification({
-    to: phone,
-    title: input.title,
-    message: input.message,
-    eventType: input.eventType ?? null,
-    eventId: input.eventId ?? null,
-    urgency: input.urgency ?? 'normal',
-  });
+async function getUserNotificationPreferences(db: DataSource, userId: number): Promise<NotificationPreferences> {
+  const record = await getPlanningRecord(db, `notification-preferences:${userId}`);
+  return normalizeNotificationPreferences(record?.payload);
 }
 
-async function deliverChannel(db: DataSource, user: UserEntity, channel: OutboxChannel, input: NotificationInput): Promise<void> {
+/**
+ * Destination opaque d'un canal externe (issue #27) : jamais l'URL résolue de
+ * l'événement, seulement un pointeur vers la notification in-app — les détails ne
+ * sont rechargés qu'après authentification et contrôle tenant/objet, via
+ * `/api/notifications/[id]/open` (`route.ts`).
+ */
+function opaqueNotificationHref(user: UserEntity, notificationId: number | null): string {
+  if (notificationId !== null) return `/api/notifications/${notificationId}/open`;
+  return notificationsInboxHref(notificationSpace(normalizeAccessRole(user.accessRole)));
+}
+
+async function deliverWhatsApp(db: DataSource, user: UserEntity, templateId: ReturnType<typeof resolveNotificationTemplateId>): Promise<void> {
+  if (!isWhatsAppGloballyEnabled()) return;
+  const preferences = await getUserNotificationPreferences(db, user.id);
+  if (!preferences.whatsapp) return;
+  const phone = user.telephone?.trim() || null;
+  if (!phone) return;
+  await sendWhatsAppNotification({ to: phone, templateId });
+}
+
+async function deliverChannel(db: DataSource, user: UserEntity, channel: OutboxChannel, item: NotificationOutboxItem): Promise<void> {
   if (channel === 'push') {
     throw new Error('Push delivery requires an outbox delivery identifier');
   }
   if (channel === 'email') {
     if (!user.email) return;
-    return sendEmail({ to: user.email, subject: input.title, text: input.message, clubId: user.clubId });
+    const preferences = await getUserNotificationPreferences(db, user.id);
+    const rendered = renderEmailNotification(item.templateId, { detailed: preferences.emailDetailedPreview });
+    await sendEmail({ to: user.email, subject: rendered.subject, text: rendered.body, clubId: user.clubId });
+    return;
   }
-  return deliverWhatsApp(db, user, input);
+  return deliverWhatsApp(db, user, item.templateId);
 }
 
 async function deliverOutboxItem(db: DataSource, user: UserEntity, item: NotificationOutboxItem): Promise<void> {
   try {
     if (item.channel === 'push') {
+      const preferences = await getUserNotificationPreferences(db, user.id);
+      const rendered = renderPushNotification(item.templateId, { detailed: preferences.pushDetailedPreview });
       await triggerPushForUser(db, user.id, {
-        notificationId: item.id,
-        type: item.type,
-        title: item.title,
-        message: item.message,
-        eventType: item.eventType,
-        eventId: item.eventId,
+        notificationId: item.notificationId,
+        templateId: item.templateId,
+        title: rendered.title,
+        message: rendered.body,
         clubId: user.clubId,
-        url: notificationDestinationHref({
-          accessRole: normalizeAccessRole(user.accessRole),
-          type: item.type,
-          eventType: item.eventType,
-          eventId: item.eventId,
-        }),
+        url: opaqueNotificationHref(user, item.notificationId),
       });
     } else {
       await deliverChannel(db, user, item.channel, item);
@@ -108,14 +126,27 @@ async function enqueueChannelsForUser(
   input: NotificationInput,
   idempotencyKeyBase?: string,
 ): Promise<NotificationOutboxItem[]> {
+  const restricted = isOutboundProcessingBlocked(user);
+  const operationalNotice = isPrivacyOperationalNotice(input.type);
+  if (restricted && !operationalNotice) {
+    return [];
+  }
+
   const preferenceRecord = await getPlanningRecord(db, `notification-preferences:${user.id}`);
   const preferences = normalizeNotificationPreferences(preferenceRecord?.payload);
   const selected = selectedNotificationChannels(preferences, { urgency: input.urgency, eventType: input.eventType });
+  // Gabarit allowlisté résolu une fois, depuis la catégorie du type métier — jamais depuis
+  // le titre/message libre, qui ne quitte plus l'in-app (issue #27).
+  const templateId = resolveNotificationTemplateId(input.type);
 
+  // Identifiant opaque de la ligne in-app : seule source du détail réel, résolue après
+  // authentification + contrôle tenant/objet (`/api/notifications/[id]/open`). Les canaux
+  // externes ne référencent jamais que cet identifiant.
+  let notificationId: number | null = null;
   if (selected.includes('inApp')) {
     try {
       const repo = db.getRepository<NotificationEntity>('Notification');
-      await repo.save({
+      const saved = await repo.save({
         userId: user.id,
         type: input.type,
         title: input.title,
@@ -124,11 +155,12 @@ async function enqueueChannelsForUser(
         eventId: input.eventId ?? null,
         readAt: null,
       });
+      notificationId = saved?.id ?? null;
       if (!(CHAT_INBOX_EXCLUDED_TYPES as readonly string[]).includes(input.type)) {
         emitNotificationsChanged(user.clubId, user.id);
       }
     } catch (error) {
-      console.error(`[notifications] Échec de la notification in-app pour l'utilisateur ${user.id} :`, error);
+      logError('app.unhandled', error);
     }
   }
 
@@ -137,24 +169,21 @@ async function enqueueChannelsForUser(
   for (const channel of channels) {
     if (!selected.includes(channel)) continue;
     if (channel === 'email' && !user.email) continue;
+    if (channel === 'whatsapp' && (!isWhatsAppGloballyEnabled() || !user.telephone?.trim())) continue;
     try {
       const item = await enqueueNotificationDelivery(
         db,
         {
           userId: user.id,
           channel,
-          type: input.type,
-          title: input.title,
-          message: input.message,
-          eventType: input.eventType ?? null,
-          eventId: input.eventId ?? null,
-          urgency: input.urgency ?? 'normal',
+          templateId,
+          notificationId,
         },
         idempotencyKeyBase ? `${idempotencyKeyBase}:${channel}` : undefined,
       );
       items.push(item);
     } catch (error) {
-      console.error(`[notifications] Échec de mise en file du canal ${channel} pour l'utilisateur ${user.id} :`, error);
+      logError('app.unhandled', error);
     }
   }
   return items;
@@ -264,7 +293,7 @@ export async function createNotificationForUser(
     const items = await enqueueChannelsForUser(db, user, input);
     await Promise.all(items.map((item) => deliverOutboxItem(db, user, item)));
   } catch (error) {
-    console.error(`[notifications] Échec inattendu de la notification pour l'utilisateur ${user.id} :`, error);
+    logError('app.unhandled', error);
   }
 }
 

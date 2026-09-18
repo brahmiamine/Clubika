@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Plus, Gamepad2, Dumbbell, Trophy } from 'lucide-react';
+import { Plus, Gamepad2, Dumbbell, Trophy, Shield } from 'lucide-react';
 import { AddEventDialog, EventType } from './add-event-dialog';
 
 interface AddEventButtonProps {
@@ -38,6 +38,10 @@ export function AddEventButton({ onEventAdded }: AddEventButtonProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem onClick={() => handleSelectEventType('officiel')}>
+            <Shield className="w-4 h-4 mr-2" />
+            Match officiel
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleSelectEventType('amical')}>
             <Gamepad2 className="w-4 h-4 mr-2" />
             Match amical

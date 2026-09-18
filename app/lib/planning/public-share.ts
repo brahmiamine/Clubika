@@ -1,26 +1,22 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { Match } from '@/types/match';
-import type { PlanningEventSnapshot, PlanningEventType, PlanningRole } from './event-store';
+import { parsePositiveInt } from '@/lib/retention/policy';
+import type { PlanningEventSnapshot, PlanningEventType } from './event-store';
 import type { TeamLogoResolver } from './team-logos';
 
-export interface PublicPlanningOfficial {
-  role: PlanningRole;
-  nom: string;
-}
-
+/**
+ * DTO public (issue #6) : liste blanche calendrier uniquement.
+ * Pas de noms de personnes, téléphones, e-mails, identifiants internes,
+ * convocation, commentaires, rapports ni audit.
+ */
 export interface PublicPlanningItem {
   eventType: PlanningEventType;
   title: string;
   date: string;
   time: string;
-  /** Heure de fin calculée à partir de `time` + `durationMinutes` (null si l'heure de début manque). */
   endTime: string | null;
   durationMinutes: number;
-  location: string | null;
   category: string | null;
-  /** Heure de rendez-vous / convocation, quand elle est renseignée (rencontres). */
-  meetingTime: string | null;
-  /** Champs « rencontre » (matchs officiels et amicaux) — null pour les entraînements et plateaux. */
   competition: string | null;
   homeTeam: string | null;
   awayTeam: string | null;
@@ -29,25 +25,97 @@ export interface PublicPlanningItem {
   venue: 'domicile' | 'extérieur' | null;
   stadium: string | null;
   address: string | null;
-  /** Arbitres officiels renseignés par la source (matchs officiels). */
-  referee: string | null;
-  assistants: string[];
-  /**
-   * Personnes affectées, nom uniquement : le lien public ne transporte jamais de
-   * numéro de téléphone ni d'autre donnée personnelle des affectés.
-   */
-  officials: PublicPlanningOfficial[];
-  /** Prévision à l’heure de l’événement, si la météo est activée. */
   weather?: {
     weatherCode: number;
     temperatureC: number | null;
   } | null;
 }
 
+export const PUBLIC_PLANNING_ITEM_KEYS = [
+  'eventType',
+  'title',
+  'date',
+  'time',
+  'endTime',
+  'durationMinutes',
+  'category',
+  'competition',
+  'homeTeam',
+  'awayTeam',
+  'homeTeamLogo',
+  'awayTeamLogo',
+  'venue',
+  'stadium',
+  'address',
+  'weather',
+] as const;
+
+export const FORBIDDEN_PUBLIC_PLANNING_KEYS = [
+  'officials',
+  'referee',
+  'assistants',
+  'meetingTime',
+  'location',
+  'personId',
+  'personType',
+  'numero',
+  'email',
+  'telephone',
+  'assignments',
+  'clubId',
+  'comments',
+  'rapport',
+  'audit',
+] as const;
+
+const EVENT_TYPE_TITLES: Record<PlanningEventType, string> = {
+  officiel: 'Match officiel',
+  amical: 'Match amical',
+  entrainement: 'Entraînement',
+  plateau: 'Plateau',
+};
+
+const PUBLIC_VENUE_HINT = /stade|gymnase|complexe|terrain|sport|municipal|omnisport|hall des sports/i;
+
 export interface PublicShareScope {
   eventTypes: PlanningEventType[];
   fromDate: string | null;
   toDate: string | null;
+}
+
+/**
+ * Fenêtre d'exposition d'un lien de partage public (issue #14) : réduite de 90 à
+ * 30 jours par défaut pour limiter les conséquences d'un lien transféré ou oublié,
+ * sans présenter cette valeur comme une obligation légale. Configurable par
+ * `PUBLIC_SHARE_MAX_EXPIRY_DAYS` (voir docs/retention.md), plafonnée à l'ancien
+ * maximum historique (90 j) pour qu'une configuration erronée ne puisse jamais
+ * dépasser la fenêtre déjà couverte par le contrat public existant.
+ */
+export const PUBLIC_SHARE_DEFAULT_EXPIRY_DAYS = 7;
+export const PUBLIC_SHARE_MIN_EXPIRY_DAYS = 1;
+export const DEFAULT_PUBLIC_SHARE_MAX_EXPIRY_DAYS = 30;
+export const PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY = 'PUBLIC_SHARE_MAX_EXPIRY_DAYS';
+const HISTORICAL_PUBLIC_SHARE_MAX_EXPIRY_DAYS = 90;
+
+export function publicShareMaxExpiryDays(env: Record<string, string | undefined> = process.env): number {
+  return parsePositiveInt(
+    env[PUBLIC_SHARE_MAX_EXPIRY_DAYS_ENV_KEY],
+    DEFAULT_PUBLIC_SHARE_MAX_EXPIRY_DAYS,
+    HISTORICAL_PUBLIC_SHARE_MAX_EXPIRY_DAYS,
+  );
+}
+
+/**
+ * Normalise une durée de partage brute (`expiryDays` du corps de requête) :
+ * jamais en dessous de 1 jour, jamais au-dessus du maximum configuré, et repli
+ * sur la valeur par défaut (7 j) si la valeur fournie n'est pas exploitable
+ * (absente, non numérique, `NaN`…). Couvre explicitement 0, une valeur
+ * négative, une valeur non numérique, 30 et plus de 30 jours (issue #14).
+ */
+export function clampShareExpiryDays(rawValue: unknown, maxDays: number = publicShareMaxExpiryDays()): number {
+  const parsed = Number(rawValue);
+  if (!Number.isFinite(parsed)) return PUBLIC_SHARE_DEFAULT_EXPIRY_DAYS;
+  return Math.max(PUBLIC_SHARE_MIN_EXPIRY_DAYS, Math.min(Math.round(parsed), maxDays));
 }
 
 export function newShareToken(): string {
@@ -92,32 +160,32 @@ function cleanString(value: unknown): string | null {
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
-function collectOfficials(snapshot: PlanningEventSnapshot): PublicPlanningOfficial[] {
-  const officials: PublicPlanningOfficial[] = [];
-  for (const [role, contacts] of Object.entries(snapshot.assignments ?? {})) {
-    if (!Array.isArray(contacts)) continue;
-    for (const contact of contacts) {
-      const nom = cleanString(contact?.nom);
-      if (nom) officials.push({ role: role as PlanningRole, nom });
-    }
-  }
-  return officials;
+function publicCalendarTitle(item: Pick<PublicPlanningItem, 'eventType' | 'category' | 'homeTeam' | 'awayTeam'>): string {
+  if (item.homeTeam && item.awayTeam) return `${item.homeTeam} – ${item.awayTeam}`;
+  if (item.category) return `${EVENT_TYPE_TITLES[item.eventType]} · ${item.category}`;
+  return EVENT_TYPE_TITLES[item.eventType];
+}
+
+/** Adresse uniquement pour une enceinte sportive officielle, jamais un lieu libre. */
+export function publicSportsVenueAddress(stadium: string | null, address: string | null): string | null {
+  if (!stadium || !address) return null;
+  if (!PUBLIC_VENUE_HINT.test(stadium) && !PUBLIC_VENUE_HINT.test(address)) return null;
+  return address;
 }
 
 export function toPublicPlanningItem(
   snapshot: PlanningEventSnapshot,
   resolveLogos?: TeamLogoResolver,
 ): PublicPlanningItem {
-  const base: PublicPlanningItem = {
+  const category = eventCategory(snapshot);
+  const item: PublicPlanningItem = {
     eventType: snapshot.eventType,
-    title: snapshot.title,
+    title: publicCalendarTitle({ eventType: snapshot.eventType, category, homeTeam: null, awayTeam: null }),
     date: snapshot.date,
     time: snapshot.time,
     endTime: endTimeFromStart(snapshot.time, snapshot.durationMinutes),
     durationMinutes: snapshot.durationMinutes,
-    location: snapshot.location,
-    category: eventCategory(snapshot),
-    meetingTime: null,
+    category,
     competition: null,
     homeTeam: null,
     awayTeam: null,
@@ -126,30 +194,23 @@ export function toPublicPlanningItem(
     venue: null,
     stadium: null,
     address: null,
-    referee: null,
-    assistants: [],
-    officials: collectOfficials(snapshot),
   };
 
   if (isMatchEvent(snapshot)) {
     const match = snapshot.event;
     const logos = resolveLogos?.(match) ?? {};
-    base.meetingTime = cleanString(match.horaireRendezVous);
-    base.competition = cleanString(match.competition) ?? cleanString(match.details?.competition);
-    base.homeTeam = cleanString(match.localTeam);
-    base.awayTeam = cleanString(match.awayTeam);
-    base.homeTeamLogo = cleanString(logos.localTeamLogo);
-    base.awayTeamLogo = cleanString(logos.awayTeamLogo);
-    base.venue = match.venue === 'domicile' || match.venue === 'extérieur' ? match.venue : null;
-    base.stadium = cleanString(match.details?.stadium) ?? snapshot.location;
-    base.address = cleanString(match.details?.address);
-    base.referee = cleanString(match.staff?.referee);
-    base.assistants = [match.staff?.assistant1, match.staff?.assistant2]
-      .map(cleanString)
-      .filter((value): value is string => value !== null);
+    item.competition = cleanString(match.competition) ?? cleanString(match.details?.competition);
+    item.homeTeam = cleanString(match.localTeam);
+    item.awayTeam = cleanString(match.awayTeam);
+    item.homeTeamLogo = cleanString(logos.localTeamLogo);
+    item.awayTeamLogo = cleanString(logos.awayTeamLogo);
+    item.venue = match.venue === 'domicile' || match.venue === 'extérieur' ? match.venue : null;
+    item.stadium = cleanString(match.details?.stadium);
+    item.address = publicSportsVenueAddress(item.stadium, cleanString(match.details?.address));
+    item.title = publicCalendarTitle(item);
   }
 
-  return base;
+  return item;
 }
 
 export function isSnapshotInShareScope(snapshot: PlanningEventSnapshot, scope: PublicShareScope): boolean {

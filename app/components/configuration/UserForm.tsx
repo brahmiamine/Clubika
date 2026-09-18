@@ -11,6 +11,7 @@ import { apiPost, apiPut } from '@/lib/utils/api';
 import type { ClubAccessRole, PlanningFunction } from '@/lib/auth/roles';
 import { AccessRoleFields } from './AccessRoleFields';
 import type { ManagedUser } from '@/app/hooks/useUsers';
+import { PASSWORD_MIN_LENGTH } from '@/lib/auth/password-policy-constants';
 
 interface UserFormProps {
   user?: ManagedUser;
@@ -18,7 +19,6 @@ interface UserFormProps {
 
 interface UserFormState {
   email: string;
-  password: string;
   nom: string;
   telephone: string;
   accessRole: ClubAccessRole;
@@ -29,7 +29,6 @@ interface UserFormState {
 function initialState(user?: ManagedUser): UserFormState {
   return {
     email: user?.email || '',
-    password: '',
     nom: user?.nom || '',
     telephone: user?.telephone || '',
     accessRole: user?.accessRole ?? 'dirigeant',
@@ -42,16 +41,30 @@ export function UserForm({ user }: UserFormProps) {
   const router = useRouter();
   const [form, setForm] = useState<UserFormState>(() => initialState(user));
   const [isSaving, setIsSaving] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+
+  if (user?.closedAt) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Compte fermé</CardTitle>
+          <CardDescription>
+            Ce compte a été anonymisé. L’identité nominative n’est plus disponible et le
+            profil ne peut plus être modifié.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => router.push('/club/utilisateurs')}>Retour à la liste</Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const handleCancel = () => router.push('/club/utilisateurs');
 
   const handleSubmit = async () => {
     if (!form.email.trim() || !form.nom.trim()) {
       toast.error('Email et nom sont requis');
-      return;
-    }
-    if (!user && form.password.length < 8) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
     setIsSaving(true);
@@ -63,21 +76,20 @@ export function UserForm({ user }: UserFormProps) {
           planningFunctions: form.planningFunctions,
           active: form.active,
           telephone: form.telephone,
-          ...(form.password ? { password: form.password } : {}),
         });
         toast.success('Utilisateur modifié');
+        router.push('/club/utilisateurs');
       } else {
-        await apiPost('/api/users', {
-          email: form.email,
-          password: form.password,
-          nom: form.nom,
+        const data = await apiPost<{ url: string }>('/api/invitations', {
+          email: form.email.trim(),
           accessRole: form.accessRole,
           planningFunctions: form.planningFunctions,
-          telephone: form.telephone,
+          personNom: form.nom.trim(),
         });
-        toast.success('Utilisateur créé');
+        const url = data.url.startsWith('http') ? data.url : `${window.location.origin}${data.url}`;
+        setInviteUrl(url);
+        toast.success('Invitation créée — copiez le lien plutôt que de choisir un mot de passe');
       }
-      router.push('/club/utilisateurs');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur inconnue');
     } finally {
@@ -88,9 +100,11 @@ export function UserForm({ user }: UserFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{user ? "Modifier l'utilisateur" : 'Ajouter un utilisateur'}</CardTitle>
+        <CardTitle>{user ? "Modifier l'utilisateur" : 'Inviter un utilisateur'}</CardTitle>
         <CardDescription>
-          {user ? "Modifiez les informations de l'utilisateur" : 'Créez un compte directement (sans passer par une invitation)'}
+          {user
+            ? "Modifiez le rôle et les informations. Le mot de passe ne peut pas être choisi à la place de la personne."
+            : `La prise de contrôle du compte se fait par invitation (lien unique, ${PASSWORD_MIN_LENGTH} caractères minimum à l'inscription).`}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -121,17 +135,6 @@ export function UserForm({ user }: UserFormProps) {
             onChange={(e) => setForm((prev) => ({ ...prev, telephone: e.target.value }))}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="user-password">
-            Mot de passe {user && '(laisser vide pour ne pas changer)'}
-          </Label>
-          <Input
-            id="user-password"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-          />
-        </div>
         <AccessRoleFields
           idPrefix="user"
           accessRole={form.accessRole}
@@ -139,8 +142,6 @@ export function UserForm({ user }: UserFormProps) {
           onAccessRoleChange={(accessRole) => setForm((prev) => ({
             ...prev,
             accessRole,
-            // Un administrateur ne porte pas de fonction terrain : le passage en admin
-            // les retire, le retour en dirigeant repart d'une sélection vide.
             planningFunctions: accessRole === 'admin' ? [] : prev.planningFunctions,
           }))}
           onPlanningFunctionsChange={(planningFunctions) => setForm((prev) => ({ ...prev, planningFunctions }))}
@@ -156,14 +157,22 @@ export function UserForm({ user }: UserFormProps) {
             <Label htmlFor="user-active">Compte actif</Label>
           </div>
         )}
+        {inviteUrl && (
+          <div className="space-y-2">
+            <Label>Lien d&apos;invitation (à copier, jamais un mot de passe choisi pour autrui)</Label>
+            <Input id="user-invite-url" value={inviteUrl} readOnly className="font-mono text-xs" />
+          </div>
+        )}
 
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
           <Button variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
-            Annuler
+            {inviteUrl ? 'Fermer' : 'Annuler'}
           </Button>
-          <Button onClick={handleSubmit} disabled={isSaving} className="w-full sm:w-auto">
-            {isSaving ? 'Enregistrement...' : 'Enregistrer'}
-          </Button>
+          {!inviteUrl && (
+            <Button onClick={handleSubmit} disabled={isSaving} className="w-full sm:w-auto">
+              {isSaving ? 'Enregistrement...' : user ? 'Enregistrer' : 'Envoyer une invitation'}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

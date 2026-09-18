@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet } from '@/lib/utils/api';
 import type { ClubAccessRole, PlanningFunction } from '@/lib/auth/roles';
@@ -12,10 +13,13 @@ export interface ManagedUser {
   planningFunctions: PlanningFunction[];
   active: boolean;
   telephone: string | null;
+  telephoneMasked?: boolean;
   /** Date d'activation du compte ; `null` = profil de dirigeant sans accès (issue #204). */
   claimedAt: string | null;
   /** Vrai si le profil a été activé et peut se connecter. */
   hasAccess: boolean;
+  closedAt: string | null;
+  closureRequestedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,7 +42,7 @@ export function useUsers() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erreur lors du chargement des utilisateurs';
       setError(errorMessage);
-      console.error('Error loading users:', err);
+      logError('app.unhandled', 'Error loading users:', err);
     } finally {
       setIsLoading(false);
     }

@@ -1,10 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./components/providers/theme-provider";
 import { Toaster } from "./components/ui/sonner";
 import { AppThemeSync } from "./components/providers/app-theme-sync";
 import { AuthProvider } from "./components/providers/auth-provider";
+import { AppShell, AppShellMain } from "./components/layout/AppShell";
 import { MobileTabBar } from "./components/layout/MobileTabBar";
 import { PwaProvider } from "./components/providers/pwa-provider";
 import { IncomingNotificationOverlay } from "./components/notifications/IncomingNotificationOverlay";
@@ -22,24 +24,33 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = buildPwaMetadata(resolveAppProductBranding());
 
-export default function RootLayout({
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="fr" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AppThemeSync />
-          <AuthProvider>
-            <PwaProvider>
-              {children}
-              <MobileTabBar />
-              <IncomingNotificationOverlay />
-            </PwaProvider>
-          </AuthProvider>
-          <Toaster />
+        <ThemeProvider nonce={nonce} attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <AppShell>
+            <AppThemeSync />
+            <AuthProvider>
+              <PwaProvider>
+                <AppShellMain>{children}</AppShellMain>
+                <MobileTabBar />
+                <IncomingNotificationOverlay />
+              </PwaProvider>
+            </AuthProvider>
+            <Toaster />
+          </AppShell>
         </ThemeProvider>
       </body>
     </html>

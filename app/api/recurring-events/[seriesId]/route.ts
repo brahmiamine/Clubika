@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { requireRole } from '@/lib/auth/require';
@@ -134,7 +135,7 @@ export async function PUT(
     return NextResponse.json({ success: true, updated });
   } catch (error) {
     if (error instanceof PlanningConcurrencyError) return NextResponse.json({ error: error.message }, { status: 409 });
-    console.error('Error updating recurring series:', error);
+    logError('app.unhandled', 'Error updating recurring series:', error);
     return NextResponse.json({ error: 'Impossible de modifier la série' }, { status: 500 });
   }
 }
@@ -247,7 +248,7 @@ export async function DELETE(
     if (error instanceof PlanningConcurrencyError) {
       return NextResponse.json({ error: error.message }, { status: 409 });
     }
-    console.error('Error deleting recurring series:', error);
+    logError('app.unhandled', 'Error deleting recurring series:', error);
     return NextResponse.json({ error: 'Impossible de supprimer la série' }, { status: 500 });
   }
 }

@@ -12,15 +12,19 @@ function icalLinkRequest(token?: string) {
   });
 }
 
-describe.skipIf(!dbAvailable)('GET /api/planning/ical-link (issue #382)', () => {
-  it('renvoie l’URL iCal pour la session courante sans exposer le token dans /api/auth/me', async () => {
+describe.skipIf(!dbAvailable)('GET /api/planning/ical-link (issue #382, durci par #13)', () => {
+  it('renvoie la date de création sans exposer le jeton ni son empreinte', async () => {
     const { token, user, cleanup } = await createTestUserAndSession('dirigeant', {}, ['arbitre_club']);
     try {
       const response = await GET(icalLinkRequest(token));
       expect(response.status).toBe(200);
-      const body = await response.json() as { feedUrl: string };
-      expect(body.feedUrl).toBe(`http://localhost/api/ical/${user.icalToken}`);
+      const body = await response.json() as { hasToken: boolean; createdAt: string | null };
+      expect(body.hasToken).toBe(true);
+      expect(body.createdAt).toBeTruthy();
+      expect(body).not.toHaveProperty('feedUrl');
       expect(body).not.toHaveProperty('icalToken');
+      expect(body).not.toHaveProperty('icalTokenHash');
+      expect(JSON.stringify(body)).not.toContain(user.icalToken);
     } finally {
       await cleanup();
     }
@@ -31,15 +35,15 @@ describe.skipIf(!dbAvailable)('GET /api/planning/ical-link (issue #382)', () => 
     expect(response.status).toBe(401);
   });
 
-  it('ne permet pas d’obtenir le lien d’un autre utilisateur', async () => {
+  it('ne renvoie que le statut du compte courant, jamais celui d’un autre utilisateur', async () => {
     const userA = await createTestUserAndSession('dirigeant', {}, ['arbitre_club']);
     const userB = await createTestUserAndSession('dirigeant', {}, ['encadrant']);
     try {
       const response = await GET(icalLinkRequest(userA.token));
       expect(response.status).toBe(200);
-      const body = await response.json() as { feedUrl: string };
-      expect(body.feedUrl).toContain(`/api/ical/${userA.user.icalToken}`);
-      expect(body.feedUrl).not.toContain(userB.user.icalToken);
+      const body = await response.json() as { hasToken: boolean };
+      expect(body.hasToken).toBe(true);
+      expect(JSON.stringify(body)).not.toContain(userB.user.icalToken);
     } finally {
       await userA.cleanup();
       await userB.cleanup();

@@ -1,9 +1,11 @@
+import { logError } from '@/lib/observability/log';
 import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { IsNull, type EntityManager } from 'typeorm';
 import { getDb } from '@/lib/db';
 import type { PasswordResetTokenEntity, UserEntity } from '@/lib/db/schemas';
 import { hashPassword } from '@/lib/auth/password';
+import { assertPasswordPolicy } from '@/lib/auth/password-policy';
 import { revokeAllSessionsForUser } from '@/lib/auth/session';
 import { hasAccountAccess } from '@/lib/auth/placeholder-account';
 
@@ -40,10 +42,8 @@ async function confirmPasswordResetInTransaction(
   }
 
   const user = await userRepo.findOneBy({ id: reset.userId });
-  // Un token émis avant la désactivation ou pour un profil sans accès (issue #204)
-  // ne doit plus permettre de définir un mot de passe.
   if (!user || !user.active || !hasAccountAccess(user)) {
-    throw new PasswordResetConfirmError(404, 'Compte indisponible');
+    throw new PasswordResetConfirmError(410, 'Ce lien est invalide ou expiré');
   }
 
   user.passwordHash = await hashPassword(newPassword);
@@ -70,10 +70,11 @@ export async function POST(request: NextRequest) {
     const token = typeof body.token === 'string' ? body.token.trim() : '';
     const newPassword = typeof body.newPassword === 'string' ? body.newPassword : '';
     if (!/^[a-f0-9]{64}$/.test(token)) {
-      return NextResponse.json({ error: 'Lien de réinitialisation invalide' }, { status: 400 });
+      return NextResponse.json({ error: 'Ce lien est invalide ou expiré' }, { status: 400 });
     }
-    if (newPassword.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, { status: 400 });
+    const policyError = await assertPasswordPolicy(newPassword);
+    if (policyError) {
+      return NextResponse.json({ error: policyError }, { status: 400 });
     }
 
     const db = await getDb();
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof PasswordResetConfirmError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error('Password reset confirmation failed:', error);
+    logError('app.unhandled', 'Password reset confirmation failed:', error);
     return NextResponse.json({ error: 'Impossible de réinitialiser le mot de passe' }, { status: 500 });
   }
 }

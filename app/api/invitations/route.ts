@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { IsNull, MoreThan } from 'typeorm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
@@ -6,9 +7,21 @@ import { requireRole } from '@/lib/auth/require';
 import { isClubAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
 import { hasAccountAccess } from '@/lib/auth/placeholder-account';
 import { setCurrentClubId } from '@/lib/auth/club-context';
-import { hashInvitationToken, newInvitationToken } from '@/lib/auth/invitation-tokens';
+import {
+  DEFAULT_INVITATION_EXPIRES_IN_DAYS,
+  hashInvitationToken,
+  MAX_INVITATION_EXPIRES_IN_DAYS,
+  newInvitationToken,
+} from '@/lib/auth/invitation-tokens';
 import { isDuplicateEntryError } from '@/lib/db/duplicate-entry';
 import { BodyValidator, parseJsonBody, RequestValidationError } from '@/lib/validation/request';
+import { resolveCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
+import {
+  inferCategoryFromPlanningFunctions,
+  loadContactMeta,
+  upsertContactMeta,
+  recordNoticeProof,
+} from '@/lib/non-account-contacts/meta';
 
 function pendingInvitationEmailKey(clubId: string, email: string | null): string | null {
   return email ? `${clubId}:${email.toLowerCase()}` : null;
@@ -93,7 +106,7 @@ export async function GET(request: NextRequest) {
     });
     return NextResponse.json({ invitations: invitations.map(serializeInvitation) });
   } catch (error) {
-    console.error('Error reading invitations from DB:', error);
+    logError('app.unhandled', 'Error reading invitations from DB:', error);
     return NextResponse.json({ error: 'Failed to load invitations' }, { status: 500 });
   }
 }
@@ -111,7 +124,7 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = v.string('email', { required: false, maxLength: 255 })?.toLowerCase() ?? null;
     const personNom = v.string('personNom', { required: false, maxLength: 255 });
     const personId = v.number('personId', { required: false, min: 1 });
-    const expiresInDays = v.number('expiresInDays', { required: false, min: 1, max: 365 });
+    const expiresInDays = v.number('expiresInDays', { required: false, min: 1, max: MAX_INVITATION_EXPIRES_IN_DAYS });
     v.throwIfInvalid();
 
     if (!isClubAccessRole(accessRole)) {
@@ -182,7 +195,7 @@ export async function POST(request: NextRequest) {
       ? normalizePlanningFunctions(targetProfile.planningFunctions)
       : requestedFunctions;
 
-    const days = expiresInDays && expiresInDays > 0 ? expiresInDays : 7;
+    const days = expiresInDays && expiresInDays > 0 ? expiresInDays : DEFAULT_INVITATION_EXPIRES_IN_DAYS;
     const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
     const rawToken = newInvitationToken();
@@ -199,18 +212,38 @@ export async function POST(request: NextRequest) {
       personType: targetProfile ? 'user' : null,
       personId: targetProfile?.id ?? null,
       createdByUserId: auth.user.id,
+      createdByPlatformAdminId: null,
       expiresAt,
       usedAt: null,
       usedByUserId: null,
       createdAt: new Date(),
+      validationContextHash: null,
+      validationContextExpiresAt: null,
     };
 
     await repo.save(invitation);
 
+    if (targetProfile) {
+      const existingMeta = await loadContactMeta(db, targetProfile.id);
+      if (!existingMeta) {
+        await upsertContactMeta(db, {
+          userId: targetProfile.id,
+          clubId: auth.user.clubId,
+          category: inferCategoryFromPlanningFunctions(targetProfile.planningFunctions),
+          provenance: null,
+          purpose: 'organisation_planning',
+          recordedByUserId: auth.user.id,
+        });
+      }
+      await recordNoticeProof(db, targetProfile.id, auth.user.clubId, 'invitation');
+    }
+
+    const path = `/inscription/${rawToken}`;
+    const origin = resolveCanonicalPublicOrigin();
     return NextResponse.json({
       success: true,
       invitation: serializeInvitation(invitation),
-      url: `/inscription/${rawToken}`,
+      url: origin ? `${origin}${path}` : path,
     });
   } catch (error) {
     if (error instanceof RequestValidationError) {
@@ -222,7 +255,7 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
-    console.error('Error creating invitation in DB:', error);
+    logError('app.unhandled', 'Error creating invitation in DB:', error);
     return NextResponse.json({ error: 'Failed to create invitation' }, { status: 500 });
   }
 }

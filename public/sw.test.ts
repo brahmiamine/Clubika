@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 
-type PushListener = (event: {
+type SwListener = (event: {
   data?: { json: () => unknown };
   notification?: { close: () => void; data?: { url?: string } };
   waitUntil: (promise: Promise<void>) => void;
@@ -10,22 +10,24 @@ type PushListener = (event: {
 
 function loadServiceWorker(self: Record<string, unknown>) {
   const source = readFileSync(new URL('./sw.js', import.meta.url), 'utf8');
-  runInNewContext(source, { self, fetch: self.fetch ?? vi.fn(), console, URL });
-  const listeners = self.__listeners as Map<string, PushListener>;
+  runInNewContext(source, { self, fetch: self.fetch ?? vi.fn(), console, URL, caches: self.caches, Date });
+  const listeners = self.__listeners as Map<string, SwListener>;
   return {
     push: listeners.get('push'),
     click: listeners.get('notificationclick'),
+    activate: listeners.get('activate'),
   };
 }
 
 function createSelf(overrides: Record<string, unknown> = {}) {
-  const listeners = new Map<string, PushListener>();
+  const listeners = new Map<string, SwListener>();
   return {
     location: { origin: 'https://club.example' },
-    addEventListener: (name: string, listener: PushListener) => listeners.set(name, listener),
+    addEventListener: (name: string, listener: SwListener) => listeners.set(name, listener),
     skipWaiting: vi.fn(),
     clients: { claim: vi.fn(), matchAll: vi.fn(async () => []), openWindow: vi.fn() },
     registration: { showNotification: vi.fn(async (..._args: unknown[]) => undefined) },
+    caches: { keys: vi.fn(async () => []), delete: vi.fn(async () => true), open: vi.fn(async () => ({ add: vi.fn(), put: vi.fn() })) },
     fetch: vi.fn(),
     __listeners: listeners,
     ...overrides,
@@ -38,6 +40,9 @@ describe('service worker installability', () => {
     expect(source).toContain("addEventListener('fetch'");
     expect(source).toContain('event.respondWith');
     expect(source).toContain("const OFFLINE_URL = '/offline'");
+    expect(source).toContain("if (event.request.method !== 'GET') return");
+    expect(source).toContain("url.pathname.startsWith('/inscription/')");
+    expect(source).toContain("url.pathname.startsWith('/api/invitations/')");
   });
 });
 

@@ -1,9 +1,15 @@
-import { randomBytes } from 'node:crypto';
+import { logError } from '@/lib/observability/log';
+import { IsNull, MoreThan } from 'typeorm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { ClubTenantEntity, UserEntity } from '@/lib/db/schemas';
+import { ClubTenantEntity, InvitationEntity, UserEntity } from '@/lib/db/schemas';
 import { requirePlatformAuth } from '@/lib/auth/platform-require';
-import { hashPassword } from '@/lib/auth/password';
+import { requireRecentPlatformMfa } from '@/lib/auth/recent-auth';
+import { hashInvitationToken, newInvitationToken } from '@/lib/auth/invitation-tokens';
+import { resolveCanonicalPublicOrigin } from '@/lib/auth/canonical-public-origin';
+import { isDuplicateEntryError } from '@/lib/db/duplicate-entry';
+import { recordPrivilegedAuthEvent } from '@/lib/auth/privileged-auth-journal';
+import { rejectIfClubNotWritable } from '@/lib/tenant-offboarding/writable';
 
 function serializeAdmin(user: UserEntity) {
   return {
@@ -13,6 +19,10 @@ function serializeAdmin(user: UserEntity) {
     active: user.active,
     createdAt: user.createdAt,
   };
+}
+
+function pendingInvitationEmailKey(clubId: string, email: string): string {
+  return `${clubId}:${email.toLowerCase()}`;
 }
 
 async function listAdmins(clubId: string) {
@@ -41,7 +51,7 @@ export async function GET(
     const admins = await listAdmins(id);
     return NextResponse.json({ admins: admins.map(serializeAdmin) });
   } catch (error) {
-    console.error('Error listing club admins:', error);
+    logError('app.unhandled', 'Error listing club admins:', error);
     return NextResponse.json({ error: 'Impossible de charger les administrateurs' }, { status: 500 });
   }
 }
@@ -52,9 +62,13 @@ export async function POST(
 ) {
   const auth = await requirePlatformAuth(request);
   if ('error' in auth) return auth.error;
+  const stepUp = await requireRecentPlatformMfa(request, auth.admin);
+  if ('error' in stepUp) return stepUp.error;
 
   try {
     const { id } = params instanceof Promise ? await params : params;
+    const blocked = await rejectIfClubNotWritable(await getDb(), id);
+    if (blocked) return blocked;
     const db = await getDb();
     const clubRepo = db.getRepository<ClubTenantEntity>('ClubTenant');
     const club = await clubRepo.findOneBy({ id });
@@ -62,57 +76,84 @@ export async function POST(
       return NextResponse.json({ error: 'Club non trouvé' }, { status: 404 });
     }
 
-    const body = await request.json();
-    const { email, password, nom } = body;
-
-    if (!email || typeof email !== 'string' || email.trim() === '') {
+    const body = await request.json() as { email?: unknown; password?: unknown; nom?: unknown };
+    if (typeof body.password === 'string' && body.password.length > 0) {
+      return NextResponse.json({
+        error: 'La plateforme ne définit pas le mot de passe d\'un administrateur de club. Une invitation expirante est envoyée.',
+      }, { status: 400 });
+    }
+    const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const nom = typeof body.nom === 'string' ? body.nom.trim() : '';
+    if (!email) {
       return NextResponse.json({ error: 'L\'email est requis' }, { status: 400 });
     }
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, { status: 400 });
-    }
-    if (!nom || typeof nom !== 'string' || nom.trim() === '') {
+    if (!nom) {
       return NextResponse.json({ error: 'Le nom est requis' }, { status: 400 });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
     const userRepo = db.getRepository<UserEntity>('User');
-    // Unicité par club, et non globale (issue #266) : la même personne peut déjà
-    // administrer un autre club avec cette adresse, seul le club ciblé compte ici.
-    if (await userRepo.findOneBy({ email: normalizedEmail, clubId: id })) {
+    if (await userRepo.findOneBy({ email, clubId: id })) {
       return NextResponse.json({ error: 'Cet email est déjà utilisé dans ce club' }, { status: 409 });
     }
 
-    const passwordHash = await hashPassword(password);
+    const invitationRepo = db.getRepository<InvitationEntity>('Invitation');
+    const pendingEmailKey = pendingInvitationEmailKey(id, email);
+    const duplicate = await invitationRepo.findOne({
+      where: {
+        pendingEmailKey,
+        usedAt: IsNull(),
+        expiresAt: MoreThan(new Date()),
+      },
+    });
+    if (duplicate) {
+      return NextResponse.json({ error: 'Une invitation en attente existe déjà pour cet email dans ce club' }, { status: 409 });
+    }
+
+    const rawToken = newInvitationToken();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     try {
-      await userRepo.save({
+      await invitationRepo.save({
+        id: hashInvitationToken(rawToken),
         clubId: id,
-        email: normalizedEmail,
-        passwordHash,
-        nom: nom.trim(),
-        // Modèle #209 : un administrateur de club créé par la plateforme porte le
-        // rôle d'accès admin (et non l'ancien tableau `roles`), sans fonction.
+        email,
+        pendingEmailKey,
         accessRole: 'admin',
         planningFunctions: [],
-        active: true,
-        claimedAt: new Date(),
-        icalToken: randomBytes(24).toString('hex'),
+        personNom: nom,
+        personType: null,
+        personId: null,
+        createdByUserId: null,
+        createdByPlatformAdminId: auth.admin.id,
+        expiresAt,
+        usedAt: null,
+        usedByUserId: null,
+        createdAt: new Date(),
       });
     } catch (error) {
-      if (
-        error && typeof error === 'object'
-        && (('code' in error && (error as { code?: unknown }).code === 'ER_DUP_ENTRY')
-          || ('errno' in error && (error as { errno?: unknown }).errno === 1062))
-      ) {
-        return NextResponse.json({ error: 'Cet email est déjà utilisé dans ce club' }, { status: 409 });
+      if (isDuplicateEntryError(error)) {
+        return NextResponse.json({ error: 'Une invitation en attente existe déjà pour cet email dans ce club' }, { status: 409 });
       }
       throw error;
     }
 
+    await recordPrivilegedAuthEvent(db, {
+      action: 'platform-club-admin-invite',
+      actorType: 'platform',
+      actorId: auth.admin.id,
+      clubId: id,
+      email,
+    });
+
+    const path = `/inscription/${rawToken}`;
+    const origin = resolveCanonicalPublicOrigin();
     const admins = await listAdmins(id);
-    return NextResponse.json({ success: true, admins: admins.map(serializeAdmin) });
+    return NextResponse.json({
+      success: true,
+      admins: admins.map(serializeAdmin),
+      invitationUrl: origin ? `${origin}${path}` : path,
+    });
   } catch (error) {
-    console.error('Error creating club admin:', error);
-    return NextResponse.json({ error: 'Impossible de créer l\'administrateur' }, { status: 500 });
+    logError('app.unhandled', 'Error inviting club admin:', error);
+    return NextResponse.json({ error: 'Impossible de créer l\'invitation administrateur' }, { status: 500 });
   }
 }

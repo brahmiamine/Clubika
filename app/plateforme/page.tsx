@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -22,6 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
   Database,
+  FileWarning,
   Palette,
   Plus,
   Save,
@@ -32,6 +34,7 @@ import {
 import { DEFAULT_APP_SETTINGS } from '@/lib/settings';
 import { apiGet, apiPatch, apiPost } from '@/lib/utils/api';
 import { OpponentClubsSection } from '@/app/components/plateforme/OpponentClubsSection';
+import { ActiveSessionsCard } from '@/app/components/profile/ActiveSessionsCard';
 
 interface PlatformAdmin {
   id: number;
@@ -51,6 +54,8 @@ interface ClubRow {
   active: boolean;
   matchesUrlKey: string;
   scraperClubName: string;
+  offboardingStatus?: string;
+  legalHoldActive?: boolean;
   createdAt: string;
 }
 
@@ -89,8 +94,8 @@ export default function PlatformDashboardPage() {
 
   const [newAdminClubId, setNewAdminClubId] = useState<string | null>(null);
   const [newAdminEmail, setNewAdminEmail] = useState('');
-  const [newAdminPassword, setNewAdminPassword] = useState('');
   const [newAdminNom, setNewAdminNom] = useState('');
+  const [newAdminInviteUrl, setNewAdminInviteUrl] = useState<string | null>(null);
   const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
 
   const loadClubs = useCallback(async () => {
@@ -255,16 +260,18 @@ export default function PlatformDashboardPage() {
     if (!newAdminClubId) return;
     setIsCreatingAdmin(true);
     try {
-      await apiPost(`/api/plateforme/clubs/${newAdminClubId}/admins`, {
+      const data = await apiPost<{ invitationUrl?: string }>(`/api/plateforme/clubs/${newAdminClubId}/admins`, {
         email: newAdminEmail.trim(),
-        password: newAdminPassword,
         nom: newAdminNom.trim(),
       });
-      toast.success('Administrateur créé');
       const clubId = newAdminClubId;
-      setNewAdminClubId(null);
+      toast.success('Invitation administrateur créée');
+      setNewAdminInviteUrl(
+        data.invitationUrl
+          ? (data.invitationUrl.startsWith('http') ? data.invitationUrl : `${window.location.origin}${data.invitationUrl}`)
+          : null,
+      );
       setNewAdminEmail('');
-      setNewAdminPassword('');
       setNewAdminNom('');
       await loadAdmins(clubId);
     } catch (error) {
@@ -312,6 +319,17 @@ export default function PlatformDashboardPage() {
           </div>
         )}
         <SectionCard
+          icon={<ShieldCheck />}
+          title="Sessions de la plateforme"
+          description="Révoquez un appareil ou toutes les autres sessions administrateur."
+        >
+          <ActiveSessionsCard
+            listUrl="/api/plateforme/sessions"
+            revokeOthersUrl="/api/plateforme/sessions/revoke-others"
+            revokeUrl={(id) => `/api/plateforme/sessions/${encodeURIComponent(id)}`}
+          />
+        </SectionCard>
+        <SectionCard
           icon={<Building2 />}
           title="Clubs"
           description="Gérez les tenants et leur source de scraping."
@@ -350,11 +368,22 @@ export default function PlatformDashboardPage() {
                             <p className="flex items-center gap-2 truncate font-medium text-foreground">
                               {club.name}
                               {!club.active && <StatusPill tone="danger">Désactivé</StatusPill>}
+                              {club.offboardingStatus === 'frozen' && <StatusPill tone="warning">Gelé</StatusPill>}
+                              {club.offboardingStatus === 'purged' && <StatusPill tone="danger">Supprimé</StatusPill>}
+                              {club.legalHoldActive && <StatusPill tone="danger">Hold</StatusPill>}
                             </p>
                             <p className="truncate font-mono text-sm text-muted-foreground">{club.id}</p>
                           </div>
                         </button>
                         <div className="flex items-center gap-2 shrink-0">
+                          <Link
+                            href={`/plateforme/offboarding/${encodeURIComponent(club.id)}`}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-secondary-soft hover:text-foreground"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <FileWarning className="h-3.5 w-3.5" />
+                            Fin de contrat
+                          </Link>
                           <Label htmlFor={`club-active-${club.id}`} className="text-xs text-muted-foreground">
                             Actif
                           </Label>
@@ -429,7 +458,7 @@ export default function PlatformDashboardPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => setNewAdminClubId(club.id)}
+                                onClick={() => { setNewAdminInviteUrl(null); setNewAdminClubId(club.id); }}
                               >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Nouvel administrateur
@@ -631,12 +660,12 @@ export default function PlatformDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={newAdminClubId !== null} onOpenChange={(open) => !open && setNewAdminClubId(null)}>
+      <Dialog open={newAdminClubId !== null} onOpenChange={(open) => { if (!open) { setNewAdminClubId(null); setNewAdminInviteUrl(null); } }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nouvel administrateur</DialogTitle>
+            <DialogTitle>Inviter un administrateur</DialogTitle>
             <DialogDescription>
-              Créez un compte administrateur pour ce club.
+              Un lien d&apos;invitation unique, expirant et révocable est généré. Vous ne choisissez pas le mot de passe.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -659,21 +688,16 @@ export default function PlatformDashboardPage() {
                 disabled={isCreatingAdmin}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-admin-password">Mot de passe</Label>
-              <Input
-                id="new-admin-password"
-                type="password"
-                value={newAdminPassword}
-                onChange={(event) => setNewAdminPassword(event.target.value)}
-                disabled={isCreatingAdmin}
-              />
-              <p className="text-xs text-muted-foreground">Au moins 8 caractères.</p>
-            </div>
+            {newAdminInviteUrl && (
+              <div className="space-y-2">
+                <Label htmlFor="new-admin-invite">Lien d&apos;invitation</Label>
+                <Input id="new-admin-invite" value={newAdminInviteUrl} readOnly className="font-mono text-xs" />
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewAdminClubId(null)} disabled={isCreatingAdmin}>
-              Annuler
+            <Button variant="outline" onClick={() => { setNewAdminClubId(null); setNewAdminInviteUrl(null); }} disabled={isCreatingAdmin}>
+              Fermer
             </Button>
             <Button
               onClick={handleCreateAdmin}
@@ -681,10 +705,9 @@ export default function PlatformDashboardPage() {
                 isCreatingAdmin
                 || !newAdminNom.trim()
                 || !newAdminEmail.trim()
-                || newAdminPassword.length < 8
               }
             >
-              {isCreatingAdmin ? 'Création...' : 'Créer'}
+              {isCreatingAdmin ? 'Création...' : 'Inviter'}
             </Button>
           </DialogFooter>
         </DialogContent>

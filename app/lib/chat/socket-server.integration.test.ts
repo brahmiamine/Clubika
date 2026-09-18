@@ -265,7 +265,84 @@ describe.skipIf(!dbAvailable)('Socket.IO chat integration', () => {
     }
   });
 
-  it('rejects chat:delete from a non-admin without persisting any change', async () => {
+  it('lets a non-admin author delete their own message over chat:delete; broadcast to all participants (issue #10)', async () => {
+    const admin = await createTestUserAndSession('admin', { clubId: 'afp' });
+    const member = await createTestUserAndSession('dirigeant', { clubId: 'afp' }, ['arbitre_club']);
+    const db = await getDb();
+    const adminSession = await getSessionUser(admin.token);
+    const room = await createChannel(db, adminSession!, { name: 'Suppression auteur' }, [member.user.id]);
+    const httpServer = createServer((_request, response) => {
+      response.writeHead(404).end();
+    });
+    const socketServer = attachChatSocketServer(httpServer);
+
+    try {
+      await new Promise<void>((resolve) => httpServer.listen(0, '127.0.0.1', resolve));
+      const address = httpServer.address() as AddressInfo;
+      const origin = `http://127.0.0.1:${address.port}`;
+      const [adminSocket, memberSocket] = await Promise.all([
+        connectClient(origin, admin.token),
+        connectClient(origin, member.token),
+      ]);
+      sockets.push(adminSocket, memberSocket);
+
+      const command = {
+        roomId: room.id,
+        clientMessageId: '550e8400-e29b-41d4-a716-446655440079',
+        content: 'Mon message à moi',
+      };
+      const adminReceivedOriginal = new Promise<ChatMessageDto>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Original broadcast timeout')), 5_000);
+        adminSocket.once('chat:message', (message: ChatMessageDto) => {
+          clearTimeout(timeout);
+          resolve(message);
+        });
+      });
+      const sendAck = await new Promise<SendAcknowledgement>((resolve) => {
+        memberSocket.emit('chat:send', command, resolve);
+      });
+      expect(sendAck.ok).toBe(true);
+      const messageId = sendAck.message!.id;
+      await adminReceivedOriginal;
+
+      const adminReceivedDeletion = new Promise<ChatMessageDto>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Deletion broadcast timeout')), 5_000);
+        adminSocket.once('chat:message', (message: ChatMessageDto) => {
+          clearTimeout(timeout);
+          resolve(message);
+        });
+      });
+
+      // L'auteur (non-admin) supprime son propre message, pas l'admin.
+      const deleteAck = await new Promise<SendAcknowledgement>((resolve) => {
+        memberSocket.emit('chat:delete', { roomId: room.id, messageId }, resolve);
+      });
+      expect(deleteAck.ok).toBe(true);
+      expect(deleteAck.message?.content).toBe('');
+      expect(deleteAck.message?.deletedAt).not.toBeNull();
+
+      const broadcast = await adminReceivedDeletion;
+      expect(broadcast.id).toBe(messageId);
+      expect(broadcast.content).toBe('');
+      expect(broadcast.deletedAt).not.toBeNull();
+
+      const persisted = await db.getRepository('ChatMessage').findOneBy({ id: messageId });
+      expect(persisted?.content).toBe('');
+      expect(persisted?.deletedAt).not.toBeNull();
+    } finally {
+      socketServer.stopSessionRevocationListener();
+      await new Promise<void>((resolve) => socketServer.io.close(() => resolve()));
+      if (httpServer.listening) await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+      await db.getRepository('ChatReadState').delete({ roomId: room.id });
+      await db.getRepository('ChatMessage').delete({ roomId: room.id });
+      await db.getRepository('ChatParticipant').delete({ roomId: room.id });
+      await db.getRepository('ChatRoom').delete({ id: room.id });
+      await admin.cleanup();
+      await member.cleanup();
+    }
+  });
+
+  it('rejects chat:delete from a non-admin who is not the author, without persisting any change', async () => {
     const admin = await createTestUserAndSession('admin', { clubId: 'afp' });
     const member = await createTestUserAndSession('dirigeant', { clubId: 'afp' }, ['arbitre_club']);
     const db = await getDb();
@@ -658,6 +735,49 @@ describe.skipIf(!dbAvailable)('Socket.IO chat integration', () => {
       await db.getRepository('MatchOfficial').delete({ id: eventId, clubId });
       await admin.cleanup();
       await viewer.cleanup();
+    }
+  });
+
+  it('refuse une connexion WebSocket d’origine tierce', async () => {
+    const user = await createTestUserAndSession('dirigeant', { clubId: 'afp' });
+    const httpServer = createServer();
+    const socketServer = attachChatSocketServer(httpServer);
+    await new Promise<void>((resolve) => httpServer.listen(0, '127.0.0.1', resolve));
+    const address = httpServer.address() as AddressInfo;
+    const origin = `http://127.0.0.1:${address.port}`;
+    try {
+      await expect(new Promise<void>((resolve, reject) => {
+        const socket = createClient(origin, {
+          autoConnect: false,
+          path: '/socket.io',
+          transports: ['websocket'],
+          reconnection: false,
+          extraHeaders: {
+            Cookie: `${SESSION_COOKIE_NAME}=${user.token}`,
+            Origin: 'https://evil.example',
+          },
+        });
+        const timeout = setTimeout(() => {
+          socket.disconnect();
+          reject(new Error('expected cross-origin handshake to fail'));
+        }, 5_000);
+        socket.once('connect', () => {
+          clearTimeout(timeout);
+          socket.disconnect();
+          reject(new Error('cross-origin socket connected'));
+        });
+        socket.once('connect_error', () => {
+          clearTimeout(timeout);
+          socket.disconnect();
+          resolve();
+        });
+        socket.connect();
+      })).resolves.toBeUndefined();
+    } finally {
+      socketServer.stopSessionRevocationListener();
+      await new Promise<void>((resolve) => socketServer.io.close(() => resolve()));
+      if (httpServer.listening) await new Promise<void>((resolve) => httpServer.close(() => resolve()));
+      await user.cleanup();
     }
   });
 });

@@ -1,0 +1,43 @@
+# Dependabot (issue #37). Les PR déclenchent la CI existante (lint/tests/build).
+# Lots groupés : mineurs/patch ensemble ; les majeures restent isolées.
+# Délais de correction : voir security/README.md (critical 7 j, high 14 j).
+
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 8
+    groups:
+      production-minor-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+      dev-minor-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 4
+    commit-message:
+      prefix: "chore(ci)"
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "chore(docker)"

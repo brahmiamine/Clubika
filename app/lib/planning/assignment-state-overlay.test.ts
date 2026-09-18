@@ -59,9 +59,9 @@ describe('applyAssignmentStatesToSnapshots', () => {
     expect(hydrated.assignments.encadrant[0]).toMatchObject({
       status: 'declined',
       declineReason: 'personal',
-      declineComment: 'Indisponible',
       reminderCount: 1,
     });
+    expect(hydrated.assignments.encadrant[0]).not.toHaveProperty('declineComment');
     expect((hydrated.event as { encadrants?: unknown[] }).encadrants?.[0]).toMatchObject({
       status: 'declined',
     });

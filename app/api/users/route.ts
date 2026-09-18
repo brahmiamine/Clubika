@@ -1,27 +1,15 @@
-import { randomBytes } from 'node:crypto';
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { UserEntity } from '@/lib/db/schemas';
 import { requireRole } from '@/lib/auth/require';
-import { hashPassword } from '@/lib/auth/password';
+import { UNUSABLE_PASSWORD_HASH } from '@/lib/auth/password';
 import { normalizeAccessRole, normalizePlanningFunctions } from '@/lib/auth/roles';
 import { setCurrentClubId } from '@/lib/auth/club-context';
+import { serializeManagedUser, wantsRevealedPhone } from '@/lib/non-account-contacts/serialize-user';
 
-function serializeUser(user: UserEntity) {
-  return {
-    id: user.id,
-    email: user.email,
-    nom: user.nom,
-    accessRole: user.accessRole,
-    planningFunctions: user.planningFunctions,
-    active: user.active,
-    telephone: user.telephone,
-    // Issue #204 : un profil sans accès (jamais activé) n'est pas un compte actif.
-    claimedAt: user.claimedAt,
-    hasAccess: user.claimedAt != null,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
-  };
+function serializeUser(user: UserEntity, revealPhone = false) {
+  return serializeManagedUser(user, { revealPhone });
 }
 
 export async function GET(request: NextRequest) {
@@ -33,13 +21,12 @@ export async function GET(request: NextRequest) {
     const db = await getDb();
     const repo = db.getRepository<UserEntity>('User');
     const users = await repo.find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
-    // ?sansAcces=1 : ne retourne que les profils de dirigeants non réclamés,
-    // pour permettre à une invitation de cibler un profil existant (issue #204).
+    const revealPhone = wantsRevealedPhone(request.url);
     const unclaimedOnly = new URL(request.url).searchParams.get('sansAcces') === '1';
     const visible = unclaimedOnly ? users.filter((user) => user.claimedAt == null) : users;
-    return NextResponse.json({ users: visible.map(serializeUser) });
+    return NextResponse.json({ users: visible.map((user) => serializeUser(user, revealPhone)) });
   } catch (error) {
-    console.error('Error reading users from DB:', error);
+    logError('app.unhandled', 'Error reading users from DB:', error);
     return NextResponse.json({ error: 'Failed to load users' }, { status: 500 });
   }
 }
@@ -55,11 +42,13 @@ export async function POST(request: NextRequest) {
     const accessRole = normalizeAccessRole(body.accessRole);
     const planningFunctions = normalizePlanningFunctions(body.planningFunctions);
 
+    if (typeof password === 'string' && password.length > 0) {
+      return NextResponse.json({
+        error: 'Un administrateur ne peut pas définir le mot de passe d\'un tiers. Envoyez une invitation.',
+      }, { status: 400 });
+    }
     if (!email || typeof email !== 'string' || email.trim() === '') {
       return NextResponse.json({ error: 'L\'email est requis' }, { status: 400 });
-    }
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return NextResponse.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, { status: 400 });
     }
     if (!nom || typeof nom !== 'string' || nom.trim() === '') {
       return NextResponse.json({ error: 'Le nom est requis' }, { status: 400 });
@@ -74,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Un utilisateur avec cet email existe déjà dans ce club' }, { status: 400 });
     }
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = UNUSABLE_PASSWORD_HASH;
     await repo.save({
       clubId: auth.user.clubId,
       email: normalizedEmail,
@@ -83,16 +72,18 @@ export async function POST(request: NextRequest) {
       accessRole,
       planningFunctions,
       active: true,
-      // Compte créé directement par un administrateur : accès actif immédiat.
-      claimedAt: new Date(),
+      // Profil créé sans identifiants : la prise de contrôle passe par une invitation (issue #32).
+      claimedAt: null,
       telephone: typeof telephone === 'string' && telephone.trim() ? telephone.trim() : null,
-      icalToken: randomBytes(24).toString('hex'),
+      // Pas de flux iCal généré à la création (issue #13) : l'abonné en génère
+      // un depuis son profil le jour où il veut s'abonner — voir
+      // `app/lib/planning/ical-token.ts`.
     });
 
     const users = await repo.find({ where: { clubId: auth.user.clubId }, order: { nom: 'ASC' } });
-    return NextResponse.json({ success: true, data: { users: users.map(serializeUser) } });
+    return NextResponse.json({ success: true, data: { users: users.map((user) => serializeUser(user)) } });
   } catch (error) {
-    console.error('Error creating user in DB:', error);
+    logError('app.unhandled', 'Error creating user in DB:', error);
     return NextResponse.json({ error: 'Failed to create user' }, { status: 500 });
   }
 }

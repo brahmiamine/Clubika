@@ -415,7 +415,10 @@ function AttachmentBubble({
 
 export function ChatConversation({ roomId, title, description, compact = false, onBack, fill = false, avatar, mentionables = [] }: ChatConversationProps) {
   const { user } = useCurrentUser();
-  // Modération admin (issue #259) : suppression d'un message réservée aux administrateurs.
+  // Suppression d'un message (issue #259 modération admin, issue #10 auteur) :
+  // l'action de suppression est affichée sur les messages de l'utilisateur courant
+  // (son propre message) ou, pour un administrateur, sur ceux des autres membres.
+  // Le serveur revérifie l'autorisation indépendamment de ce que l'UI affiche.
   const canModerate = user?.accessRole === 'admin';
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [content, setContent] = useState('');
@@ -916,8 +919,9 @@ export function ChatConversation({ roomId, title, description, compact = false, 
     });
   }, []);
 
-  /** Modération admin (issue #259) : supprime un message côté serveur (contenu/pièce
-   * jointe purgés) ; le message mis à jour revient via chat:message (fusion par id). */
+  /** Supprime un message côté serveur (contenu/pièce jointe purgés), pour son auteur
+   * (issue #10) ou en modération admin (issue #259) ; le message mis à jour revient
+   * via chat:message (fusion par id). Le serveur revérifie l'autorisation. */
   const deleteMessageOnServer = useCallback((messageId: string) => {
     const socket = socketRef.current;
     if (!socket?.connected) {
@@ -1422,14 +1426,14 @@ export function ChatConversation({ roomId, title, description, compact = false, 
                       </button>
                     </div>
                   )}
-                  {canModerate && !deleted && mine && (
+                  {!deleted && mine && (
                     <button
                       type="button"
                       onClick={() => {
                         if (window.confirm('Supprimer ce message pour tout le monde ?')) deleteMessageOnServer(message.id);
                       }}
                       className="shrink-0 rounded-md p-1 text-muted-foreground/60 hover:text-destructive"
-                      aria-label="Supprimer ce message (modération)"
+                      aria-label="Supprimer mon message"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -1577,7 +1581,7 @@ export function ChatConversation({ roomId, title, description, compact = false, 
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,video/mp4,video/webm,video/quicktime,audio/*,application/pdf,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,application/vnd.ms-excel,.xls,text/csv,.csv"
+              accept="image/*,video/mp4,video/webm,audio/*,application/pdf,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,text/csv,.csv"
               className="hidden"
               onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)}
             />

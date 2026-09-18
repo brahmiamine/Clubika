@@ -1,3 +1,4 @@
+import { logError } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/require';
 import { WRITE_ROLES } from '@/lib/auth/roles';
@@ -10,8 +11,10 @@ import {
   savePlanningRecord,
 } from '@/lib/planning/records';
 import {
+  clampShareExpiryDays,
   hashShareToken,
   newShareToken,
+  publicShareMaxExpiryDays,
   type PublicShareScope,
 } from '@/lib/planning/public-share';
 import type { PlanningEventType } from '@/lib/planning/event-store';
@@ -53,6 +56,9 @@ export async function GET(request: NextRequest) {
       createdAt: record.createdAt,
       expired: Date.parse(record.payload.expiresAt) <= Date.now(),
     })),
+    // Durée maximale proposée pour un nouveau lien (issue #14) : exposée ici pour que
+    // l'administration l'affiche avant création plutôt que de la dupliquer côté client.
+    maxExpiryDays: publicShareMaxExpiryDays(),
   });
 }
 
@@ -63,8 +69,10 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const expiryDaysRaw = Number(body.expiryDays ?? 7);
-    const expiryDays = Number.isFinite(expiryDaysRaw) ? Math.max(1, Math.min(Math.round(expiryDaysRaw), 90)) : 7;
+    // Fenêtre plafonnée à 30 j par défaut (configurable), au lieu de 90 j (issue #14) :
+    // couvre 0, une valeur négative, non numérique, 30 et plus de 30 jours.
+    const maxExpiryDays = publicShareMaxExpiryDays();
+    const expiryDays = clampShareExpiryDays(body.expiryDays, maxExpiryDays);
     const fromDate = validDate(body.fromDate) ? body.fromDate : null;
     const toDate = validDate(body.toDate) ? body.toDate : null;
     if (fromDate && toDate && fromDate > toDate) {
@@ -110,9 +118,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       share: { id, token, expiresAt, scope, path: `/partage/${token}` },
+      maxExpiryDays,
     });
   } catch (error) {
-    console.error('Creating planning share failed:', error);
+    logError('app.unhandled', 'Creating planning share failed:', error);
     return NextResponse.json({ error: 'Impossible de créer le partage' }, { status: 500 });
   }
 }

@@ -45,10 +45,9 @@ function BrandMark({ name, logo, size, className, branded }: {
 }
 
 /**
- * Enveloppe des écrans hors session. `/login`, mot de passe oublié et
- * réinitialisation portent l'identité produit Clubika. L'inscription par
- * invitation affiche le logo et le nom du club qui invite : ses couleurs
- * primaire / secondaire sont appliquées via les variables CSS de thème.
+ * Enveloppe des écrans hors session. `/login`, mot de passe oublié,
+ * réinitialisation et inscription portent l'identité produit Clubika, éventuellement
+ * complétée du nom public du club invité (sans logo distant, issue #34).
  */
 export function AuthShell({ children, brand }: { children: ReactNode; brand?: AuthShellBrand | null }) {
   const name = brand?.name?.trim() || 'Clubika';

@@ -7,15 +7,16 @@ describe('usesAppProductDocumentHead', () => {
     expect(usesAppProductDocumentHead('/login')).toBe(true);
     expect(usesAppProductDocumentHead('/plateforme/login')).toBe(true);
     expect(usesAppProductDocumentHead('/mot-de-passe-oublie')).toBe(true);
+    expect(usesAppProductDocumentHead('/inscription/xyz')).toBe(true);
     expect(usesAppProductDocumentHead('/club')).toBe(false);
     expect(usesAppProductDocumentHead('/partage/abc')).toBe(false);
   });
 });
 
 describe('usesTokenClubDocumentHead', () => {
-  it('identifie le planning public et l’inscription', () => {
+  it('identifie le planning public, pas l’inscription', () => {
     expect(usesTokenClubDocumentHead('/partage/abc')).toBe(true);
-    expect(usesTokenClubDocumentHead('/inscription/xyz')).toBe(true);
+    expect(usesTokenClubDocumentHead('/inscription/xyz')).toBe(false);
     expect(usesTokenClubDocumentHead('/')).toBe(false);
   });
 });

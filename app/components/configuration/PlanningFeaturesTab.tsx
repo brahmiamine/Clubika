@@ -36,6 +36,17 @@ interface FeatureSettingsResponse {
   timeZone: string;
 }
 
+interface ExternalServiceStatus {
+  id: string;
+  label: string;
+  enabled: boolean;
+  hostnames: string[];
+  purpose: string;
+  dataCategories: string[];
+  legalReview: 'required';
+  enabledEnv: string;
+}
+
 interface ScraperRun {
   id: string;
   status: 'running' | 'succeeded' | 'failed';
@@ -53,6 +64,8 @@ export function PlanningFeaturesTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [scraperRuns, setScraperRuns] = useState<ScraperRun[]>([]);
+  const [externalServices, setExternalServices] = useState<ExternalServiceStatus[]>([]);
+  const [externalNotice, setExternalNotice] = useState<string>('');
 
   useEffect(() => {
     void apiGet<FeatureSettingsResponse>('/api/settings/planning-features')
@@ -65,6 +78,12 @@ export function PlanningFeaturesTab() {
     void apiGet<{ runs: ScraperRun[] }>('/api/scraper')
       .then((response) => setScraperRuns(response.runs.slice(0, 8)))
       .catch(() => setScraperRuns([]));
+    void apiGet<{ services: ExternalServiceStatus[]; notice: string }>('/api/settings/external-services')
+      .then((response) => {
+        setExternalServices(response.services);
+        setExternalNotice(response.notice);
+      })
+      .catch(() => setExternalServices([]));
   }, []);
 
   const save = async () => {
@@ -113,6 +132,35 @@ export function PlanningFeaturesTab() {
               />
             </div>
           ))}
+        </div>
+        <div className="space-y-3 rounded-lg border p-4">
+          <div>
+            <h3 className="font-medium">Intégrations sortantes</h3>
+            <p className="text-xs text-muted-foreground">
+              {externalNotice || 'État réel des flux vers des services externes. Désactiver un drapeau d’environnement n’efface aucune donnée.'}
+            </p>
+          </div>
+          {externalServices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Aucun état chargé.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {externalServices.map((service) => (
+                <li key={service.id} className="rounded-md border p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium">{service.label}</span>
+                    <StatusPill tone={service.enabled ? 'warning' : 'success'}>
+                      {service.enabled ? 'Activée (revue juridique requise)' : 'Désactivée'}
+                    </StatusPill>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{service.purpose}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Kill switch : {service.enabledEnv}
+                    {service.hostnames.length > 0 ? ` · hôtes : ${service.hostnames.join(', ')}` : ' · aucun hôte allowlisté'}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         <div className="space-y-3">
           <div>

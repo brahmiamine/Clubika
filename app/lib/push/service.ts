@@ -1,7 +1,10 @@
+import { logError } from '@/lib/observability/log';
 import { buildNotificationClubIconPath, PWA_NOTIFICATION_ICON } from '@/lib/pwa/icons';
 import type { DataSource } from 'typeorm';
 import webPush from 'web-push';
 import { buildVapidAuthorization, getVapidConfig } from './vapid';
+import { isExternalServiceEnabled, guardedFetch } from '@/lib/compliance/external-services';
+import { isTrustedPushEndpoint } from './endpoint';
 import {
   listPushSubscriptionsForUser,
   removePushSubscriptionByEndpoint,
@@ -16,7 +19,7 @@ async function sendWakeUpPush(endpoint: string): Promise<Response> {
     throw new Error('VAPID configuration is missing');
   }
 
-  return fetch(endpoint, {
+  return guardedFetch('web-push', endpoint, {
     method: 'POST',
     headers: {
       Authorization: buildVapidAuthorization(endpoint, config),
@@ -26,13 +29,18 @@ async function sendWakeUpPush(endpoint: string): Promise<Response> {
   });
 }
 
+/**
+ * Contenu strictement générique (issue #27) : `title`/`message` sont déjà rendus depuis
+ * un gabarit allowlisté (jamais de texte libre), `notificationId` est un identifiant
+ * opaque vers la notification in-app (pas d'`eventType`/`eventId` en clair), et `url`
+ * pointe vers `/api/notifications/[id]/open`, résolu seulement après authentification
+ * et contrôle tenant/objet.
+ */
 export interface PushNotificationPayload {
-  notificationId: string;
-  type: string;
+  notificationId: number | null;
+  templateId: string;
   title: string;
   message: string;
-  eventType: string | null;
-  eventId: string | null;
   url?: string;
   clubId?: string;
   icon?: string;
@@ -92,7 +100,7 @@ export async function triggerPushForUser(
   userId: number,
   payload: PushNotificationPayload,
 ): Promise<void> {
-  if (!getVapidConfig()) return;
+  if (!isExternalServiceEnabled('web-push') || !getVapidConfig()) return;
 
   try {
     const subscriptions = await listPushSubscriptionsForUser(db, userId);
@@ -100,6 +108,7 @@ export async function triggerPushForUser(
     await Promise.all(
       subscriptions.map(async (subscription) => {
         try {
+          if (!isTrustedPushEndpoint(subscription.endpoint)) return;
           await sendPayloadPush(subscription, payload);
         } catch (error) {
           const status = pushStatusCode(error);
@@ -107,11 +116,11 @@ export async function triggerPushForUser(
             await removePushSubscriptionByEndpoint(db, subscription.endpoint);
             return;
           }
-          console.error('Web push delivery failed:', error);
+          logError('push.delivery_failed', error);
         }
       }),
     );
   } catch (error) {
-    console.error('Unable to trigger web push:', error);
+    logError('push.delivery_failed', error);
   }
 }

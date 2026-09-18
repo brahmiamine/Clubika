@@ -1,5 +1,6 @@
 'use client';
 
+import { logError } from '@/lib/observability/client-log';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { BellRing, X } from 'lucide-react';
@@ -24,6 +25,7 @@ import {
 } from '@/lib/pwa/web-push-client';
 import { appPathFromNotificationUrl, notificationNavigateHref } from '@/lib/notifications/destinations';
 import { consumePendingNotificationUrl } from '@/lib/notifications/pending-navigation';
+import { isStandaloneDisplay } from '@/lib/pwa/display-mode';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -33,12 +35,6 @@ interface BeforeInstallPromptEvent extends Event {
 interface PushConfig {
   enabled: boolean;
   publicKey: string | null;
-}
-
-function isStandalone(): boolean {
-  if (typeof window === 'undefined') return false;
-  const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
-  return window.matchMedia('(display-mode: standalone)').matches || navigatorWithStandalone.standalone === true;
 }
 
 function isMobile(): boolean {
@@ -104,6 +100,29 @@ async function syncSubscription(): Promise<boolean> {
   return true;
 }
 
+/**
+ * Active la préférence serveur `push` dans le même geste que l'abonnement navigateur
+ * (issue #27) : sans cet appel, un abonnement créé via « Activer » resterait silencieux
+ * (push désactivé par défaut). Best-effort — une erreur réseau ne doit jamais casser le
+ * flux d'activation, qui a déjà réussi côté navigateur.
+ */
+async function enablePushPreference(): Promise<void> {
+  try {
+    const response = await fetch('/api/me/notification-preferences', { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = (await response.json()) as { preferences?: Record<string, unknown> };
+    if (!data.preferences) return;
+    await fetch('/api/me/notification-preferences', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...data.preferences, inApp: true, push: true }),
+    });
+  } catch {
+    // Best-effort : l'abonnement navigateur reste valide, l'utilisateur peut activer la
+    // préférence depuis les réglages si cet appel échoue.
+  }
+}
+
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   const { user } = useCurrentUser();
   const { settings } = useAppSettings();
@@ -118,14 +137,17 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setStandalone(isStandalone());
+    setStandalone(isStandaloneDisplay());
     setPushSupported('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
     if ('Notification' in window) setPushPermission(Notification.permission);
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
-        console.error('Service worker registration failed:', error);
-      });
+      const onInvitationPage = pathname === '/inscription' || pathname.startsWith('/inscription/');
+      if (!onInvitationPage) {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch((error) => {
+          logError('app.unhandled', 'Service worker registration failed:', error);
+        });
+      }
     }
 
     const onBeforeInstallPrompt = (event: Event) => {
@@ -144,7 +166,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
-  }, [settings.clubName]);
+  }, [pathname, settings.clubName]);
 
   useEffect(() => {
     if (usesTokenClubDocumentHead(pathname)) return;
@@ -175,7 +197,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     if (typeof navigator === 'undefined' || !canUseWebPush(navigator.userAgent, window.isSecureContext)) return;
     syncSubscription().catch((error) => {
       if (isPushServiceUnavailableError(error)) return;
-      console.error('Push subscription sync failed:', error);
+      logError('app.unhandled', 'Push subscription sync failed:', error);
     });
   }, [user, pushSupported, pushPermission]);
 
@@ -267,6 +289,10 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
       const enabled = await syncSubscription();
       if (enabled) {
+        // Opt-in explicite du canal push (issue #27) : le clic sur « Activer » et la
+        // permission navigateur suffisent à créer l'abonnement, mais l'envoi effectif
+        // reste conditionné à la préférence serveur — activée ici, dans le même geste.
+        await enablePushPreference();
         toast.success('Notifications smartphone activées');
       } else {
         toast.error("Les clés VAPID ne sont pas encore configurées sur le serveur.");
@@ -285,7 +311,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
       {canOfferInstall && (
-        <div className="sticky top-0 z-[70] flex items-center justify-between gap-2 border-b bg-primary px-3 py-2 text-primary-foreground lg:hidden">
+        <div className="sticky top-0 z-[70] flex shrink-0 items-center justify-between gap-2 border-b bg-primary px-3 py-2 text-primary-foreground lg:hidden">
           <div className="flex min-w-0 items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -318,7 +344,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       )}
 
       {canOfferPush && (
-        <div className="sticky top-0 z-[70] flex items-center justify-between gap-2 border-b bg-primary px-3 py-2 text-primary-foreground lg:hidden">
+        <div className="sticky top-0 z-[70] flex shrink-0 items-center justify-between gap-2 border-b bg-primary px-3 py-2 text-primary-foreground lg:hidden">
           <div className="flex min-w-0 items-center gap-2">
             <BellRing className="h-4 w-4 shrink-0" />
             <span className="truncate text-sm font-medium">Recevoir les désignations sur votre téléphone</span>

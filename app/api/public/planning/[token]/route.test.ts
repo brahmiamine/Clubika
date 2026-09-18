@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { isDbAvailable } from '@/lib/db/test-utils';
 import { getDb } from '@/lib/db';
 import { hashBucketComponent } from '@/lib/auth/login-rate-limit';
+import { enableTrustedProxyHeaders, uniqueTestIp } from '@/lib/auth/test-helpers';
 import { savePlanningRecord } from '@/lib/planning/records';
 import { hashShareToken, newShareToken, type PublicShareScope } from '@/lib/planning/public-share';
 import type { PlanningEventSnapshot } from '@/lib/planning/event-store';
@@ -16,7 +17,7 @@ const dbAvailable = await isDbAvailable();
 // `pnpm test` contre sa base locale documentée (cf. TESTING.md).
 const CLUB_ID = `test-club-${randomBytes(6).toString('hex')}`;
 
-function publicShareRequest(token: string, ip = randomBytes(8).toString('hex')) {
+function publicShareRequest(token: string, ip = uniqueTestIp()) {
   return new NextRequest(`http://localhost/api/public/planning/${token}`, {
     headers: { 'x-forwarded-for': ip },
   });
@@ -42,8 +43,14 @@ function snapshot(overrides: Partial<PlanningEventSnapshot>): PlanningEventSnaps
 describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] — limitation de débit (issue #381)', () => {
   const cleanupIps: string[] = [];
   const cleanupTokens: string[] = [];
+  let restoreProxy: (() => void) | undefined;
+
+  beforeEach(() => {
+    restoreProxy = enableTrustedProxyHeaders();
+  });
 
   afterEach(async () => {
+    restoreProxy?.();
     const db = await getDb();
     for (const ip of cleanupIps.splice(0)) {
       await db.query('DELETE FROM login_rate_limits WHERE bucket_key = ?', [`public-share:ip:${hashBucketComponent(ip)}`]);
@@ -54,7 +61,7 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] — limitation d
   });
 
   it('renvoie 429 après 5 sondes sur un jeton invalide depuis la même IP', async () => {
-    const ip = randomBytes(8).toString('hex');
+    const ip = uniqueTestIp();
     cleanupIps.push(ip);
     const token = `invalid-probe-${randomBytes(8).toString('hex')}`;
 
@@ -133,13 +140,16 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] (integration)', 
     );
 
     expect(response.status).toBe(200);
+    // Jamais mis en cache par un intermédiaire ni réutilisé après révocation (issue #14).
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store, max-age=0');
     const body = await response.json();
-    expect(body.club.id).toBe(CLUB_ID);
+    expect(body.club).not.toHaveProperty('id');
     expect(body.club.primaryColor).toMatch(/^#/);
     expect(body.club.accentColor).toMatch(/^#/);
     const titles = (body.items as Array<{ title: string }>).map((item) => item.title);
-    expect(titles).toContain('Entraînement test');
+    expect(titles).toContain('Entraînement');
     expect(titles).not.toContain('Match annulé');
+    expect(titles).not.toContain('Entraînement test');
   });
 
   it('refuse un lien de partage par ailleurs valide une fois le club désactivé (issue #213)', async () => {
@@ -165,7 +175,7 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] (integration)', 
     await db.getRepository('ClubTenant').save({ id: CLUB_ID, name: 'Club test désactivé', active: false });
 
     try {
-      const ip = randomBytes(8).toString('hex');
+      const ip = uniqueTestIp();
       const response = await GET(
         publicShareRequest(token, ip) as never,
         { params: Promise.resolve({ token }) },
@@ -252,7 +262,7 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] (integration)', 
         schemaVersion: 1,
         publishedAt: new Date().toISOString(),
         publishedByUserId: 0,
-        events: [snapshot({ eventId: 'evt-club-a', title: 'Événement club A' })],
+        events: [snapshot({ eventId: 'evt-club-a', date: '15/09/2026' })],
       },
     });
 
@@ -281,7 +291,7 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] (integration)', 
         schemaVersion: 1,
         publishedAt: new Date().toISOString(),
         publishedByUserId: 0,
-        events: [snapshot({ eventId: 'evt-club-b', title: 'Événement club B' })],
+        events: [snapshot({ eventId: 'evt-club-b', date: '16/09/2026' })],
       },
     });
 
@@ -312,15 +322,16 @@ describe.skipIf(!dbAvailable)('GET /api/public/planning/[token] (integration)', 
       expect(responseA.status).toBe(200);
       expect(responseB.status).toBe(200);
 
-      const titlesA = ((await responseA.json()).items as Array<{ title: string }>).map((item) => item.title);
-      const titlesB = ((await responseB.json()).items as Array<{ title: string }>).map((item) => item.title);
-      // Le jeton de A ne doit jamais résoudre les événements de B, ni inversement :
-      // chacun reste scopé au club qui l'a émis, malgré une recherche désormais globale
+      const datesA = ((await responseA.json()).items as Array<{ date: string }>).map((item) => item.date);
+      const datesB = ((await responseB.json()).items as Array<{ date: string }>).map((item) => item.date);
+      // Les titres publics sont désormais dérivés (type d'événement), donc l'isolation
+      // se vérifie sur un champ calendaire distinct. Le jeton de A ne doit jamais
+      // résoudre les événements de B, ni inversement, malgré une recherche globale
       // (sans filtre club_id préalable) sur `token_hash`.
-      expect(titlesA).toContain('Événement club A');
-      expect(titlesA).not.toContain('Événement club B');
-      expect(titlesB).toContain('Événement club B');
-      expect(titlesB).not.toContain('Événement club A');
+      expect(datesA).toContain('15/09/2026');
+      expect(datesA).not.toContain('16/09/2026');
+      expect(datesB).toContain('16/09/2026');
+      expect(datesB).not.toContain('15/09/2026');
     } finally {
       await db.query('DELETE FROM planning_records WHERE club_id = ?', [otherClubId]);
     }

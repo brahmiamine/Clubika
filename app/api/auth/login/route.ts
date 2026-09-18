@@ -1,9 +1,11 @@
+import { logError, logWarn } from '@/lib/observability/log';
 import { NextRequest, NextResponse } from 'next/server';
 import { In } from 'typeorm';
 import { getDb } from '@/lib/db';
 import { ClubTenantEntity, UserEntity } from '@/lib/db/schemas';
-import { verifyPassword } from '@/lib/auth/password';
-import { createSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { verifyPasswordAndMaybeRehash } from '@/lib/auth/password';
+import { createSession, revokeSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
+import { sessionCookieSetOptions } from '@/lib/auth/session-cookie';
 import { canEdit, normalizeAccessRole } from '@/lib/auth/roles';
 import { isClubTenantActive } from '@/lib/db/club-tenants';
 import { hasAccountAccess } from '@/lib/auth/placeholder-account';
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
         recordFailedLoginAttempt(db, identityBucket),
       ]);
       if (ipResult.limited) {
-        console.warn(`[auth] Connexion : verrouillage par IP déclenché (${ip}, ${ipResult.retryAfterSeconds}s)`);
+        logWarn('auth.failed');
       }
       return NextResponse.json(GENERIC_ERROR, { status: 401 });
     };
@@ -76,12 +78,17 @@ export async function POST(request: NextRequest) {
     for (const candidate of candidates) {
       // Un profil sans accès (issue #204) n'a pas d'identifiants connus : même si
       // le hash technique venait à être deviné, il ne doit jamais ouvrir de session.
-      if (!candidate.active || !hasAccountAccess(candidate)) continue;
+      if (!candidate.active || candidate.closedAt || !hasAccountAccess(candidate)) continue;
 
       const candidateClubId = resolveUserClubId(candidate);
       if (!(await isClubTenantActive(db, candidateClubId))) continue;
 
-      if (await verifyPassword(password, candidate.passwordHash)) {
+      const verified = await verifyPasswordAndMaybeRehash(password, candidate.passwordHash);
+      if (verified.ok && verified.newHash) {
+        candidate.passwordHash = verified.newHash;
+        await repo.save(candidate);
+      }
+      if (verified.ok) {
         passwordMatches.push(candidate);
       }
     }
@@ -115,9 +122,14 @@ export async function POST(request: NextRequest) {
       resetLoginRateLimit(db, identityBucket),
     ]);
 
+    const existingToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (existingToken) {
+      await revokeSession(existingToken);
+    }
+
     const { token, expiresAt } = await createSession(matchedUser.id, {
       userAgent: request.headers.get('user-agent'),
-      ipAddress: request.headers.get('x-forwarded-for'),
+      ipAddress: ip,
     });
 
     const redirectTo = canEdit(normalizeAccessRole(matchedUser.accessRole))
@@ -125,16 +137,10 @@ export async function POST(request: NextRequest) {
       : '/mon-planning';
 
     const response = NextResponse.json({ success: true, redirectTo });
-    response.cookies.set(SESSION_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: expiresAt,
-      path: '/',
-    });
+    response.cookies.set(SESSION_COOKIE_NAME, token, sessionCookieSetOptions(expiresAt));
     return response;
   } catch (error) {
-    console.error('Error during login:', error);
+    logError('auth.failed', error);
     return NextResponse.json({ error: 'Une erreur est survenue' }, { status: 500 });
   }
 }
