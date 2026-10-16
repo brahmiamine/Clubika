@@ -75,8 +75,6 @@ const EVENT_TYPE_TITLES: Record<PlanningEventType, string> = {
   plateau: 'Plateau',
 };
 
-const PUBLIC_VENUE_HINT = /stade|gymnase|complexe|terrain|sport|municipal|omnisport|hall des sports/i;
-
 export interface PublicShareScope {
   eventTypes: PlanningEventType[];
   fromDate: string | null;
@@ -166,13 +164,6 @@ function publicCalendarTitle(item: Pick<PublicPlanningItem, 'eventType' | 'categ
   return EVENT_TYPE_TITLES[item.eventType];
 }
 
-/** Adresse uniquement pour une enceinte sportive officielle, jamais un lieu libre. */
-export function publicSportsVenueAddress(stadium: string | null, address: string | null): string | null {
-  if (!stadium || !address) return null;
-  if (!PUBLIC_VENUE_HINT.test(stadium) && !PUBLIC_VENUE_HINT.test(address)) return null;
-  return address;
-}
-
 export function toPublicPlanningItem(
   snapshot: PlanningEventSnapshot,
   resolveLogos?: TeamLogoResolver,
@@ -206,7 +197,11 @@ export function toPublicPlanningItem(
     item.awayTeamLogo = cleanString(logos.awayTeamLogo);
     item.venue = match.venue === 'domicile' || match.venue === 'extérieur' ? match.venue : null;
     item.stadium = cleanString(match.details?.stadium);
-    item.address = publicSportsVenueAddress(item.stadium, cleanString(match.details?.address));
+    // Issue #98 : plus aucune détection de l'adresse par mots-clés (regex « stade »,
+    // « gymnase »…). Une adresse ne peut être publiée que rattachée à un lieu
+    // structuré explicitement approuvé pour l'affichage public — rattachement qui
+    // n'existe pas encore dans le modèle. Fail closed : jamais d'adresse.
+    item.address = null;
     item.title = publicCalendarTitle(item);
   }
 

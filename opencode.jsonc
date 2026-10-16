@@ -1,0 +1,66 @@
+{
+  // Configuration OpenCode du projet Clubika (OpenCode V2).
+  // Documentation : https://opencode.ai/v2/docs/config
+  //
+  // Les instructions projet vivent dans AGENTS.md (chargé automatiquement).
+  // Le champ `instructions` n'est pas résolu en V2 : ne pas l'utiliser.
+  "$schema": "https://opencode.ai/config.json",
+
+  // Commandes de dev courantes autorisées sans confirmation. Tout ce qui n'est pas
+  // listé retombe sur le comportement par défaut (`ask`), et les actions sensibles
+  // restent explicitement soumises à approbation. La dernière règle qui matche gagne.
+  "permissions": [
+    { "action": "shell", "resource": "pnpm install*", "effect": "allow" },
+    { "action": "shell", "resource": "pnpm lint*", "effect": "allow" },
+    { "action": "shell", "resource": "pnpm type-check*", "effect": "allow" },
+    { "action": "shell", "resource": "pnpm test*", "effect": "allow" },
+    { "action": "shell", "resource": "pnpm build*", "effect": "allow" },
+    { "action": "shell", "resource": "pnpm run e2e*", "effect": "allow" },
+    { "action": "shell", "resource": "pnpm run routes:coverage*", "effect": "allow" },
+    { "action": "shell", "resource": "pnpm run privacy:fixtures*", "effect": "allow" },
+    { "action": "shell", "resource": "git status*", "effect": "allow" },
+    { "action": "shell", "resource": "git diff*", "effect": "allow" },
+    { "action": "shell", "resource": "git log*", "effect": "allow" },
+    { "action": "shell", "resource": "git show*", "effect": "allow" },
+    { "action": "shell", "resource": "git branch*", "effect": "allow" },
+
+    { "action": "shell", "resource": "git push*", "effect": "ask" },
+    { "action": "shell", "resource": "git reset --hard*", "effect": "ask" },
+    { "action": "shell", "resource": "git clean*", "effect": "ask" },
+    { "action": "shell", "resource": "pnpm publish*", "effect": "ask" },
+    { "action": "shell", "resource": "pnpm deploy*", "effect": "ask" },
+    { "action": "shell", "resource": "rm -rf *", "effect": "ask" },
+
+    // Les secrets (.env*) restent en `ask` par défaut ; .env.example reste lisible.
+    { "action": "read", "resource": "*.env", "effect": "ask" }
+  ],
+
+  // GitHub MCP Server officiel (github/github-mcp-server) : accès aux issues,
+  // pull requests, revues et dépôts GitHub depuis l'agent.
+  // Authentification OAuth, par utilisateur : lancer `/mcps` dans OpenCode,
+  // sélectionner `github` et se connecter. Aucun secret n'est stocké dans ce
+  // fichier ; l'état « needs authentication » dans `opencode mcp list` est normal
+  // tant que la connexion n'a pas été faite.
+  // Alternative (non commitée) : PAT via `Authorization: Bearer {env:GITHUB_PERSONAL_ACCESS_TOKEN}`
+  // et `"oauth": false`, si l'on préfère un jeton d'environnement.
+  // Guide : https://github.com/github/github-mcp-server/blob/main/docs/installation-guides/install-opencode.md
+  "mcp": {
+    "servers": {
+      "github": {
+        "type": "remote",
+        "url": "https://api.githubcopilot.com/mcp/"
+      }
+    }
+  },
+
+  // Artefacts générés : ne pas déclencher de watcher dessus.
+  "watcher": {
+    "ignore": [
+      ".next/**",
+      "coverage/**",
+      "test-results/**",
+      "playwright-report/**",
+      ".pnpm-store/**"
+    ]
+  }
+}

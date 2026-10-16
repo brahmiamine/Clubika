@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { PlanningEventSnapshot } from './event-store';
+import type { Match } from '@/types/match';
 import {
   DEFAULT_PUBLIC_SHARE_MAX_EXPIRY_DAYS,
   FORBIDDEN_PUBLIC_PLANNING_KEYS,
@@ -9,7 +10,6 @@ import {
   clampShareExpiryDays,
   hashShareToken,
   publicShareMaxExpiryDays,
-  publicSportsVenueAddress,
   toPublicPlanningItem,
 } from './public-share';
 
@@ -82,7 +82,9 @@ describe('public planning shares', () => {
       awayTeam: 'Visiteur',
       venue: 'domicile',
       stadium: 'Stade AFP',
-      address: '1 avenue du Stade, Paris',
+      // Issue #98 : l'adresse n'est plus exposée par détection de mots-clés —
+      // aucun rattachement structuré à un lieu approuvé n'existe, donc fail closed.
+      address: null,
     }));
 
     for (const key of FORBIDDEN_PUBLIC_PLANNING_KEYS) {
@@ -155,15 +157,38 @@ describe('durée maximale des liens de partage public (issue #14)', () => {
   });
 });
 
-describe('publicSportsVenueAddress', () => {
-  it('refuse une adresse sans stade officiel ou sans indice d’enceinte sportive', () => {
-    expect(publicSportsVenueAddress(null, '1 rue du Stade')).toBeNull();
-    expect(publicSportsVenueAddress('Salle municipale', null)).toBeNull();
-    expect(publicSportsVenueAddress('Domicile de l’entraîneur', '12 rue des Lilas')).toBeNull();
+describe('adresse publique (issue #98)', () => {
+  function itemWithVenue(stadium: string, address: string) {
+    return toPublicPlanningItem({
+      ...snapshot,
+      event: {
+        ...(snapshot.event as Match),
+        details: {
+          stadium,
+          dateTime: '',
+          competition: 'Championnat',
+          address,
+          terrainType: '',
+          itineraryLink: '',
+          rawText: '',
+        },
+      },
+    });
+  }
+
+  it('n’expose jamais l’adresse, même pour un nom d’enceinte contenant « Stade »', () => {
+    // Adresse privée déguisée derrière un libellé d'enceinte trompeur : l'ancienne
+    // détection par mots-clés l'aurait publiée.
+    expect(itemWithVenue('Stade de la famille sentinelle', '12 rue privée des Lilas').address).toBeNull();
+    expect(itemWithVenue('Stade municipal', '1 avenue du Stade, Paris').address).toBeNull();
+    expect(itemWithVenue('Domicile de l’entraîneur', '12 rue des Lilas').address).toBeNull();
   });
 
-  it('conserve l’adresse d’un stade nommé', () => {
-    expect(publicSportsVenueAddress('Stade AFP', '1 avenue du Stade, Paris')).toBe('1 avenue du Stade, Paris');
+  it('conserve le nom d’enceinte (champ intentionnellement public) mais jamais l’adresse', () => {
+    const item = itemWithVenue('Stade municipal', '1 avenue du Stade, Paris');
+    expect(item.stadium).toBe('Stade municipal');
+    expect(item.address).toBeNull();
+    expect(JSON.stringify(item)).not.toContain('1 avenue du Stade');
   });
 });
 

@@ -28,6 +28,12 @@ export interface StadeEntity {
   nom: string;
   adresse: string | null;
   googleMapsUrl: string;
+  /**
+   * Issue #98 : décision explicite d'afficher ce lieu dans les partages publics.
+   * Défaut `false` — aucun lieu historique n'est approuvé automatiquement. La
+   * décision est relue à chaque rendu : la retirer coupe l'exposition.
+   */
+  publicDisplay: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -124,6 +130,7 @@ export const StadeSchema = new EntitySchema<StadeEntity>({
     nom: { type: String },
     adresse: { type: String, nullable: true },
     googleMapsUrl: { type: String },
+    publicDisplay: { type: 'boolean', default: false },
     createdAt: { type: 'datetime', createDate: true },
     updatedAt: { type: 'datetime', updateDate: true },
   },

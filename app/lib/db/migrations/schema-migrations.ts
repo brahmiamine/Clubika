@@ -957,4 +957,17 @@ export const schemaMigrations: readonly SchemaMigration[] = [
        WHERE type = 'minor-account-erroneous-closure'`,
     ],
   },
+  {
+    version: '0046',
+    name: 'lieu_public_affichage_explicite',
+    // Issue #98 : décision explicite d'afficher un lieu structuré dans les partages
+    // publics. Défaut 0 : aucun lieu historique n'est approuvé automatiquement
+    // (fail closed). La colonne est relue à chaque rendu, donc retirer l'approbation
+    // coupe immédiatement l'exposition. Tant qu'aucun rattachement structuré
+    // événement→lieu n'existe, les adresses publiques restent nulles : cette colonne
+    // prépare l'approbation explicite, elle ne l'accorde pas.
+    statements: [
+      'ALTER TABLE stades ADD COLUMN IF NOT EXISTS publicDisplay TINYINT(1) NOT NULL DEFAULT 0',
+    ],
+  },
 ];
